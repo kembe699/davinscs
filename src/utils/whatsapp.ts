@@ -1,6 +1,6 @@
 import { Product } from "@/data/products";
 
-const WA_NUMBER = "211980266312";
+const WA_NUMBER = "256792149296";
 
 export function buildWhatsAppUrl(product: Product, includeSpecs = false): string {
   const imageUrl = `${window.location.origin}${product.image}`;
