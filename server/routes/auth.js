@@ -7,6 +7,13 @@ import pool from "../db.js";
 
 const router = express.Router();
 
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+});
+
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -38,6 +45,7 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT id FROM users WHERE email = $1", [email.toLowerCase()]);
     if (!rows[0]) {
+      console.log(`[forgot-password] email not found in DB: ${email}`);
       return res.json({ message: "If that email exists, a reset link has been sent." });
     }
     const token = uuidv4();
@@ -52,21 +60,19 @@ router.post("/forgot-password", async (req, res) => {
     );
     const appUrl = process.env.APP_URL || "http://localhost:5173";
     const resetLink = `${appUrl}/admin/reset-password?token=${token}`;
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
+    console.log(`[forgot-password] sending reset link to ${email}: ${resetLink}`);
     await transporter.sendMail({
       from: `"Davin's Store" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Password Reset — Davin's CMS",
+      subject: "Password Reset \u2014 Davin's CMS",
       html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
              <p><a href="${resetLink}">${resetLink}</a></p>
              <p>If you did not request this, ignore this email.</p>`,
     });
+    console.log(`[forgot-password] email sent successfully to ${email}`);
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch (err) {
-    console.error(err);
+    console.error("[forgot-password] error:", err.message);
     res.status(500).json({ error: "Failed to send reset email" });
   }
 });
