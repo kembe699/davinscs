@@ -1,0 +1,67 @@
+const Footer = () => {
+  return (
+    <footer className="border-t border-border-subtle">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+          <div className="md:col-span-1">
+            <div className="flex flex-col leading-none mb-4">
+              <span className="font-bold tracking-tighter text-xl text-foreground">DAVIN'S</span>
+              <span className="font-mono-tech text-[10px] text-primary tracking-[0.2em] uppercase">
+                Camera Store
+              </span>
+            </div>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+              Professional media equipment for filmmakers, podcasters, and content creators.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Equipment</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><a href="#" className="hover:text-primary transition-colors">Cameras</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Lenses</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Microphones</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Teleprompters</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Lighting</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Support</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><a href="#" className="hover:text-primary transition-colors">Contact Us</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Shipping Info</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Returns</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Warranty</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Connect</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li><a href="#" className="hover:text-primary transition-colors">Instagram</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">YouTube</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Twitter / X</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Newsletter</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-border-subtle pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest flex flex-wrap gap-4 sm:gap-8 justify-center">
+            <div className="flex gap-2 items-center">
+              <span className="text-primary">•</span> Global Shipping
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-primary">•</span> 4.9/5 Rated
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-primary">•</span> Authorized Dealer
+            </div>
+          </div>
+          <div className="font-mono-tech text-[10px] text-muted-foreground">
+            © 2025 Davin's Camera Store. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

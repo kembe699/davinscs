@@ -57,6 +57,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        indicator: "hsl(var(--indicator))",
+        chassis: "hsl(var(--chassis))",
+        grip: "hsl(var(--grip))",
+        metal: "hsl(var(--metal))",
+        "border-subtle": "hsl(var(--border-subtle))",
       },
       borderRadius: {
         lg: "var(--radius)",
