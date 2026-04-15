@@ -22,6 +22,8 @@ import Dashboard from "./pages/admin/Dashboard.tsx";
 import AdminProducts from "./pages/admin/Products.tsx";
 import ProductForm from "./pages/admin/ProductForm.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
+import AdminUsers from "./pages/admin/Users.tsx";
+import ResetPassword from "./pages/admin/ResetPassword.tsx";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,8 @@ const App = () => (
             <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
             <Route path="/admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
             <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/reset-password" element={<ResetPassword />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

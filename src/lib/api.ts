@@ -46,6 +46,13 @@ export type ApiCategory = {
   created_at: string;
 };
 
+export type ApiUser = {
+  id: number;
+  email: string;
+  role: string;
+  created_at: string;
+};
+
 export type ApiOrderStats = {
   total: number;
   by_product: { name: string; category: string; order_count: number }[];
@@ -84,11 +91,28 @@ export const api = {
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/categories/${id}`, { method: "DELETE" }),
   },
+  users: {
+    list: () => request<ApiUser[]>("/api/users"),
+    create: (email: string, password: string) =>
+      request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password }) }),
+    delete: (id: number) =>
+      request<{ success: boolean }>(`/api/users/${id}`, { method: "DELETE" }),
+  },
   auth: {
     login: (email: string, password: string) =>
       request<{ token: string; user: { id: number; email: string; role: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
+      }),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
       }),
   },
 };

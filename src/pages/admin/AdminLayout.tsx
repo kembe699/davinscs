@@ -1,12 +1,13 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Package, Layers, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Users, LogOut, ChevronRight } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Products", href: "/admin/products", icon: Package },
   { label: "Categories", href: "/admin/categories", icon: Layers },
+  { label: "Users", href: "/admin/users", icon: Users },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -22,7 +23,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 border-r border-border-subtle flex flex-col bg-chassis">
+      <aside className="w-56 shrink-0 border-r border-border-subtle flex flex-col bg-chassis sticky top-0 h-screen">
         <div className="p-5 border-b border-border-subtle">
           <Link to="/">
             <img src="/logo.jpeg" alt="Davin's" className="h-10 object-contain" />
