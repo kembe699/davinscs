@@ -9,9 +9,14 @@ const Footer = () => {
             <Link to="/" className="flex items-center mb-4">
               <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-12 w-auto object-contain" />
             </Link>
-            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mb-4">
               Professional media equipment for filmmakers, podcasters, and content creators.
             </p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p>📍 London Chambers GF Shop 16<br />Johnson Street, Kampala</p>
+              <p className="pt-1">📞 0757-774682</p>
+              <p>✉️ infor@davinsstore</p>
+            </div>
           </div>
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Equipment</h4>

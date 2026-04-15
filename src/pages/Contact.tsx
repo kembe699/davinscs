@@ -50,9 +50,9 @@ const Contact = () => {
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Address</p>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      142 Creator's Row<br />
-                      Studio District<br />
-                      Los Angeles, CA 90028
+                      London Chambers GF Shop 16<br />
+                      Johnson Street<br />
+                      Kampala, Uganda
                     </p>
                   </div>
                 </div>
@@ -62,8 +62,9 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Phone</p>
-                    <p className="text-muted-foreground text-sm">+1 (310) 555-0198</p>
-                    <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Mon – Sat, 9AM – 6PM PST</p>
+                    <p className="text-muted-foreground text-sm">0757-774682</p>
+                    <p className="text-muted-foreground text-sm">+256 792 149 296 (WhatsApp)</p>
+                    <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Mon – Sat, 9AM – 6PM EAT</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -72,7 +73,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Email</p>
-                    <p className="text-muted-foreground text-sm">support@davins.store</p>
+                    <p className="text-muted-foreground text-sm">infor@davinsstore</p>
                     <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Response within 24 hours</p>
                   </div>
                 </div>
