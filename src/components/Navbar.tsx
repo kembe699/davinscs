@@ -1,28 +1,35 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 const navLinks = [
-  { label: "[01] Cameras", href: "#cameras" },
-  { label: "[02] Audio", href: "#audio" },
-  { label: "[03] Studio", href: "#studio" },
-  { label: "[04] Support", href: "#about" },
+  { label: "[01] Cameras", to: "/cameras" },
+  { label: "[02] Microphones", to: "/microphones" },
+  { label: "[03] Teleprompters", to: "/teleprompters" },
+  { label: "[04] Support", to: "/support" },
+  { label: "[05] Contact", to: "/contact" },
 ];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <nav className="border-b border-border-subtle px-6 lg:px-8 h-16 flex items-center justify-between sticky top-0 bg-chassis/80 backdrop-blur-md z-50">
       <div className="flex items-center gap-8 lg:gap-12">
-        <div className="flex flex-col leading-none">
+        <Link to="/" className="flex flex-col leading-none">
           <span className="font-bold tracking-tighter text-xl text-foreground">DAVIN'S</span>
           <span className="font-mono-tech text-[10px] text-primary tracking-[0.2em] uppercase">Camera Store</span>
-        </div>
+        </Link>
         <div className="hidden lg:flex gap-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href} className="hover:text-primary transition-colors">
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`hover:text-primary transition-colors ${location.pathname.startsWith(link.to) ? "text-primary" : ""}`}
+            >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
       </div>
@@ -40,14 +47,14 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="absolute top-16 left-0 right-0 bg-chassis border-b border-border-subtle p-6 flex flex-col gap-4 lg:hidden z-50">
           {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`text-sm font-medium uppercase tracking-widest hover:text-primary transition-colors ${location.pathname.startsWith(link.to) ? "text-primary" : "text-muted-foreground"}`}
               onClick={() => setMobileOpen(false)}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
       )}

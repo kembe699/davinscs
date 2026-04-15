@@ -1,15 +1,17 @@
+import { Link } from "react-router-dom";
+
 const Footer = () => {
   return (
     <footer className="border-t border-border-subtle">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-1">
-            <div className="flex flex-col leading-none mb-4">
+            <Link to="/" className="flex flex-col leading-none mb-4">
               <span className="font-bold tracking-tighter text-xl text-foreground">DAVIN'S</span>
               <span className="font-mono-tech text-[10px] text-primary tracking-[0.2em] uppercase">
                 Camera Store
               </span>
-            </div>
+            </Link>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
               Professional media equipment for filmmakers, podcasters, and content creators.
             </p>
@@ -17,20 +19,20 @@ const Footer = () => {
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Equipment</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Cameras</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Lenses</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Microphones</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Teleprompters</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Lighting</a></li>
+              <li><Link to="/cameras" className="hover:text-primary transition-colors">Cameras</Link></li>
+              <li><Link to="/lenses" className="hover:text-primary transition-colors">Lenses</Link></li>
+              <li><Link to="/microphones" className="hover:text-primary transition-colors">Microphones</Link></li>
+              <li><Link to="/teleprompters" className="hover:text-primary transition-colors">Teleprompters</Link></li>
+              <li><Link to="/lighting" className="hover:text-primary transition-colors">Lighting</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Support</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Contact Us</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Shipping Info</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Returns</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Warranty</a></li>
+              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
+              <li><Link to="/shipping" className="hover:text-primary transition-colors">Shipping Info</Link></li>
+              <li><Link to="/returns" className="hover:text-primary transition-colors">Returns</Link></li>
+              <li><Link to="/warranty" className="hover:text-primary transition-colors">Warranty</Link></li>
             </ul>
           </div>
           <div>

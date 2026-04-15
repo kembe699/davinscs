@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import heroCamera from "@/assets/hero-camera.jpg";
 import podcastMic from "@/assets/podcast-mic.jpg";
 import teleprompter from "@/assets/teleprompter.jpg";
@@ -8,6 +9,7 @@ import fieldMonitor from "@/assets/field-monitor.jpg";
 const categories = [
   {
     id: "cameras",
+    to: "/cameras",
     module: "MODULE_01",
     title: "Cameras & Cinema",
     description: "From mirrorless hybrids to full-frame cinema rigs. 4K, 6K, 8K — every resolution covered.",
@@ -15,7 +17,8 @@ const categories = [
     image: heroCamera,
   },
   {
-    id: "audio",
+    id: "microphones",
+    to: "/microphones",
     module: "MODULE_02",
     title: "Microphones & Audio",
     description: "XLR condensers, wireless lavs, shotgun mics, and podcast-ready bundles.",
@@ -23,7 +26,8 @@ const categories = [
     image: podcastMic,
   },
   {
-    id: "studio",
+    id: "teleprompters",
+    to: "/teleprompters",
     module: "MODULE_03",
     title: "Teleprompters",
     description: "Professional teleprompter systems for live broadcasts, YouTube, and corporate productions.",
@@ -32,6 +36,7 @@ const categories = [
   },
   {
     id: "lighting",
+    to: "/lighting",
     module: "MODULE_04",
     title: "Studio Lighting",
     description: "LED panels, COB lights, ring lights, softboxes, and full studio kits.",
@@ -40,6 +45,7 @@ const categories = [
   },
   {
     id: "lenses",
+    to: "/lenses",
     module: "MODULE_05",
     title: "Lenses & Optics",
     description: "Cine primes, anamorphic glass, zoom lenses, and vintage rehoused optics.",
@@ -47,10 +53,11 @@ const categories = [
     image: cineLens,
   },
   {
-    id: "monitors",
+    id: "support",
+    to: "/support",
     module: "MODULE_06",
-    title: "Monitors & Accessories",
-    description: "Field monitors, cages, rigs, follow focus systems, and stabilizers.",
+    title: "Support & Info",
+    description: "Expert advice, shipping info, returns, warranty, and contact options — all in one place.",
     tag: "FIELD_READY",
     image: fieldMonitor,
   },
@@ -75,9 +82,10 @@ const CategoryGrid = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border-subtle border border-border-subtle">
         {categories.map((cat) => (
-          <div
+          <Link
             key={cat.id}
-            className="bg-chassis p-6 lg:p-8 group cursor-pointer hover:bg-grip transition-colors"
+            to={cat.to}
+            className="bg-chassis p-6 lg:p-8 group hover:bg-grip transition-colors"
           >
             <div className="aspect-square bg-grip mb-6 lg:mb-8 relative overflow-hidden">
               <img
@@ -104,7 +112,7 @@ const CategoryGrid = () => {
               <span className="font-mono-tech text-xs text-primary tracking-tighter">{cat.tag}</span>
               <span className="text-muted-foreground group-hover:text-primary transition-colors">→</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
