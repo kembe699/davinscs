@@ -6,11 +6,8 @@ const Footer = () => {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-1">
-            <Link to="/" className="flex flex-col leading-none mb-4">
-              <span className="font-bold tracking-tighter text-xl text-foreground">DAVIN'S</span>
-              <span className="font-mono-tech text-[10px] text-primary tracking-[0.2em] uppercase">
-                Camera Store
-              </span>
+            <Link to="/" className="flex items-center mb-4">
+              <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-12 w-auto object-contain" />
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
               Professional media equipment for filmmakers, podcasters, and content creators.

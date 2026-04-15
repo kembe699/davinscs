@@ -7,19 +7,19 @@ const shippingOptions = [
   {
     name: "Standard Shipping",
     time: "5–7 Business Days",
-    cost: "Free on orders over $99",
+    cost: "Free on orders over UGX 20,000",
     note: "USPS / UPS Ground",
   },
   {
     name: "Express Shipping",
     time: "2–3 Business Days",
-    cost: "From $14.99",
+    cost: "From UGX 3,000",
     note: "UPS / FedEx",
   },
   {
     name: "Overnight Shipping",
     time: "Next Business Day",
-    cost: "From $39.99",
+    cost: "From UGX 8,000",
     note: "FedEx Priority / UPS Next Day",
   },
   {

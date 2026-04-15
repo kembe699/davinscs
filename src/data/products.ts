@@ -52,7 +52,7 @@ export const cameras: Product[] = [
     id: "sony-fx3",
     name: "Sony FX3 Full-Frame Cinema Camera",
     brand: "Sony",
-    price: 3899,
+    price: 795000,
     tag: "FULL_FRAME",
     description: "A compact full-frame cinema camera with 12.1MP sensor, 4K 120fps recording, and dual native ISO up to 409600.",
     specs: [
@@ -71,7 +71,7 @@ export const cameras: Product[] = [
     id: "bmpcc-6k-g2",
     name: "Blackmagic Pocket Cinema 6K G2",
     brand: "Blackmagic Design",
-    price: 1995,
+    price: 407000,
     tag: "6K_CINEMA",
     description: "The Pocket Cinema Camera 6K G2 features a Super 35 sensor with 6144×3456 resolution and 13 stops of dynamic range.",
     specs: [
@@ -90,7 +90,7 @@ export const cameras: Product[] = [
     id: "canon-r5c",
     name: "Canon EOS R5 C Cinema Camera",
     brand: "Canon",
-    price: 4299,
+    price: 877000,
     tag: "8K_RAW",
     description: "Merges Canon's EOS R5 mirrorless system with cinema-grade 8K RAW recording and unlimited record times.",
     specs: [
@@ -109,7 +109,7 @@ export const cameras: Product[] = [
     id: "nikon-z9",
     name: "Nikon Z9 Mirrorless Camera",
     brand: "Nikon",
-    price: 5499,
+    price: 1122000,
     tag: "PRO_FLAGSHIP",
     description: "Nikon's flagship mirrorless powerhouse with a stacked 45.7MP sensor, 8K internal recording, and no mechanical shutter.",
     specs: [
@@ -128,7 +128,7 @@ export const cameras: Product[] = [
     id: "red-v-raptor",
     name: "RED V-RAPTOR 8K VV",
     brand: "RED Digital Cinema",
-    price: 24500,
+    price: 5000000,
     tag: "8K_VV",
     description: "The V-RAPTOR shoots 8K at up to 120fps in VistaVision format with 17+ stops of dynamic range.",
     specs: [
@@ -147,7 +147,7 @@ export const cameras: Product[] = [
     id: "fujifilm-x-h2s",
     name: "Fujifilm X-H2S Mirrorless",
     brand: "Fujifilm",
-    price: 2499,
+    price: 510000,
     tag: "APSC_SPEED",
     description: "Fujifilm's speed champion: 26.16MP stacked BSI sensor with 6.2K 30fps open-gate video and ProRes RAW output.",
     specs: [
@@ -169,7 +169,7 @@ export const lenses: Product[] = [
     id: "sigma-18-35-art",
     name: "Sigma 18-35mm f/1.8 Art DC HSM",
     brand: "Sigma",
-    price: 799,
+    price: 163000,
     tag: "ART_SERIES",
     description: "Industry-leading f/1.8 maximum aperture across the full zoom range — a game-changer for video and stills.",
     specs: [
@@ -188,7 +188,7 @@ export const lenses: Product[] = [
     id: "canon-rf-85-1-2",
     name: "Canon RF 85mm f/1.2L USM",
     brand: "Canon",
-    price: 2799,
+    price: 571000,
     tag: "L_SERIES",
     description: "Masterpiece portrait prime with an f/1.2 aperture delivering creamy bokeh and razor-sharp subject separation.",
     specs: [
@@ -207,7 +207,7 @@ export const lenses: Product[] = [
     id: "laowa-12mm-zero-d",
     name: "Laowa 12mm f/2.8 Zero-D",
     brand: "Laowa",
-    price: 849,
+    price: 173000,
     tag: "ZERO_DISTORTION",
     description: "Ultra-wide prime with near-zero distortion — perfect for architecture, real estate, and cinematic wide shots.",
     specs: [
@@ -226,7 +226,7 @@ export const lenses: Product[] = [
     id: "sony-gmaster-50-1-2",
     name: "Sony FE 50mm f/1.2 GM",
     brand: "Sony",
-    price: 1999,
+    price: 408000,
     tag: "GM_SERIES",
     description: "Sony's G Master 50mm standard prime with f/1.2 and near-perfect bokeh for both video and photography.",
     specs: [
@@ -245,7 +245,7 @@ export const lenses: Product[] = [
     id: "tokina-cinema-50mm-t1-5",
     name: "Tokina Cinema ATX 50mm T1.5",
     brand: "Tokina",
-    price: 1150,
+    price: 235000,
     tag: "CINEMA_PRIME",
     description: "PL/EF cinema prime with smooth, clickless iris and linear focus — built for professional video production.",
     specs: [
@@ -264,7 +264,7 @@ export const lenses: Product[] = [
     id: "sirui-anamorphic-50mm",
     name: "SIRUI 50mm T2.9 1.6x Anamorphic",
     brand: "SIRUI",
-    price: 899,
+    price: 183000,
     tag: "ANAMORPHIC",
     description: "Affordable 1.6x anamorphic prime delivering cinematic oval bokeh and horizontal lens flares.",
     specs: [
@@ -286,7 +286,7 @@ export const microphones: Product[] = [
     id: "rode-ntg5",
     name: "Røde NTG5 Broadcast Shotgun",
     brand: "Røde",
-    price: 499,
+    price: 102000,
     tag: "BROADCAST_SHOTGUN",
     description: "Ultra-compact broadcast-grade shotgun mic with RF-bias technology and industry-leading off-axis rejection.",
     specs: [
@@ -305,7 +305,7 @@ export const microphones: Product[] = [
     id: "shure-sm7b",
     name: "Shure SM7B Dynamic Vocal Mic",
     brand: "Shure",
-    price: 399,
+    price: 81000,
     tag: "PODCAST_LEGEND",
     description: "The industry standard for podcasting, broadcasting, and vocal recording. Used by Joe Rogan and countless pros.",
     specs: [
@@ -324,7 +324,7 @@ export const microphones: Product[] = [
     id: "sennheiser-ew-512p",
     name: "Sennheiser EW 512P G4 Wireless",
     brand: "Sennheiser",
-    price: 799,
+    price: 163000,
     tag: "WIRELESS_LAV",
     description: "Professional UHF wireless lav system with 42MHz tuning bandwidth and ultra-low latency at 1.9ms.",
     specs: [
@@ -343,7 +343,7 @@ export const microphones: Product[] = [
     id: "audio-technica-at4053b",
     name: "Audio-Technica AT4053b Hypercardioid",
     brand: "Audio-Technica",
-    price: 349,
+    price: 71000,
     tag: "HYPERCARDIOID",
     description: "Professional hypercardioid condenser for film production, ENG, and live broadcast environments.",
     specs: [
@@ -362,7 +362,7 @@ export const microphones: Product[] = [
     id: "zoom-h6-essential",
     name: "Zoom H6essential Portable Recorder",
     brand: "Zoom",
-    price: 269,
+    price: 55000,
     tag: "FIELD_RECORDER",
     description: "Six-track portable field recorder with 32-bit float recording, 4 XLR/TRS combo inputs, and built-in mid-side mics.",
     specs: [
@@ -384,7 +384,7 @@ export const teleprompters: Product[] = [
     id: "datavideo-tp-650",
     name: "Datavideo TP-650 Portable Teleprompter",
     brand: "Datavideo",
-    price: 349,
+    price: 71000,
     tag: "PORTABLE_PRO",
     description: "Camera-mounted teleprompter with 15\" beam-splitter glass supporting tablets up to 12.9\" — travel-ready.",
     specs: [
@@ -403,7 +403,7 @@ export const teleprompters: Product[] = [
     id: "feelworld-tp10",
     name: "FEELWORLD TP10 Teleprompter Kit",
     brand: "FEELWORLD",
-    price: 179,
+    price: 37000,
     tag: "BUDGET_PRO",
     description: "Lightweight aluminum teleprompter kit with 10\" semi-transparent glass for tablets up to 9.7\".",
     specs: [
@@ -422,7 +422,7 @@ export const teleprompters: Product[] = [
     id: "glide-gear-tmp100",
     name: "Glide Gear TMP100 Pro Teleprompter",
     brand: "Glide Gear",
-    price: 219,
+    price: 45000,
     tag: "DUAL_GLASS",
     description: "Professional dual camera-mount teleprompter with 70/30 beam-splitter glass and universal tablet compatibility.",
     specs: [
@@ -441,7 +441,7 @@ export const teleprompters: Product[] = [
     id: "parrot-presidential",
     name: "Parrot Presidential Teleprompter",
     brand: "Parrot",
-    price: 2995,
+    price: 611000,
     tag: "FLOOR_STAND",
     description: "Broadcast-grade floor-standing teleprompter with 17\" LCD monitor and full studio rigging — presidential quality.",
     specs: [
@@ -460,7 +460,7 @@ export const teleprompters: Product[] = [
     id: "ikan-pt-elite",
     name: "Ikan PT-ELITE-V2 Teleprompter",
     brand: "Ikan",
-    price: 549,
+    price: 112000,
     tag: "ELITE_SERIES",
     description: "Advanced teleprompter with 17\" high-brightness LCD monitor, foot pedal controller, and optional remote.",
     specs: [
@@ -482,7 +482,7 @@ export const lighting: Product[] = [
     id: "aputure-ls-600d-pro",
     name: "Aputure LS 600d Pro LED Light",
     brand: "Aputure",
-    price: 1399,
+    price: 285000,
     tag: "600W_DAYLIGHT",
     description: "600W daylight LED with Bowens mount, weather resistance, and 45,000 lux at 1m — the industry's top workhorse.",
     specs: [
@@ -501,7 +501,7 @@ export const lighting: Product[] = [
     id: "nanlite-forza-60b",
     name: "Nanlite Forza 60B Bi-Color LED",
     brand: "Nanlite",
-    price: 349,
+    price: 71000,
     tag: "BI_COLOR",
     description: "Compact 60W bi-color LED spotlight with 2700–6500K range, Bowens mount, and wireless DMX control.",
     specs: [
@@ -520,7 +520,7 @@ export const lighting: Product[] = [
     id: "godox-sl-200ii",
     name: "Godox SL-200W II LED Video Light",
     brand: "Godox",
-    price: 289,
+    price: 59000,
     tag: "STUDIO_LED",
     description: "200W daylight-balanced studio LED with quiet fan, Bowens mount, and 88° illumination angle.",
     specs: [
@@ -539,7 +539,7 @@ export const lighting: Product[] = [
     id: "luxli-cello-2",
     name: "Luxli Cello 2 RGBAW Panel",
     brand: "Luxli",
-    price: 549,
+    price: 112000,
     tag: "RGBAW_PANEL",
     description: "Compact RGBAW on-camera LED panel with 2000–10000K range, gel emulation, and free iOS/Android app.",
     specs: [
@@ -558,7 +558,7 @@ export const lighting: Product[] = [
     id: "aputure-amaran-200x",
     name: "Aputure Amaran 200x Bi-Color",
     brand: "Aputure",
-    price: 259,
+    price: 53000,
     tag: "AMARAN_SERIES",
     description: "200W bi-color LED with sidus Link app control, hyper-smooth dimming, and Bowens S-mount compatibility.",
     specs: [
@@ -577,7 +577,7 @@ export const lighting: Product[] = [
     id: "nanlite-pavotube-ii-30c",
     name: "Nanlite PavoTube II 30C RGB Tube",
     brand: "Nanlite",
-    price: 199,
+    price: 41000,
     tag: "RGB_TUBE",
     description: "2-foot RGBWW LED tube light with internal battery, 14 built-in effects, and Bluetooth app control.",
     specs: [

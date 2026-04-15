@@ -17,9 +17,8 @@ const Navbar = () => {
   return (
     <nav className="border-b border-border-subtle px-6 lg:px-8 h-16 flex items-center justify-between sticky top-0 bg-chassis/80 backdrop-blur-md z-50">
       <div className="flex items-center gap-8 lg:gap-12">
-        <Link to="/" className="flex flex-col leading-none">
-          <span className="font-bold tracking-tighter text-xl text-foreground">DAVIN'S</span>
-          <span className="font-mono-tech text-[10px] text-primary tracking-[0.2em] uppercase">Camera Store</span>
+        <Link to="/" className="flex items-center">
+          <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-10 w-auto object-contain" />
         </Link>
         <div className="hidden lg:flex gap-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           {navLinks.map((link) => (

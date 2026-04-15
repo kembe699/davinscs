@@ -90,7 +90,7 @@ const HeroSection = () => {
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">Anamorphic Prime 35mm</h4>
                   <p className="font-mono-tech text-[10px] text-muted-foreground">T1.5 Carbon Fiber</p>
-                  <p className="mt-1 text-xs text-primary">$4,850.00</p>
+                  <p className="mt-1 text-xs text-primary">UGX 990,000</p>
                 </div>
               </div>
               <div className="flex gap-4 items-start">
@@ -100,7 +100,7 @@ const HeroSection = () => {
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">X-Field Monitor 7"</h4>
                   <p className="font-mono-tech text-[10px] text-muted-foreground">3000 Nits HDR</p>
-                  <p className="mt-1 text-xs text-primary">$1,299.00</p>
+                  <p className="mt-1 text-xs text-primary">UGX 265,000</p>
                 </div>
               </div>
             </div>

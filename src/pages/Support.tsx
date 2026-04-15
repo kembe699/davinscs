@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "What payment methods do you accept?",
-    a: "We accept all major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and bank transfer for orders over $2,000. Financing is available through Affirm.",
+    a: "We accept all major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and bank transfer for orders over UGX 408,000. Financing is available through Affirm.",
   },
   {
     q: "Can I pick up my order in-store?",
