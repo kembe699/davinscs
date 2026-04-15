@@ -1,3 +1,37 @@
+// Camera images
+import sonyFx3Img from "@/assets/products/sony-fx3.jpg";
+import bmpcc6kG2Img from "@/assets/products/bmpcc-6k-g2.jpg";
+import canonR5cImg from "@/assets/products/canon-r5c.jpg";
+import nikonZ9Img from "@/assets/products/nikon-z9.jpg";
+import redVRaptorImg from "@/assets/products/red-v-raptor.jpg";
+import fujifilmXH2sImg from "@/assets/products/fujifilm-x-h2s.jpg";
+// Lens images
+import sigma1835Img from "@/assets/products/sigma-18-35-art.jpg";
+import canonRf85Img from "@/assets/products/canon-rf-85.jpg";
+import laowa12mmImg from "@/assets/products/laowa-12mm.jpg";
+import sonyGmaster50Img from "@/assets/products/sony-gmaster-50.jpg";
+import tokinaCinema50Img from "@/assets/products/tokina-cinema-50.jpg";
+import siruiAnamorphicImg from "@/assets/products/sirui-anamorphic-50.jpg";
+// Microphone images
+import rodeNtg5Img from "@/assets/products/rode-ntg5.jpg";
+import shureSm7bImg from "@/assets/products/shure-sm7b.jpg";
+import sennheiserEw512pImg from "@/assets/products/sennheiser-ew-512p.jpg";
+import audioTechnicaImg from "@/assets/products/audio-technica-at4053b.jpg";
+import zoomH6Img from "@/assets/products/zoom-h6.jpg";
+// Teleprompter images
+import datavideoTp650Img from "@/assets/products/datavideo-tp650.jpg";
+import feelworldTp10Img from "@/assets/products/feelworld-tp10.jpg";
+import glideGearTmp100Img from "@/assets/products/glide-gear-tmp100.jpg";
+import parrotPresidentialImg from "@/assets/products/parrot-presidential.jpg";
+import ikanPtEliteImg from "@/assets/products/ikan-pt-elite.jpg";
+// Lighting images
+import aputureLs600dImg from "@/assets/products/aputure-ls-600d.jpg";
+import nanliteForza60bImg from "@/assets/products/nanlite-forza-60b.jpg";
+import godoxSl200iiImg from "@/assets/products/godox-sl-200ii.jpg";
+import luxliCello2Img from "@/assets/products/luxli-cello-2.jpg";
+import aputureAmaran200xImg from "@/assets/products/aputure-amaran-200x.jpg";
+import nanlitePavotubeImg from "@/assets/products/nanlite-pavotube.jpg";
+
 export type Product = {
   id: string;
   name: string;
@@ -29,7 +63,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "715g (body only)" },
       { label: "Battery", value: "NP-FZ100" },
     ],
-    image: "/placeholder.svg",
+    image: sonyFx3Img,
     inStock: true,
     category: "cameras",
   },
@@ -48,7 +82,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "900g" },
       { label: "Battery", value: "LP-E6" },
     ],
-    image: "/placeholder.svg",
+    image: bmpcc6kG2Img,
     inStock: true,
     category: "cameras",
   },
@@ -67,7 +101,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "680g" },
       { label: "Recording", value: "CFexpress + SD" },
     ],
-    image: "/placeholder.svg",
+    image: canonR5cImg,
     inStock: true,
     category: "cameras",
   },
@@ -86,7 +120,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "1,340g" },
       { label: "Battery", value: "EN-EL18d" },
     ],
-    image: "/placeholder.svg",
+    image: nikonZ9Img,
     inStock: false,
     category: "cameras",
   },
@@ -105,7 +139,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "1,450g" },
       { label: "Recording", value: "REDCODE RAW" },
     ],
-    image: "/placeholder.svg",
+    image: redVRaptorImg,
     inStock: true,
     category: "cameras",
   },
@@ -124,7 +158,7 @@ export const cameras: Product[] = [
       { label: "Body Weight", value: "660g" },
       { label: "Battery", value: "NP-W235" },
     ],
-    image: "/placeholder.svg",
+    image: fujifilmXH2sImg,
     inStock: true,
     category: "cameras",
   },
@@ -146,7 +180,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "72mm" },
       { label: "Weight", value: "810g" },
     ],
-    image: "/placeholder.svg",
+    image: sigma1835Img,
     inStock: true,
     category: "lenses",
   },
@@ -165,7 +199,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "82mm" },
       { label: "Weight", value: "1,195g" },
     ],
-    image: "/placeholder.svg",
+    image: canonRf85Img,
     inStock: true,
     category: "lenses",
   },
@@ -184,7 +218,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "77mm" },
       { label: "Weight", value: "540g" },
     ],
-    image: "/placeholder.svg",
+    image: laowa12mmImg,
     inStock: true,
     category: "lenses",
   },
@@ -203,7 +237,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "72mm" },
       { label: "Weight", value: "778g" },
     ],
-    image: "/placeholder.svg",
+    image: sonyGmaster50Img,
     inStock: true,
     category: "lenses",
   },
@@ -222,7 +256,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "77mm" },
       { label: "Weight", value: "960g" },
     ],
-    image: "/placeholder.svg",
+    image: tokinaCinema50Img,
     inStock: false,
     category: "lenses",
   },
@@ -241,7 +275,7 @@ export const lenses: Product[] = [
       { label: "Filter Thread", value: "82mm" },
       { label: "Weight", value: "680g" },
     ],
-    image: "/placeholder.svg",
+    image: siruiAnamorphicImg,
     inStock: true,
     category: "lenses",
   },
@@ -263,7 +297,7 @@ export const microphones: Product[] = [
       { label: "Connector", value: "3-pin XLR" },
       { label: "Length", value: "203mm / 76g" },
     ],
-    image: "/placeholder.svg",
+    image: rodeNtg5Img,
     inStock: true,
     category: "microphones",
   },
@@ -282,7 +316,7 @@ export const microphones: Product[] = [
       { label: "Weight", value: "765g" },
       { label: "Requires", value: "Preamp / Audio Interface" },
     ],
-    image: "/placeholder.svg",
+    image: shureSm7bImg,
     inStock: true,
     category: "microphones",
   },
@@ -301,7 +335,7 @@ export const microphones: Product[] = [
       { label: "Battery", value: "AA / Rechargeable" },
       { label: "Channels", value: "Up to 32 compatible" },
     ],
-    image: "/placeholder.svg",
+    image: sennheiserEw512pImg,
     inStock: true,
     category: "microphones",
   },
@@ -320,7 +354,7 @@ export const microphones: Product[] = [
       { label: "Connector", value: "5-pin LEMO" },
       { label: "Weight", value: "79g" },
     ],
-    image: "/placeholder.svg",
+    image: audioTechnicaImg,
     inStock: true,
     category: "microphones",
   },
@@ -339,7 +373,7 @@ export const microphones: Product[] = [
       { label: "Storage", value: "SDXC (up to 512GB)" },
       { label: "Power", value: "4 × AA / USB-C" },
     ],
-    image: "/placeholder.svg",
+    image: zoomH6Img,
     inStock: true,
     category: "microphones",
   },
@@ -361,7 +395,7 @@ export const teleprompters: Product[] = [
       { label: "Weight", value: "1.8kg" },
       { label: "App", value: "Datavideo Prompter (iOS/Android)" },
     ],
-    image: "/placeholder.svg",
+    image: datavideoTp650Img,
     inStock: true,
     category: "teleprompters",
   },
@@ -380,7 +414,7 @@ export const teleprompters: Product[] = [
       { label: "Weight", value: "1.1kg" },
       { label: "App", value: "Universal (any prompter app)" },
     ],
-    image: "/placeholder.svg",
+    image: feelworldTp10Img,
     inStock: true,
     category: "teleprompters",
   },
@@ -399,7 +433,7 @@ export const teleprompters: Product[] = [
       { label: "Weight", value: "1.5kg" },
       { label: "Compatibility", value: "Universal" },
     ],
-    image: "/placeholder.svg",
+    image: glideGearTmp100Img,
     inStock: true,
     category: "teleprompters",
   },
@@ -418,7 +452,7 @@ export const teleprompters: Product[] = [
       { label: "Weight", value: "12kg (full kit)" },
       { label: "Software", value: "Autocue QMaster Compatible" },
     ],
-    image: "/placeholder.svg",
+    image: parrotPresidentialImg,
     inStock: false,
     category: "teleprompters",
   },
@@ -437,7 +471,7 @@ export const teleprompters: Product[] = [
       { label: "Weight", value: "6.3kg" },
       { label: "Software", value: "Ikan Prompt (iOS/Android/Win)" },
     ],
-    image: "/placeholder.svg",
+    image: ikanPtEliteImg,
     inStock: true,
     category: "teleprompters",
   },
@@ -459,7 +493,7 @@ export const lighting: Product[] = [
       { label: "Mount", value: "Bowens Mount" },
       { label: "IP Rating", value: "IP54 Weather Resistant" },
     ],
-    image: "/placeholder.svg",
+    image: aputureLs600dImg,
     inStock: true,
     category: "lighting",
   },
@@ -478,7 +512,7 @@ export const lighting: Product[] = [
       { label: "Mount", value: "Bowens Mount" },
       { label: "Control", value: "DMX / Bluetooth / CRMX" },
     ],
-    image: "/placeholder.svg",
+    image: nanliteForza60bImg,
     inStock: true,
     category: "lighting",
   },
@@ -497,7 +531,7 @@ export const lighting: Product[] = [
       { label: "Mount", value: "Bowens Mount" },
       { label: "Dimming", value: "0–100% PWM" },
     ],
-    image: "/placeholder.svg",
+    image: godoxSl200iiImg,
     inStock: true,
     category: "lighting",
   },
@@ -516,7 +550,7 @@ export const lighting: Product[] = [
       { label: "Power", value: "V-Mount / Anton Bauer / USB-C" },
       { label: "Control", value: "Bluetooth App + DMX" },
     ],
-    image: "/placeholder.svg",
+    image: luxliCello2Img,
     inStock: true,
     category: "lighting",
   },
@@ -535,7 +569,7 @@ export const lighting: Product[] = [
       { label: "Control", value: "Sidus Link App + 2.4GHz" },
       { label: "Mount", value: "Bowens S-Mount" },
     ],
-    image: "/placeholder.svg",
+    image: aputureAmaran200xImg,
     inStock: true,
     category: "lighting",
   },
@@ -554,7 +588,7 @@ export const lighting: Product[] = [
       { label: "Battery", value: "Built-in (2 hrs runtime)" },
       { label: "Effects", value: "14 built-in (lightning, fire, etc.)" },
     ],
-    image: "/placeholder.svg",
+    image: nanlitePavotubeImg,
     inStock: true,
     category: "lighting",
   },
