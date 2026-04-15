@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import pool from "./db.js";
+import { autoSeed } from "./autoSeed.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import orderRoutes from "./routes/orders.js";
@@ -77,12 +78,13 @@ async function migrate() {
 }
 
 migrate()
+  .then(() => autoSeed())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("\u274c Migration failed, aborting:", err.message);
+    console.error("\u274c Startup failed:", err.message);
     process.exit(1);
   });
