@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CamerasPage from "./pages/categories/Cameras.tsx";
@@ -16,39 +17,58 @@ import Support from "./pages/Support.tsx";
 import Shipping from "./pages/Shipping.tsx";
 import Returns from "./pages/Returns.tsx";
 import Warranty from "./pages/Warranty.tsx";
+import AdminLogin from "./pages/admin/Login.tsx";
+import Dashboard from "./pages/admin/Dashboard.tsx";
+import AdminProducts from "./pages/admin/Products.tsx";
+import ProductForm from "./pages/admin/ProductForm.tsx";
+import AdminCategories from "./pages/admin/Categories.tsx";
 
 const queryClient = new QueryClient();
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth();
+  return token ? <>{children}</> : <Navigate to="/admin/login" replace />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* Category listing pages */}
-          <Route path="/cameras" element={<CamerasPage />} />
-          <Route path="/lenses" element={<LensesPage />} />
-          <Route path="/microphones" element={<MicrophonesPage />} />
-          <Route path="/teleprompters" element={<TelepromptersPage />} />
-          <Route path="/lighting" element={<LightingPage />} />
-          {/* Product detail pages */}
-          <Route path="/cameras/:id" element={<ProductDetail />} />
-          <Route path="/lenses/:id" element={<ProductDetail />} />
-          <Route path="/microphones/:id" element={<ProductDetail />} />
-          <Route path="/teleprompters/:id" element={<ProductDetail />} />
-          <Route path="/lighting/:id" element={<ProductDetail />} />
-          {/* Support / Info pages */}
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/shipping" element={<Shipping />} />
-          <Route path="/returns" element={<Returns />} />
-          <Route path="/warranty" element={<Warranty />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* Category listing pages */}
+            <Route path="/cameras" element={<CamerasPage />} />
+            <Route path="/lenses" element={<LensesPage />} />
+            <Route path="/microphones" element={<MicrophonesPage />} />
+            <Route path="/teleprompters" element={<TelepromptersPage />} />
+            <Route path="/lighting" element={<LightingPage />} />
+            {/* Product detail pages */}
+            <Route path="/cameras/:id" element={<ProductDetail />} />
+            <Route path="/lenses/:id" element={<ProductDetail />} />
+            <Route path="/microphones/:id" element={<ProductDetail />} />
+            <Route path="/teleprompters/:id" element={<ProductDetail />} />
+            <Route path="/lighting/:id" element={<ProductDetail />} />
+            {/* Support / Info pages */}
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/shipping" element={<Shipping />} />
+            <Route path="/returns" element={<Returns />} />
+            <Route path="/warranty" element={<Warranty />} />
+            {/* Admin CMS */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+            <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+            <Route path="/admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+            <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

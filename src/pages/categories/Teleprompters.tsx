@@ -1,6 +1,5 @@
 import CategoryListingPage from "@/components/CategoryListingPage";
-import { teleprompters } from "@/data/products";
 
-const TelepromptersPage = () => <CategoryListingPage category="teleprompters" products={teleprompters} />;
+const TelepromptersPage = () => <CategoryListingPage category="teleprompters" />;
 
 export default TelepromptersPage;

@@ -1,4 +1,4 @@
-# ── Stage 1: Build ──────────────────────────────────────────────────────────
+# ── Stage 1: Build React app ────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -9,12 +9,21 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# ── Stage 2: Serve ──────────────────────────────────────────────────────────
-FROM nginx:stable-alpine AS runner
+# ── Stage 2: Production server ───────────────────────────────────────────────
+FROM node:20-alpine AS runner
 
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-EXPOSE 80
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-CMD ["nginx", "-g", "daemon off;"]
+COPY server/ ./server/
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+
+ENV NODE_ENV=production
+ENV PORT=10000
+
+EXPOSE 10000
+
+CMD ["node", "server/index.js"]

@@ -1,8 +1,17 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import heroCamera from "@/assets/hero-camera.jpg";
-import cineLens from "@/assets/cine-lens.jpg";
-import fieldMonitor from "@/assets/field-monitor.jpg";
+import { api, ApiProduct } from "@/lib/api";
 
 const HeroSection = () => {
+  const [featured, setFeatured] = useState<ApiProduct[]>([]);
+
+  useEffect(() => {
+    api.products.list(undefined, true)
+      .then((products) => setFeatured(products.slice(0, 3)))
+      .catch(() => {});
+  }, []);
+
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 technical-grid opacity-20 pointer-events-none" />
@@ -82,33 +91,42 @@ const HeroSection = () => {
             <span className="font-mono-tech text-[10px] text-primary block mb-4 tracking-widest">
               FEATURED GEAR
             </span>
-            <div className="space-y-6">
-              <div className="flex gap-4 items-start">
-                <div className="size-16 shrink-0 bg-chassis border border-border-subtle overflow-hidden">
-                  <img src={cineLens} loading="lazy" className="size-full object-cover" width={150} height={150} alt="Cinema lens" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">Anamorphic Prime 35mm</h4>
-                  <p className="font-mono-tech text-[10px] text-muted-foreground">T1.5 Carbon Fiber</p>
-                  <p className="mt-1 text-xs text-primary">UGX 990,000</p>
-                </div>
+            {featured.length === 0 ? (
+              <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
+                No featured products yet.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {featured.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/${p.category}/${p.slug}`}
+                    className="flex gap-4 items-start group"
+                  >
+                    <div className="size-16 shrink-0 bg-chassis border border-border-subtle overflow-hidden">
+                      <img
+                        src={p.image_url}
+                        loading="lazy"
+                        className="size-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        alt={p.name}
+                      />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-foreground group-hover:text-primary transition-colors leading-snug">
+                        {p.name}
+                      </h4>
+                      <p className="font-mono-tech text-[10px] text-muted-foreground">{p.brand}</p>
+                      <p className="mt-1 text-xs text-primary">UGX {p.price.toLocaleString()}</p>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <div className="flex gap-4 items-start">
-                <div className="size-16 shrink-0 bg-chassis border border-border-subtle overflow-hidden">
-                  <img src={fieldMonitor} loading="lazy" className="size-full object-cover" width={150} height={150} alt="Field monitor" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">X-Field Monitor 7"</h4>
-                  <p className="font-mono-tech text-[10px] text-muted-foreground">3000 Nits HDR</p>
-                  <p className="mt-1 text-xs text-primary">UGX 265,000</p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="flex-1 border-l border-border-subtle pl-6 flex flex-col justify-end">
             <div className="font-mono-tech text-[10px] text-muted-foreground space-y-2 uppercase leading-relaxed">
-              <p>[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde & more.</p>
+              <p>[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde &amp; more.</p>
               <p>[SHIP] Same-day shipping on in-stock items.</p>
               <p>[SUPPORT] Expert advice from working professionals.</p>
             </div>

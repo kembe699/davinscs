@@ -1,8 +1,8 @@
-import { Product } from "@/data/products";
+import { ApiProduct, api } from "@/lib/api";
 
 const WA_NUMBER = "256792149296";
 
-function buildMessage(product: Product, includeSpecs = false): string {
+function buildMessage(product: ApiProduct, includeSpecs = false): string {
   const lines: string[] = [
     "Hi Davin's Camera Store! 👋",
     "I'd like to order the following:",
@@ -26,11 +26,12 @@ function buildMessage(product: Product, includeSpecs = false): string {
   return lines.join("\n");
 }
 
-export function buildWhatsAppUrl(product: Product, includeSpecs = false): string {
+export function buildWhatsAppUrl(product: ApiProduct, includeSpecs = false): string {
   const message = encodeURIComponent(buildMessage(product, includeSpecs));
   return `https://wa.me/${WA_NUMBER}?text=${message}`;
 }
 
-export function orderViaWhatsApp(product: Product, includeSpecs = false): void {
+export function orderViaWhatsApp(product: ApiProduct, includeSpecs = false): void {
+  api.orders.track(product.id, product.name).catch(() => {});
   window.open(buildWhatsAppUrl(product, includeSpecs), "_blank");
 }

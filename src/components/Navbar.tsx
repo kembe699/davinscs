@@ -1,18 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { api, ApiCategory } from "@/lib/api";
 
-const navLinks = [
-  { label: "[01] Cameras", to: "/cameras" },
-  { label: "[02] Microphones", to: "/microphones" },
-  { label: "[03] Teleprompters", to: "/teleprompters" },
-  { label: "[04] Support", to: "/support" },
-  { label: "[05] Contact", to: "/contact" },
+const staticLinks = [
+  { label: "Support", to: "/support" },
+  { label: "Contact", to: "/contact" },
 ];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const location = useLocation();
+
+  useEffect(() => {
+    api.categories.list().then(setCategories).catch(() => {});
+  }, []);
+
+  const categoryLinks = categories.map((c) => ({
+    label: `[${String(c.sort_order).padStart(2, "0")}] ${c.name}`,
+    to: `/${c.slug}`,
+  }));
+
+  const allLinks = [...categoryLinks, ...staticLinks];
 
   return (
     <nav className="border-b border-border-subtle px-6 lg:px-8 h-16 flex items-center justify-between sticky top-0 bg-chassis/80 backdrop-blur-md z-50">
@@ -21,7 +31,7 @@ const Navbar = () => {
           <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-10 w-auto object-contain" />
         </Link>
         <div className="hidden lg:flex gap-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {navLinks.map((link) => (
+          {allLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -45,7 +55,7 @@ const Navbar = () => {
 
       {mobileOpen && (
         <div className="absolute top-16 left-0 right-0 bg-chassis border-b border-border-subtle p-6 flex flex-col gap-4 lg:hidden z-50">
-          {navLinks.map((link) => (
+          {allLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}

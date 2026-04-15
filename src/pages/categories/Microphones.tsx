@@ -1,6 +1,5 @@
 import CategoryListingPage from "@/components/CategoryListingPage";
-import { microphones } from "@/data/products";
 
-const MicrophonesPage = () => <CategoryListingPage category="microphones" products={microphones} />;
+const MicrophonesPage = () => <CategoryListingPage category="microphones" />;
 
 export default MicrophonesPage;

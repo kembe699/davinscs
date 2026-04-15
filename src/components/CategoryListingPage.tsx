@@ -1,20 +1,31 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useState } from "react";
-import type { Category, Product } from "@/data/products";
+import { useState, useEffect } from "react";
+import type { Category } from "@/data/products";
 import { categoryMeta } from "@/data/products";
+import { api, ApiProduct } from "@/lib/api";
 
 type Props = {
   category: Category;
-  products: Product[];
 };
 
-const CategoryListingPage = ({ category, products }: Props) => {
+const CategoryListingPage = ({ category }: Props) => {
   const meta = categoryMeta[category];
-  const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBrand, setSelectedBrand] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
+
+  useEffect(() => {
+    setLoading(true);
+    api.products.list(category)
+      .then(setProducts)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [category]);
+
+  const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
 
   const filtered = products
     .filter((p) => selectedBrand === "ALL" || p.brand === selectedBrand)
@@ -111,7 +122,13 @@ const CategoryListingPage = ({ category, products }: Props) => {
 
       {/* Product Grid */}
       <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-24">
+            <p className="font-mono-tech text-muted-foreground text-sm uppercase tracking-widest animate-pulse">
+              Loading products…
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-24">
             <p className="font-mono-tech text-muted-foreground text-sm uppercase tracking-widest">
               No products match the selected filter.
@@ -120,7 +137,7 @@ const CategoryListingPage = ({ category, products }: Props) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
             {filtered.map((product) => (
-              <div key={product.id} className="bg-background">
+              <div key={product.slug} className="bg-background">
                 <ProductCard product={product} />
               </div>
             ))}

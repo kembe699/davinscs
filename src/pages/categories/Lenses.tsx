@@ -1,6 +1,5 @@
 import CategoryListingPage from "@/components/CategoryListingPage";
-import { lenses } from "@/data/products";
 
-const LensesPage = () => <CategoryListingPage category="lenses" products={lenses} />;
+const LensesPage = () => <CategoryListingPage category="lenses" />;
 
 export default LensesPage;

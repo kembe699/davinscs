@@ -1,20 +1,20 @@
 import { Link } from "react-router-dom";
-import type { Product } from "@/data/products";
+import { ApiProduct } from "@/lib/api";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
 
 type Props = {
-  product: Product;
+  product: ApiProduct;
 };
 
 const ProductCard = ({ product }: Props) => {
   return (
     <Link
-      to={`/${product.category}/${product.id}`}
+      to={`/${product.category}/${product.slug}`}
       className="bg-chassis border border-border-subtle group flex flex-col hover:border-primary/40 transition-colors"
     >
       <div className="aspect-square bg-grip relative overflow-hidden">
         <img
-          src={product.image}
+          src={product.image_url}
           alt={product.name}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-70"
@@ -24,7 +24,7 @@ const ProductCard = ({ product }: Props) => {
             {product.tag}
           </span>
         </div>
-        {!product.inStock && (
+        {!product.in_stock && (
           <div className="absolute inset-0 bg-chassis/70 flex items-center justify-center">
             <span className="font-mono-tech text-[10px] text-muted-foreground tracking-widest uppercase border border-border-subtle px-3 py-1">
               Out of Stock
@@ -45,6 +45,7 @@ const ProductCard = ({ product }: Props) => {
           </span>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); orderViaWhatsApp(product); }}
+            aria-label="Order via WhatsApp"
             title="Order via WhatsApp"
             className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[10px] font-mono-tech uppercase tracking-widest px-2.5 py-1.5 transition-colors"
           >

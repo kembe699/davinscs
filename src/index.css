@@ -110,3 +110,13 @@
 .animate-fade-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
 .animate-fade-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
 .animate-fade-up-delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+.field-label {
+  @apply font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest block mb-2;
+}
+.field-input {
+  @apply w-full h-11 bg-background border border-border-subtle px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors;
+}
+textarea.field-input {
+  @apply h-auto py-3;
+}
