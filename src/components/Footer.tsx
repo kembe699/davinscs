@@ -14,7 +14,8 @@ const Footer = () => {
             </p>
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>📍 London Chambers GF Shop 16<br />Johnson Street, Kampala</p>
-              <p className="pt-1">📞 0757-774682</p>
+              <a href="tel:+256757774682" className="block pt-1 hover:text-primary transition-colors">📞 0757-774682</a>
+              <a href="https://wa.me/256792149296" target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 WhatsApp Us</a>
               <p>✉️ infor@davinsstore</p>
             </div>
           </div>
