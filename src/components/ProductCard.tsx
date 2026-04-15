@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Product } from "@/data/products";
-import { buildWhatsAppUrl } from "@/utils/whatsapp";
+import { orderViaWhatsApp } from "@/utils/whatsapp";
 
 type Props = {
   product: Product;
@@ -43,11 +43,8 @@ const ProductCard = ({ product }: Props) => {
           <span className="text-primary font-mono-tech text-sm font-medium">
             UGX {product.price.toLocaleString()}
           </span>
-          <a
-            href={buildWhatsAppUrl(product)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); orderViaWhatsApp(product); }}
             title="Order via WhatsApp"
             className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[10px] font-mono-tech uppercase tracking-widest px-2.5 py-1.5 transition-colors"
           >
@@ -56,7 +53,7 @@ const ProductCard = ({ product }: Props) => {
               <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L.057 23.273a.75.75 0 0 0 .92.92l5.421-1.471A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.693 9.693 0 0 1-4.953-1.36l-.355-.212-3.676.997.977-3.567-.232-.368A9.693 9.693 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
             </svg>
             Order
-          </a>
+          </button>
         </div>
       </div>
     </Link>
