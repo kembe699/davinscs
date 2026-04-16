@@ -16,7 +16,7 @@ function generateSaleNumber() {
 
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
-  const { customer_id, items, payment_type_id, discount_amount, sale_type, notes } = req.body;
+  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status } = req.body;
   const user_id = req.user.id;
   
   if (!items || items.length === 0) {
@@ -107,11 +107,11 @@ router.post("/sales", requireAuth, async (req, res) => {
     
     // Create sale
     const saleResult = await client.query(
-      `INSERT INTO pos_sales (sale_number, customer_id, user_id, session_id, subtotal, tax_amount, 
-                              discount_amount, total_amount, payment_type_id, payment_status, sale_type, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [sale_number, customer_id, user_id, session_id, subtotal, tax_amount, total_discount, 
-       total_amount, payment_type_id, payment_status, sale_type || 'regular', notes]
+      `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, subtotal, tax_amount, 
+                              discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+      [sale_number, customer_id, customer_name, user_id, session_id, subtotal, tax_amount, total_discount, 
+       total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes]
     );
     
     const sale = saleResult.rows[0];

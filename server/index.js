@@ -366,6 +366,7 @@ async function migrate() {
       id SERIAL PRIMARY KEY,
       sale_number VARCHAR(50) UNIQUE NOT NULL,
       customer_id INTEGER REFERENCES customers(id),
+      customer_name VARCHAR(255),
       user_id INTEGER REFERENCES users(id),
       session_id INTEGER REFERENCES cash_drawer_sessions(id),
       subtotal INTEGER NOT NULL,
@@ -375,9 +376,9 @@ async function migrate() {
       payment_type_id INTEGER REFERENCES payment_types(id),
       payment_status VARCHAR(20) DEFAULT 'paid',
       sale_type VARCHAR(20) DEFAULT 'regular',
+      status VARCHAR(20) DEFAULT 'completed',
       notes TEXT,
-      voided BOOLEAN DEFAULT false,
-      voided_at TIMESTAMPTZ,
+      voided BOOLEAN DEFAULT FALSE,
       voided_by INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT NOW()
     );

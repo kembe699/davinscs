@@ -23,6 +23,8 @@ export default function POSMain() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountType, setDiscountType] = useState<"percentage" | "amount">("percentage");
   const [discountValue, setDiscountValue] = useState(0);
+  const [heldSales, setHeldSales] = useState<Array<any>>([]);
+  const [showHeldSales, setShowHeldSales] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -127,6 +129,99 @@ export default function POSMain() {
     setShowDiscountModal(false);
   };
 
+  const handleHoldSale = async () => {
+    if (cart.length === 0) {
+      alert("Cart is empty");
+      return;
+    }
+
+    try {
+      const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
+      
+      const saleData = {
+        customer_name: customerName || 'Walk-in Customer',
+        items: cart.map(item => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+          discount_amount: item.discount,
+        })),
+        payment_type_id: selectedPaymentType || 1,
+        discount_amount: cartDiscount,
+        sale_type: "regular",
+        status: "held",
+      };
+
+      const sale = await api.pos.createSale(saleData);
+      
+      // Store held sale locally
+      const heldSale = {
+        ...sale,
+        items: cart,
+        customerName: customerName || 'Walk-in Customer',
+        subtotal,
+        taxAmount,
+        total,
+      };
+      
+      setHeldSales([...heldSales, heldSale]);
+      
+      // Clear current cart
+      setCart([]);
+      setCartDiscount(0);
+      setCustomerName("");
+      
+      // Print sale order
+      printSaleOrder(heldSale);
+      
+      alert(`Sale ${sale.sale_number} held successfully!`);
+    } catch (err: any) {
+      alert(err.message || "Failed to hold sale");
+    }
+  };
+
+  const printSaleOrder = (sale: any) => {
+    const printWindow = window.open('', '', 'width=400,height=600');
+    if (!printWindow) return;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Sale Order - ${sale.sale_number}</title>
+          <style>
+            body { font-family: monospace; padding: 20px; }
+            h2 { text-align: center; }
+            .line { border-top: 1px solid black; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <h2>SALE ORDER</h2>
+          <p>Order #: ${sale.sale_number}</p>
+          <p>Customer: ${sale.customerName}</p>
+          <p>Date: ${new Date().toLocaleString()}</p>
+          <div class="line"></div>
+          <h3>Items:</h3>
+          ${sale.items.map((item: any) => `
+            <p>${item.product.name} x ${item.quantity} - UGX ${(item.product.price / 100).toFixed(0)}</p>
+          `).join('')}
+          <div class="line"></div>
+          <p><strong>Total: UGX ${(sale.total / 100).toFixed(0)}</strong></p>
+          <p style="text-align: center; margin-top: 20px;">*** HELD - NOT PAID ***</p>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const loadHeldSale = (heldSale: any) => {
+    setCart(heldSale.items);
+    setCustomerName(heldSale.customerName);
+    setCartDiscount(heldSale.items.reduce((sum: number, item: any) => sum + item.discount, 0));
+    setHeldSales(heldSales.filter(s => s.id !== heldSale.id));
+    setShowHeldSales(false);
+  };
+
   const handlePayment = async () => {
     if (!selectedPaymentType) {
       alert("Please select a payment type");
@@ -142,6 +237,7 @@ export default function POSMain() {
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
       
       const saleData = {
+        customer_name: customerName || 'Walk-in Customer',
         items: cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -151,6 +247,7 @@ export default function POSMain() {
         payment_type_id: selectedPaymentType,
         discount_amount: cartDiscount,
         sale_type: "regular",
+        status: "completed",
       };
 
       const sale = await api.pos.createSale(saleData);
@@ -294,12 +391,28 @@ export default function POSMain() {
 
           <div className="p-3 border-t border-admin-border flex gap-2">
             <button
+              onClick={handleHoldSale}
+              className="flex-1 px-3 py-2 bg-yellow-600 text-white text-sm hover:opacity-90"
+            >
+              Lock Sale
+            </button>
+            <button
               onClick={() => setCart([])}
               className="flex-1 px-3 py-2 bg-admin-danger text-white text-sm hover:opacity-90"
             >
               Void Order
             </button>
           </div>
+          {heldSales.length > 0 && (
+            <div className="p-3 border-t border-admin-border">
+              <button
+                onClick={() => setShowHeldSales(true)}
+                className="w-full px-3 py-2 bg-admin-text text-admin-bg text-sm hover:opacity-90"
+              >
+                View Held Sales ({heldSales.length})
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Panel - Products */}
@@ -620,6 +733,53 @@ export default function POSMain() {
                 Apply
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Held Sales Modal */}
+      {showHeldSales && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-6 w-[600px] max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-admin-text">Held Sales</h2>
+              <button
+                onClick={() => setShowHeldSales(false)}
+                className="text-admin-text-secondary hover:text-admin-text"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {heldSales.length === 0 ? (
+              <p className="text-center text-admin-text-secondary py-8">No held sales</p>
+            ) : (
+              <div className="space-y-3">
+                {heldSales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="bg-admin-bg border border-admin-border p-4 hover:bg-admin-surface cursor-pointer"
+                    onClick={() => loadHeldSale(sale)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-sm font-bold text-admin-text">{sale.sale_number}</p>
+                        <p className="text-xs text-admin-text-secondary">{sale.customerName}</p>
+                      </div>
+                      <p className="text-sm font-bold text-admin-text font-mono">
+                        UGX {(sale.total / 100).toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="text-xs text-admin-text-secondary">
+                      {sale.items.length} item(s) • {new Date(sale.created_at).toLocaleString()}
+                    </div>
+                    <div className="mt-2 text-xs text-yellow-600">
+                      Click to load and continue
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
