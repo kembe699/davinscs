@@ -95,6 +95,8 @@ export const api = {
     list: () => request<ApiUser[]>("/api/users"),
     create: (email: string, password: string) =>
       request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password }) }),
+    update: (id: number, email: string, password?: string) =>
+      request<ApiUser>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify({ email, password: password || undefined }) }),
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/users/${id}`, { method: "DELETE" }),
   },

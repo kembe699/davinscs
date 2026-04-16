@@ -35,6 +35,31 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
+router.put("/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const { email, password } = req.body;
+  if (!email) return res.status(400).json({ error: "Email required" });
+  try {
+    let query, params;
+    if (password) {
+      if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+      const hash = await bcrypt.hash(password, 10);
+      query = "UPDATE users SET email = $1, password_hash = $2 WHERE id = $3 RETURNING id, email, role, created_at";
+      params = [email.toLowerCase(), hash, id];
+    } else {
+      query = "UPDATE users SET email = $1 WHERE id = $2 RETURNING id, email, role, created_at";
+      params = [email.toLowerCase(), id];
+    }
+    const { rows } = await pool.query(query, params);
+    if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.delete("/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (id === req.user.id) return res.status(400).json({ error: "Cannot delete your own account" });
