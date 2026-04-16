@@ -12,6 +12,10 @@ export default function SalesHistory() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
+  const [filterCustomer, setFilterCustomer] = useState("");
+  const [filterUser, setFilterUser] = useState("");
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -52,9 +56,58 @@ export default function SalesHistory() {
     loadData();
   };
 
+  const handlePrint = () => {
+    if (!selectedSale) {
+      alert("Please select a sale to print");
+      return;
+    }
+    setReceiptData(selectedSale);
+    setShowReceiptModal(true);
+  };
+
+  const handleRefund = async () => {
+    if (!selectedSale) {
+      alert("Please select a sale to refund");
+      return;
+    }
+    if (selectedSale.voided) {
+      alert("This sale has already been refunded");
+      return;
+    }
+    if (!confirm(`Are you sure you want to refund sale ${selectedSale.sale_number}?`)) return;
+    
+    try {
+      await api.pos.voidSale(selectedSale.id);
+      alert("Sale refunded successfully");
+      loadData();
+      setSelectedSale(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to refund sale");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedSale) {
+      alert("Please select a sale to delete");
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete sale ${selectedSale.sale_number}? This action cannot be undone.`)) return;
+    
+    try {
+      await api.pos.voidSale(selectedSale.id);
+      alert("Sale deleted successfully");
+      loadData();
+      setSelectedSale(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to delete sale");
+    }
+  };
+
   const filteredSales = sales.filter(sale => {
     if (startDate && new Date(sale.created_at) < new Date(startDate)) return false;
     if (endDate && new Date(sale.created_at) > new Date(endDate)) return false;
+    if (filterCustomer && !sale.customer_id) return false;
+    if (filterUser && filterUser !== "all") return false;
     return true;
   });
 
@@ -100,33 +153,47 @@ export default function SalesHistory() {
             <RefreshCw size={14} />
             Refresh
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
+          <button 
+            onClick={() => setFilterUser(filterUser === "all" ? "" : "all")}
+            className={`px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface ${
+              filterUser === "all" ? "bg-admin-text text-admin-bg" : ""
+            }`}
+          >
             Show all users
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+          <button 
+            onClick={() => setFilterCustomer(filterCustomer ? "" : "customer")}
+            className={`px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 ${
+              filterCustomer ? "bg-admin-text text-admin-bg" : ""
+            }`}
+          >
             <User size={14} />
             Customer
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+          <button 
+            onClick={handlePrint}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+          >
             <Printer size={14} />
             Print
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
-            <FileText size={14} />
-            Save as PDF
-          </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
-            <FileText size={14} />
-            Receipt
-          </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+          <button 
+            onClick={() => window.print()}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+          >
             <Mail size={14} />
             Send email
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
+          <button 
+            onClick={handleRefund}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          >
             Refund
           </button>
-          <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+          <button 
+            onClick={handleDelete}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-danger text-sm hover:bg-admin-surface flex items-center gap-2"
+          >
             <Trash2 size={14} />
             Delete
           </button>
@@ -242,6 +309,86 @@ export default function SalesHistory() {
           )}
         </div>
       </div>
+
+      {/* Receipt Modal */}
+      {showReceiptModal && receiptData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-black uppercase">Davin's Camera Store</h2>
+              <p className="text-xs text-black">Kampala, Uganda</p>
+              <p className="text-xs text-black">Tel: +256-XXX-XXXXXX</p>
+              <div className="border-t border-black my-3"></div>
+              <p className="text-sm font-bold text-black">SALES RECEIPT</p>
+              <p className="text-xs text-black">#{receiptData.sale_number}</p>
+              <p className="text-xs text-black">{new Date(receiptData.created_at).toLocaleString()}</p>
+              <div className="border-t border-black my-3"></div>
+              <p className="text-xs text-black text-left">Customer: Walk-in Customer</p>
+            </div>
+
+            <div className="mb-4">
+              <div className="border-b border-black pb-1 mb-2">
+                <div className="flex justify-between text-xs font-bold text-black">
+                  <span>ITEM</span>
+                  <span>QTY</span>
+                  <span>PRICE</span>
+                  <span>TOTAL</span>
+                </div>
+              </div>
+              {saleItems.map((item: any, idx: number) => (
+                <div key={idx} className="mb-2">
+                  <div className="text-xs text-black">{item.product_name}</div>
+                  <div className="flex justify-between text-xs text-black">
+                    <span></span>
+                    <span>{item.quantity}</span>
+                    <span>UGX {(item.unit_price / 100).toFixed(0)}</span>
+                    <span>UGX {(item.subtotal / 100).toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-black pt-2 mb-4">
+              <div className="flex justify-between text-xs text-black mb-1">
+                <span>Subtotal:</span>
+                <span>UGX {(receiptData.subtotal / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-black mb-1">
+                <span>Tax (18%):</span>
+                <span>UGX {(receiptData.tax_amount / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
+                <span className="text-black">TOTAL:</span>
+                <span className="text-black">UGX {(receiptData.total_amount / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-black mt-3">
+                <span>Payment:</span>
+                <span>{getPaymentTypeName(receiptData.payment_type_id)}</span>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-black mb-6 border-t border-black pt-3">
+              <p>*** Thank you for your business! ***</p>
+              <p>*** Please come again ***</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 px-4 py-2 bg-gray-800 text-white hover:bg-gray-700"
+              >
+                Print Receipt
+              </button>
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
