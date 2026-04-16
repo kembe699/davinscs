@@ -121,5 +121,88 @@ export async function autoSeed() {
     WHERE quantity_on_hand = 0
   `);
 
-  console.log("✅ Auto-seed complete (admin + categories + products + suppliers + accounts + inventory)");
+  // Seed payment types
+  const paymentTypes = [
+    { name: "Cash", code: "cash", sort_order: 1 },
+    { name: "Card", code: "card", sort_order: 2 },
+    { name: "Check", code: "check", sort_order: 3 },
+    { name: "Credit", code: "credit", sort_order: 4 },
+    { name: "Mobile Money", code: "mobile", sort_order: 5 },
+  ];
+
+  for (const pt of paymentTypes) {
+    await pool.query(
+      `INSERT INTO payment_types (name, code, sort_order, is_active) 
+       VALUES ($1, $2, $3, true) ON CONFLICT (code) DO NOTHING`,
+      [pt.name, pt.code, pt.sort_order]
+    );
+  }
+
+  // Seed tax rates
+  const taxRates = [
+    { name: "VAT 18%", rate: 18.00, is_default: true },
+    { name: "No Tax", rate: 0.00, is_default: false },
+    { name: "Reduced VAT 5%", rate: 5.00, is_default: false },
+  ];
+
+  for (const tr of taxRates) {
+    await pool.query(
+      `INSERT INTO tax_rates (name, rate, is_active, is_default) 
+       VALUES ($1, $2, true, $3) ON CONFLICT DO NOTHING`,
+      [tr.name, tr.rate, tr.is_default]
+    );
+  }
+
+  // Seed default price list
+  await pool.query(
+    `INSERT INTO price_lists (name, description, discount_percent, is_active) 
+     VALUES ('Standard', 'Standard retail pricing', 0, true) ON CONFLICT DO NOTHING`
+  );
+
+  await pool.query(
+    `INSERT INTO price_lists (name, description, discount_percent, is_active) 
+     VALUES ('Wholesale', 'Wholesale pricing with 10% discount', 10, true) ON CONFLICT DO NOTHING`
+  );
+
+  // Seed company settings
+  await pool.query(
+    `INSERT INTO company_settings (company_name, address, phone, email, currency, receipt_footer)
+     VALUES ('Davin''s Camera Store', 'Kampala, Uganda', '+256-XXX-XXXXXX', 'info@divinsstore.com', 'UGX', 'Thank you for your business!')
+     ON CONFLICT DO NOTHING`
+  );
+
+  // Seed countries
+  const countries = [
+    { code: "UG", name: "Uganda" },
+    { code: "KE", name: "Kenya" },
+    { code: "TZ", name: "Tanzania" },
+    { code: "RW", name: "Rwanda" },
+  ];
+
+  for (const country of countries) {
+    await pool.query(
+      `INSERT INTO countries (code, name, is_active) 
+       VALUES ($1, $2, true) ON CONFLICT (code) DO NOTHING`,
+      [country.code, country.name]
+    );
+  }
+
+  // Update admin user to have POS access
+  await pool.query(
+    `UPDATE users SET can_access_pos = true WHERE email = 'admin@divinsstore.com'`
+  );
+
+  // Get default tax rate and assign to products
+  const defaultTax = await pool.query(
+    "SELECT id FROM tax_rates WHERE is_default = true LIMIT 1"
+  );
+  
+  if (defaultTax.rows[0]) {
+    await pool.query(
+      "UPDATE products SET tax_rate_id = $1 WHERE tax_rate_id IS NULL",
+      [defaultTax.rows[0].id]
+    );
+  }
+
+  console.log("✅ Auto-seed complete (admin + categories + products + suppliers + accounts + inventory + POS data)");
 }

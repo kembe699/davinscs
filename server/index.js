@@ -17,6 +17,15 @@ import procurementRoutes from "./routes/procurement.js";
 import accountingRoutes from "./routes/accounting.js";
 import cartRoutes from "./routes/cart.js";
 import checkoutRoutes from "./routes/checkout.js";
+import paymentTypesRoutes from "./routes/payment-types.js";
+import taxRatesRoutes from "./routes/tax-rates.js";
+import priceListsRoutes from "./routes/price-lists.js";
+import promotionsRoutes from "./routes/promotions.js";
+import countriesRoutes from "./routes/countries.js";
+import companyRoutes from "./routes/company.js";
+import posRoutes from "./routes/pos.js";
+import cashDrawerRoutes from "./routes/cash-drawer.js";
+import posReportsRoutes from "./routes/pos-reports.js";
 
 dotenv.config();
 
@@ -57,6 +66,15 @@ app.use("/api/procurement", procurementRoutes);
 app.use("/api/accounting", accountingRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
+app.use("/api/payment-types", paymentTypesRoutes);
+app.use("/api/tax-rates", taxRatesRoutes);
+app.use("/api/price-lists", priceListsRoutes);
+app.use("/api/promotions", promotionsRoutes);
+app.use("/api/countries", countriesRoutes);
+app.use("/api/company", companyRoutes);
+app.use("/api/pos", posRoutes);
+app.use("/api/cash-drawer", cashDrawerRoutes);
+app.use("/api/pos-reports", posReportsRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -257,6 +275,162 @@ async function migrate() {
       PRIMARY KEY (sid)
     );
     CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire);
+    
+    -- POS Tables
+    CREATE TABLE IF NOT EXISTS payment_types (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS tax_rates (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      rate DECIMAL(5,2) NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      is_default BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS price_lists (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      discount_percent DECIMAL(5,2) DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS promotions (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      discount_type VARCHAR(20) NOT NULL,
+      discount_value DECIMAL(10,2) NOT NULL,
+      start_date DATE,
+      end_date DATE,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS countries (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(3) UNIQUE NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS company_settings (
+      id SERIAL PRIMARY KEY,
+      company_name VARCHAR(255) NOT NULL,
+      address TEXT,
+      phone VARCHAR(50),
+      email VARCHAR(255),
+      tax_id VARCHAR(100),
+      currency VARCHAR(10) DEFAULT 'UGX',
+      logo_url VARCHAR(500),
+      receipt_footer TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS cash_drawer_sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      opening_cash INTEGER NOT NULL,
+      closing_cash INTEGER,
+      expected_cash INTEGER,
+      cash_difference INTEGER,
+      opened_at TIMESTAMPTZ DEFAULT NOW(),
+      closed_at TIMESTAMPTZ,
+      status VARCHAR(20) DEFAULT 'open',
+      notes TEXT
+    );
+    
+    CREATE TABLE IF NOT EXISTS cash_movements (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER REFERENCES cash_drawer_sessions(id),
+      user_id INTEGER REFERENCES users(id),
+      type VARCHAR(20) NOT NULL,
+      amount INTEGER NOT NULL,
+      reason TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS pos_sales (
+      id SERIAL PRIMARY KEY,
+      sale_number VARCHAR(50) UNIQUE NOT NULL,
+      customer_id INTEGER REFERENCES customers(id),
+      user_id INTEGER REFERENCES users(id),
+      session_id INTEGER REFERENCES cash_drawer_sessions(id),
+      subtotal INTEGER NOT NULL,
+      tax_amount INTEGER NOT NULL,
+      discount_amount INTEGER DEFAULT 0,
+      total_amount INTEGER NOT NULL,
+      payment_type_id INTEGER REFERENCES payment_types(id),
+      payment_status VARCHAR(20) DEFAULT 'paid',
+      sale_type VARCHAR(20) DEFAULT 'regular',
+      notes TEXT,
+      voided BOOLEAN DEFAULT false,
+      voided_at TIMESTAMPTZ,
+      voided_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS pos_sale_items (
+      id SERIAL PRIMARY KEY,
+      sale_id INTEGER REFERENCES pos_sales(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id),
+      product_name VARCHAR(255) NOT NULL,
+      quantity INTEGER NOT NULL,
+      unit_price INTEGER NOT NULL,
+      discount_amount INTEGER DEFAULT 0,
+      tax_amount INTEGER NOT NULL,
+      subtotal INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS credit_sales (
+      id SERIAL PRIMARY KEY,
+      sale_id INTEGER REFERENCES pos_sales(id),
+      customer_id INTEGER REFERENCES customers(id),
+      total_amount INTEGER NOT NULL,
+      paid_amount INTEGER DEFAULT 0,
+      balance INTEGER NOT NULL,
+      due_date DATE,
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS customer_payments (
+      id SERIAL PRIMARY KEY,
+      credit_sale_id INTEGER REFERENCES credit_sales(id),
+      customer_id INTEGER REFERENCES customers(id),
+      amount INTEGER NOT NULL,
+      payment_type_id INTEGER REFERENCES payment_types(id),
+      payment_date TIMESTAMPTZ DEFAULT NOW(),
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    -- Extend customers table
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS credit_limit INTEGER DEFAULT 0;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS payment_terms INTEGER DEFAULT 30;
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS price_list_id INTEGER REFERENCES price_lists(id);
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS balance INTEGER DEFAULT 0;
+    
+    -- Extend products table
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode VARCHAR(100);
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS quick_sale BOOLEAN DEFAULT false;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS tax_rate_id INTEGER REFERENCES tax_rates(id);
+    
+    -- Extend users table
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS can_access_pos BOOLEAN DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS pos_pin VARCHAR(10);
   `);
   console.log("\u2705 Migrations applied");
 }
