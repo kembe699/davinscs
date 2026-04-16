@@ -31,6 +31,9 @@ import Reports from "./pages/admin/Reports.tsx";
 import Cart from "./pages/Cart.tsx";
 import Checkout from "./pages/Checkout.tsx";
 import OrderConfirmation from "./pages/OrderConfirmation.tsx";
+import POSMain from "./pages/pos/POSMain.tsx";
+import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
+import TaxRates from "./pages/admin/TaxRates.tsx";
 
 const queryClient = new QueryClient();
 
@@ -77,8 +80,11 @@ const App = () => (
             <Route path="/admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
             <Route path="/admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
+            <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
+            <Route path="/pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
             {/* E-commerce */}
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
