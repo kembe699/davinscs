@@ -18,6 +18,11 @@ export default function POSMain() {
   const [showMenu, setShowMenu] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountType, setDiscountType] = useState<"percentage" | "amount">("percentage");
+  const [discountValue, setDiscountValue] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -96,11 +101,30 @@ export default function POSMain() {
       return sum + (item.product.price * item.quantity) - item.discount;
     }, 0);
     
+    // Apply cart-level discount
+    let discountAmount = cartDiscount;
+    if (discountType === "percentage" && discountValue > 0) {
+      discountAmount = Math.round(subtotal * (discountValue / 100));
+    } else if (discountType === "amount" && discountValue > 0) {
+      discountAmount = discountValue;
+    }
+    
+    const afterDiscount = subtotal - discountAmount;
     const taxRate = defaultTax?.rate || 0;
-    const taxAmount = Math.round(subtotal * (taxRate / 100));
-    const total = subtotal + taxAmount - cartDiscount;
+    const taxAmount = Math.round(afterDiscount * (taxRate / 100));
+    const total = afterDiscount + taxAmount;
 
-    return { subtotal, taxAmount, total };
+    return { subtotal, taxAmount, total, discountAmount };
+  };
+
+  const applyDiscount = () => {
+    const { subtotal } = calculateTotals();
+    if (discountType === "percentage") {
+      setCartDiscount(Math.round(subtotal * (discountValue / 100)));
+    } else {
+      setCartDiscount(discountValue);
+    }
+    setShowDiscountModal(false);
   };
 
   const handlePayment = async () => {
@@ -115,7 +139,7 @@ export default function POSMain() {
     }
 
     try {
-      const { subtotal, taxAmount, total } = calculateTotals();
+      const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
       
       const saleData = {
         items: cart.map(item => ({
@@ -153,26 +177,28 @@ export default function POSMain() {
     }
   };
 
-  const { subtotal, taxAmount, total } = calculateTotals();
+  const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
 
   return (
     <div className="h-screen bg-admin-bg flex flex-col">
       {/* Top Toolbar */}
       <div className="bg-admin-surface border-b border-admin-border p-3 flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1">
-          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
-            <Search size={16} />
-            Search
-          </button>
-          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+          <button 
+            onClick={() => setShowCustomerModal(true)}
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+          >
             <User size={16} />
-            Customer
-          </button>
-          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-            Discount
+            {customerName || "Customer"}
           </button>
           <button 
-            onClick={() => { setCart([]); setCartDiscount(0); }}
+            onClick={() => setShowDiscountModal(true)}
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          >
+            Discount {cartDiscount > 0 ? `(-${discountType === 'percentage' ? discountValue + '%' : 'UGX ' + (discountValue/100).toFixed(0)})` : ''}
+          </button>
+          <button 
+            onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
           >
             New Sale
@@ -186,9 +212,6 @@ export default function POSMain() {
           >
             F10 Payment
           </button>
-          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-            F12 Cash
-          </button>
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
@@ -201,14 +224,8 @@ export default function POSMain() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Cart */}
         <div className="w-80 bg-admin-surface border-r border-admin-border flex flex-col">
-          <div className="p-3 border-b border-admin-border flex gap-2">
-            <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-              <Trash2 size={14} className="inline mr-1" />
-              Delete
-            </button>
-            <button className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-              Quantity
-            </button>
+          <div className="p-3 border-b border-admin-border">
+            <h3 className="text-admin-text font-medium text-sm">Shopping Cart</h3>
           </div>
 
           {/* Cart Items */}
@@ -256,15 +273,21 @@ export default function POSMain() {
           <div className="border-t border-admin-border p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Subtotal</span>
-              <span className="text-admin-text font-mono">{(subtotal / 100).toFixed(2)}</span>
+              <span className="text-admin-text font-mono">UGX {(subtotal / 100).toFixed(0)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-admin-text-secondary">Discount</span>
+                <span className="text-admin-danger font-mono">-UGX {(discountAmount / 100).toFixed(0)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
-              <span className="text-admin-text-secondary">Tax</span>
-              <span className="text-admin-text font-mono">{(taxAmount / 100).toFixed(2)}</span>
+              <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
+              <span className="text-admin-text font-mono">UGX {(taxAmount / 100).toFixed(0)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
               <span className="text-admin-text">Total</span>
-              <span className="text-admin-text font-mono">{(total / 100).toFixed(2)}</span>
+              <span className="text-admin-text font-mono">UGX {(total / 100).toFixed(0)}</span>
             </div>
           </div>
 
@@ -415,32 +438,32 @@ export default function POSMain() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Davin's Camera Store</h2>
-              <p className="text-sm text-gray-600">Kampala, Uganda</p>
-              <p className="text-sm text-gray-600">+256-XXX-XXXXXX</p>
+              <h2 className="text-2xl font-bold text-black">Davin's Camera Store</h2>
+              <p className="text-sm text-black">Kampala, Uganda</p>
+              <p className="text-sm text-black">+256-XXX-XXXXXX</p>
               <div className="border-t border-gray-300 my-4"></div>
-              <p className="text-lg font-bold">SALES RECEIPT</p>
-              <p className="text-sm text-gray-600">#{completedSale.sale_number}</p>
-              <p className="text-xs text-gray-500">{new Date(completedSale.created_at).toLocaleString()}</p>
+              <p className="text-lg font-bold text-black">SALES RECEIPT</p>
+              <p className="text-sm text-black">#{completedSale.sale_number}</p>
+              <p className="text-xs text-black">{new Date(completedSale.created_at).toLocaleString()}</p>
             </div>
 
             <div className="mb-6">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-300">
-                    <th className="text-left py-2">Item</th>
-                    <th className="text-center py-2">Qty</th>
-                    <th className="text-right py-2">Price</th>
-                    <th className="text-right py-2">Total</th>
+                    <th className="text-left py-2 text-black">Item</th>
+                    <th className="text-center py-2 text-black">Qty</th>
+                    <th className="text-right py-2 text-black">Price</th>
+                    <th className="text-right py-2 text-black">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {completedSale.items.map((item: any, idx: number) => (
                     <tr key={idx} className="border-b border-gray-200">
-                      <td className="py-2">{item.product.name}</td>
-                      <td className="text-center py-2">{item.quantity}</td>
-                      <td className="text-right py-2">UGX {(item.product.price / 100).toFixed(0)}</td>
-                      <td className="text-right py-2">UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</td>
+                      <td className="py-2 text-black">{item.product.name}</td>
+                      <td className="text-center py-2 text-black">{item.quantity}</td>
+                      <td className="text-right py-2 text-black">UGX {(item.product.price / 100).toFixed(0)}</td>
+                      <td className="text-right py-2 text-black">UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -449,24 +472,24 @@ export default function POSMain() {
 
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-mono">UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
+                <span className="text-black">Subtotal:</span>
+                <span className="font-mono text-black">UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tax ({defaultTax?.rate}%):</span>
-                <span className="font-mono">UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
+                <span className="text-black">Tax ({defaultTax?.rate}%):</span>
+                <span className="font-mono text-black">UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
-                <span>TOTAL:</span>
-                <span className="font-mono">UGX {(completedSale.total / 100).toFixed(0)}</span>
+                <span className="text-black">TOTAL:</span>
+                <span className="font-mono text-black">UGX {(completedSale.total / 100).toFixed(0)}</span>
               </div>
               <div className="flex justify-between text-sm mt-4">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="font-semibold">{completedSale.paymentTypeName}</span>
+                <span className="text-black">Payment Method:</span>
+                <span className="font-semibold text-black">{completedSale.paymentTypeName}</span>
               </div>
             </div>
 
-            <div className="text-center text-xs text-gray-500 mb-6">
+            <div className="text-center text-xs text-black mb-6">
               <p>Thank you for your business!</p>
               <p>Please come again</p>
             </div>
@@ -483,6 +506,107 @@ export default function POSMain() {
                 className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90"
               >
                 New Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Modal */}
+      {showCustomerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-6 w-96">
+            <h2 className="text-xl font-bold text-admin-text mb-4">Customer Information</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-admin-text-secondary mb-2">Customer Name</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter customer name"
+                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text placeholder-admin-text-secondary"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="flex-1 px-4 py-2 bg-admin-text text-admin-bg hover:opacity-90"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-6 w-96">
+            <h2 className="text-xl font-bold text-admin-text mb-4">Apply Discount</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-admin-text-secondary mb-2">Discount Type</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDiscountType("percentage")}
+                    className={`flex-1 px-4 py-2 text-sm ${
+                      discountType === "percentage"
+                        ? "bg-admin-text text-admin-bg"
+                        : "bg-admin-bg border border-admin-border text-admin-text"
+                    }`}
+                  >
+                    Percentage (%)
+                  </button>
+                  <button
+                    onClick={() => setDiscountType("amount")}
+                    className={`flex-1 px-4 py-2 text-sm ${
+                      discountType === "amount"
+                        ? "bg-admin-text text-admin-bg"
+                        : "bg-admin-bg border border-admin-border text-admin-text"
+                    }`}
+                  >
+                    Amount (UGX)
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-admin-text-secondary mb-2">
+                  {discountType === "percentage" ? "Percentage" : "Amount (in cents)"}
+                </label>
+                <input
+                  type="number"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Number(e.target.value))}
+                  placeholder={discountType === "percentage" ? "Enter percentage" : "Enter amount"}
+                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text placeholder-admin-text-secondary"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowDiscountModal(false);
+                  setDiscountValue(0);
+                  setCartDiscount(0);
+                }}
+                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+              >
+                Clear
+              </button>
+              <button
+                onClick={applyDiscount}
+                className="flex-1 px-4 py-2 bg-admin-text text-admin-bg hover:opacity-90"
+              >
+                Apply
               </button>
             </div>
           </div>
