@@ -62,6 +62,16 @@ export default {
         grip: "hsl(var(--grip))",
         metal: "hsl(var(--metal))",
         "border-subtle": "hsl(var(--border-subtle))",
+        admin: {
+          bg: "#1a1a1a",
+          surface: "#2d2d2d",
+          border: "#404040",
+          text: "#ffffff",
+          "text-secondary": "#b0b0b0",
+          accent: "#ffffff",
+          success: "#4caf50",
+          danger: "#f44336",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

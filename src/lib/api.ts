@@ -195,11 +195,131 @@ export type ApiCustomerOrder = {
 export type ApiOrderItem = {
   id: number;
   order_id: number;
-  product_id?: number;
+  product_id: number;
   product_name: string;
   product_price: number;
   quantity: number;
   subtotal: number;
+};
+
+export type PaymentType = {
+  id: number;
+  name: string;
+  code: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type TaxRate = {
+  id: number;
+  name: string;
+  rate: number;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+};
+
+export type PriceList = {
+  id: number;
+  name: string;
+  description: string;
+  discount_percent: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Promotion = {
+  id: number;
+  name: string;
+  description: string;
+  discount_type: string;
+  discount_value: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type Country = {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type CompanySettings = {
+  id: number;
+  company_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  tax_id: string;
+  currency: string;
+  logo_url: string;
+  receipt_footer: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type POSSale = {
+  id: number;
+  sale_number: string;
+  customer_id: number;
+  user_id: number;
+  session_id: number;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  payment_type_id: number;
+  payment_status: string;
+  sale_type: string;
+  notes: string;
+  voided: boolean;
+  voided_at: string;
+  voided_by: number;
+  created_at: string;
+  items?: POSSaleItem[];
+  customer_name?: string;
+  payment_type_name?: string;
+};
+
+export type POSSaleItem = {
+  id: number;
+  sale_id: number;
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  discount_amount: number;
+  tax_amount: number;
+  subtotal: number;
+  created_at: string;
+};
+
+export type CashDrawerSession = {
+  id: number;
+  user_id: number;
+  opening_cash: number;
+  closing_cash: number;
+  expected_cash: number;
+  cash_difference: number;
+  opened_at: string;
+  closed_at: string;
+  status: string;
+  notes: string;
+};
+
+export type CashMovement = {
+  id: number;
+  session_id: number;
+  user_id: number;
+  type: string;
+  amount: number;
+  reason: string;
+  created_at: string;
 };
 
 // Products
@@ -369,5 +489,148 @@ export const api = {
         credentials: "include",
       }),
     getOrder: (id: number) => request<ApiCustomerOrder>(`/api/checkout/orders/${id}`),
+  },
+  paymentTypes: {
+    list: () => request<PaymentType[]>("/api/payment-types"),
+    active: () => request<PaymentType[]>("/api/payment-types/active"),
+    create: (data: Partial<PaymentType>) =>
+      request<PaymentType>("/api/payment-types", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<PaymentType>) =>
+      request<PaymentType>(`/api/payment-types/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ message: string }>(`/api/payment-types/${id}`, { method: "DELETE" }),
+  },
+  taxRates: {
+    list: () => request<TaxRate[]>("/api/tax-rates"),
+    active: () => request<TaxRate[]>("/api/tax-rates/active"),
+    default: () => request<TaxRate>("/api/tax-rates/default"),
+    create: (data: Partial<TaxRate>) =>
+      request<TaxRate>("/api/tax-rates", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<TaxRate>) =>
+      request<TaxRate>(`/api/tax-rates/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ message: string }>(`/api/tax-rates/${id}`, { method: "DELETE" }),
+  },
+  priceLists: {
+    list: () => request<PriceList[]>("/api/price-lists"),
+    active: () => request<PriceList[]>("/api/price-lists/active"),
+    create: (data: Partial<PriceList>) =>
+      request<PriceList>("/api/price-lists", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<PriceList>) =>
+      request<PriceList>(`/api/price-lists/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ message: string }>(`/api/price-lists/${id}`, { method: "DELETE" }),
+  },
+  promotions: {
+    list: () => request<Promotion[]>("/api/promotions"),
+    active: () => request<Promotion[]>("/api/promotions/active"),
+    create: (data: Partial<Promotion>) =>
+      request<Promotion>("/api/promotions", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<Promotion>) =>
+      request<Promotion>(`/api/promotions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ message: string }>(`/api/promotions/${id}`, { method: "DELETE" }),
+  },
+  countries: {
+    list: () => request<Country[]>("/api/countries"),
+    active: () => request<Country[]>("/api/countries/active"),
+    create: (data: Partial<Country>) =>
+      request<Country>("/api/countries", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: Partial<Country>) =>
+      request<Country>(`/api/countries/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ message: string }>(`/api/countries/${id}`, { method: "DELETE" }),
+  },
+  company: {
+    get: () => request<CompanySettings>("/api/company"),
+    save: (data: Partial<CompanySettings>) =>
+      request<CompanySettings>("/api/company", { method: "POST", body: JSON.stringify(data) }),
+  },
+  pos: {
+    createSale: (data: {
+      customer_id?: number;
+      items: Array<{ product_id: number; quantity: number; unit_price?: number; discount_amount?: number }>;
+      payment_type_id: number;
+      discount_amount?: number;
+      sale_type?: string;
+      notes?: string;
+    }) => request<POSSale>("/api/pos/sales", { method: "POST", body: JSON.stringify(data) }),
+    getSales: (params?: {
+      start_date?: string;
+      end_date?: string;
+      customer_id?: number;
+      payment_status?: string;
+      sale_type?: string;
+    }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<POSSale[]>(`/api/pos/sales${qs ? `?${qs}` : ""}`);
+    },
+    getSale: (id: number) => request<POSSale>(`/api/pos/sales/${id}`),
+    voidSale: (id: number) =>
+      request<{ message: string }>(`/api/pos/sales/${id}/void`, { method: "POST" }),
+    refundSale: (id: number, items: Array<{ product_id: number; quantity: number }>) =>
+      request<{ message: string; refund_amount: number }>(`/api/pos/sales/${id}/refund`, {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      }),
+  },
+  cashDrawer: {
+    getCurrent: () => request<CashDrawerSession>("/api/cash-drawer/current"),
+    open: (opening_cash: number) =>
+      request<CashDrawerSession>("/api/cash-drawer/open", {
+        method: "POST",
+        body: JSON.stringify({ opening_cash }),
+      }),
+    close: (closing_cash: number, notes?: string) =>
+      request<CashDrawerSession>("/api/cash-drawer/close", {
+        method: "POST",
+        body: JSON.stringify({ closing_cash, notes }),
+      }),
+    cashIn: (amount: number, reason: string) =>
+      request<CashMovement>("/api/cash-drawer/cash-in", {
+        method: "POST",
+        body: JSON.stringify({ amount, reason }),
+      }),
+    cashOut: (amount: number, reason: string) =>
+      request<CashMovement>("/api/cash-drawer/cash-out", {
+        method: "POST",
+        body: JSON.stringify({ amount, reason }),
+      }),
+    getSessions: (params?: { start_date?: string; end_date?: string; user_id?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<CashDrawerSession[]>(`/api/cash-drawer/sessions${qs ? `?${qs}` : ""}`);
+    },
+    getMovements: (sessionId: number) =>
+      request<CashMovement[]>(`/api/cash-drawer/sessions/${sessionId}/movements`),
+  },
+  posReports: {
+    dailySales: (date?: string) => {
+      const qs = date ? `?date=${date}` : "";
+      return request<any>(`/api/pos-reports/daily-sales${qs}`);
+    },
+    hourlySales: (date?: string) => {
+      const qs = date ? `?date=${date}` : "";
+      return request<any[]>(`/api/pos-reports/hourly-sales${qs}`);
+    },
+    topProducts: (params?: { start_date?: string; end_date?: string; limit?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any[]>(`/api/pos-reports/top-products${qs ? `?${qs}` : ""}`);
+    },
+    topCustomers: (params?: { start_date?: string; end_date?: string; limit?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any[]>(`/api/pos-reports/top-customers${qs ? `?${qs}` : ""}`);
+    },
+    paymentMethods: (params?: { start_date?: string; end_date?: string }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any[]>(`/api/pos-reports/payment-methods${qs ? `?${qs}` : ""}`);
+    },
+    monthlySales: (year?: number) => {
+      const qs = year ? `?year=${year}` : "";
+      return request<any[]>(`/api/pos-reports/monthly-sales${qs}`);
+    },
+    endOfDay: (params?: { date?: string; session_id?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any>(`/api/pos-reports/end-of-day${qs ? `?${qs}` : ""}`);
+    },
   },
 };
