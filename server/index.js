@@ -147,7 +147,8 @@ async function migrate() {
       reference_id INTEGER,
       notes TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
-      created_by INTEGER REFERENCES users(id)
+      created_by INTEGER REFERENCES users(id),
+      user_id INTEGER REFERENCES users(id)
     );
     
     -- Procurement Module
