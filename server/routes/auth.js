@@ -7,13 +7,6 @@ import pool from "../db.js";
 
 const router = express.Router();
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
-
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -60,7 +53,14 @@ router.post("/forgot-password", async (req, res) => {
     );
     const appUrl = process.env.APP_URL || "http://localhost:5173";
     const resetLink = `${appUrl}/admin/reset-password?token=${token}`;
-    console.log(`[forgot-password] sending reset link to ${email}: ${resetLink}`);
+    console.log(`[forgot-password] SMTP_USER=${process.env.SMTP_USER} sending to ${email}`);
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      tls: { rejectUnauthorized: false },
+    });
     await transporter.sendMail({
       from: `"Davin's Store" <${process.env.SMTP_USER}>`,
       to: email,
