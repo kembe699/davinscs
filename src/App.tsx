@@ -32,6 +32,9 @@ import Cart from "./pages/Cart.tsx";
 import Checkout from "./pages/Checkout.tsx";
 import OrderConfirmation from "./pages/OrderConfirmation.tsx";
 import POSMain from "./pages/pos/POSMain.tsx";
+import SalesHistory from "./pages/pos/SalesHistory.tsx";
+import CashManagement from "./pages/pos/CashManagement.tsx";
+import EndOfDay from "./pages/pos/EndOfDay.tsx";
 import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
 import TaxRates from "./pages/admin/TaxRates.tsx";
 
@@ -85,6 +88,9 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
             <Route path="/pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
+            <Route path="/pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
+            <Route path="/pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
+            <Route path="/pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
             {/* E-commerce */}
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />

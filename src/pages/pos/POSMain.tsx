@@ -163,6 +163,7 @@ export default function POSMain() {
         taxAmount,
         total,
         paymentTypeName: paymentTypes.find(pt => pt.id === selectedPaymentType)?.name || 'Cash',
+        customerName: customerName || 'Walk-in Customer',
       });
       
       // Clear cart
@@ -365,13 +366,22 @@ export default function POSMain() {
               >
                 Management
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg">
+              <button 
+                onClick={() => navigate("/pos/sales-history")}
+                className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
+              >
                 View Sales History
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg">
+              <button 
+                onClick={() => navigate("/pos/cash-management")}
+                className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
+              >
                 Cash In / Out
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg">
+              <button 
+                onClick={() => navigate("/pos/end-of-day")}
+                className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
+              >
                 End of Day
               </button>
             </div>
@@ -436,62 +446,63 @@ export default function POSMain() {
       {/* Receipt Modal */}
       {showReceipt && completedSale && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-black">Davin's Camera Store</h2>
-              <p className="text-sm text-black">Kampala, Uganda</p>
-              <p className="text-sm text-black">+256-XXX-XXXXXX</p>
-              <div className="border-t border-gray-300 my-4"></div>
-              <p className="text-lg font-bold text-black">SALES RECEIPT</p>
-              <p className="text-sm text-black">#{completedSale.sale_number}</p>
+              <h2 className="text-xl font-bold text-black uppercase">Davin's Camera Store</h2>
+              <p className="text-xs text-black">Kampala, Uganda</p>
+              <p className="text-xs text-black">Tel: +256-XXX-XXXXXX</p>
+              <div className="border-t border-black my-3"></div>
+              <p className="text-sm font-bold text-black">SALES RECEIPT</p>
+              <p className="text-xs text-black">#{completedSale.sale_number}</p>
               <p className="text-xs text-black">{new Date(completedSale.created_at).toLocaleString()}</p>
+              <div className="border-t border-black my-3"></div>
+              <p className="text-xs text-black text-left">Customer: {completedSale.customerName}</p>
             </div>
 
-            <div className="mb-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-300">
-                    <th className="text-left py-2 text-black">Item</th>
-                    <th className="text-center py-2 text-black">Qty</th>
-                    <th className="text-right py-2 text-black">Price</th>
-                    <th className="text-right py-2 text-black">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {completedSale.items.map((item: any, idx: number) => (
-                    <tr key={idx} className="border-b border-gray-200">
-                      <td className="py-2 text-black">{item.product.name}</td>
-                      <td className="text-center py-2 text-black">{item.quantity}</td>
-                      <td className="text-right py-2 text-black">UGX {(item.product.price / 100).toFixed(0)}</td>
-                      <td className="text-right py-2 text-black">UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mb-4">
+              <div className="border-b border-black pb-1 mb-2">
+                <div className="flex justify-between text-xs font-bold text-black">
+                  <span>ITEM</span>
+                  <span>QTY</span>
+                  <span>PRICE</span>
+                  <span>TOTAL</span>
+                </div>
+              </div>
+              {completedSale.items.map((item: any, idx: number) => (
+                <div key={idx} className="mb-2">
+                  <div className="text-xs text-black">{item.product.name}</div>
+                  <div className="flex justify-between text-xs text-black">
+                    <span></span>
+                    <span>{item.quantity}</span>
+                    <span>UGX {(item.product.price / 100).toFixed(0)}</span>
+                    <span>UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-2 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-black">Subtotal:</span>
-                <span className="font-mono text-black">UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
+            <div className="border-t border-black pt-2 mb-4">
+              <div className="flex justify-between text-xs text-black mb-1">
+                <span>Subtotal:</span>
+                <span>UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-black">Tax ({defaultTax?.rate}%):</span>
-                <span className="font-mono text-black">UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
+              <div className="flex justify-between text-xs text-black mb-1">
+                <span>Tax ({defaultTax?.rate}%):</span>
+                <span>UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+              <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
                 <span className="text-black">TOTAL:</span>
-                <span className="font-mono text-black">UGX {(completedSale.total / 100).toFixed(0)}</span>
+                <span className="text-black">UGX {(completedSale.total / 100).toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-sm mt-4">
-                <span className="text-black">Payment Method:</span>
-                <span className="font-semibold text-black">{completedSale.paymentTypeName}</span>
+              <div className="flex justify-between text-xs text-black mt-3">
+                <span>Payment:</span>
+                <span>{completedSale.paymentTypeName}</span>
               </div>
             </div>
 
-            <div className="text-center text-xs text-black mb-6">
-              <p>Thank you for your business!</p>
-              <p>Please come again</p>
+            <div className="text-center text-xs text-black mb-6 border-t border-black pt-3">
+              <p>*** Thank you for your business! ***</p>
+              <p>*** Please come again ***</p>
             </div>
 
             <div className="flex gap-3">
