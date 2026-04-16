@@ -73,6 +73,14 @@ export default function POSMain() {
 
   const addToCart = (product: ApiProduct) => {
     const existing = cart.find(item => item.product.id === product.id);
+    const currentQtyInCart = existing ? existing.quantity : 0;
+    const availableStock = product.quantity_on_hand - product.quantity_reserved;
+    
+    if (currentQtyInCart >= availableStock) {
+      alert(`Cannot add more! Only ${availableStock} units available in stock.`);
+      return;
+    }
+    
     if (existing) {
       setCart(cart.map(item =>
         item.product.id === product.id
@@ -87,11 +95,21 @@ export default function POSMain() {
   const updateQuantity = (productId: number, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
-    } else {
-      setCart(cart.map(item =>
-        item.product.id === productId ? { ...item, quantity } : item
-      ));
+      return;
     }
+    
+    const cartItem = cart.find(item => item.product.id === productId);
+    if (cartItem) {
+      const availableStock = cartItem.product.quantity_on_hand - cartItem.product.quantity_reserved;
+      if (quantity > availableStock) {
+        alert(`Cannot set quantity to ${quantity}! Only ${availableStock} units available in stock.`);
+        return;
+      }
+    }
+    
+    setCart(cart.map(item =>
+      item.product.id === productId ? { ...item, quantity } : item
+    ));
   };
 
   const removeFromCart = (productId: number) => {
@@ -432,33 +450,54 @@ export default function POSMain() {
 
           <div className="flex-1 overflow-y-auto p-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredProducts.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  disabled={!product.in_stock}
-                  className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
-                >
-                  {product.image_url && (
-                    <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
+              {filteredProducts.map(product => {
+                const availableStock = product.quantity_on_hand - product.quantity_reserved;
+                const inCart = cart.find(item => item.product.id === product.id);
+                const qtyInCart = inCart ? inCart.quantity : 0;
+                const remainingStock = availableStock - qtyInCart;
+                
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    disabled={!product.in_stock || availableStock <= 0}
+                    className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
+                  >
+                    {product.image_url && (
+                      <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">
+                      {product.name}
                     </div>
-                  )}
-                  <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">
-                    {product.name}
-                  </div>
-                  <div className="text-admin-text font-mono text-lg font-bold">
-                    UGX {(product.price / 100).toFixed(0)}
-                  </div>
-                  {!product.in_stock && (
-                    <div className="text-admin-danger text-xs mt-1">Out of stock</div>
-                  )}
-                </button>
-              ))}
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="text-admin-text font-mono text-lg font-bold">
+                        UGX {(product.price / 100).toFixed(0)}
+                      </div>
+                      <div className={`text-xs font-bold ${
+                        remainingStock <= 0 ? 'text-admin-danger' : 
+                        remainingStock <= 5 ? 'text-yellow-600' : 
+                        'text-admin-success'
+                      }`}>
+                        Stock: {remainingStock}
+                      </div>
+                    </div>
+                    {qtyInCart > 0 && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        {qtyInCart} in cart
+                      </div>
+                    )}
+                    {(!product.in_stock || availableStock <= 0) && (
+                      <div className="text-admin-danger text-xs mt-1">Out of stock</div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
