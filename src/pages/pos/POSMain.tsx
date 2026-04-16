@@ -16,6 +16,8 @@ export default function POSMain() {
   const [cartDiscount, setCartDiscount] = useState(0);
   const [cashDrawerSession, setCashDrawerSession] = useState<CashDrawerSession | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [completedSale, setCompletedSale] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -127,14 +129,25 @@ export default function POSMain() {
         sale_type: "regular",
       };
 
-      await api.pos.createSale(saleData);
+      const sale = await api.pos.createSale(saleData);
+      
+      // Store completed sale data for receipt
+      setCompletedSale({
+        ...sale,
+        items: cart,
+        subtotal,
+        taxAmount,
+        total,
+        paymentTypeName: paymentTypes.find(pt => pt.id === selectedPaymentType)?.name || 'Cash',
+      });
       
       // Clear cart
       setCart([]);
       setCartDiscount(0);
       setShowPaymentModal(false);
       
-      alert("Sale completed successfully!");
+      // Show receipt
+      setShowReceipt(true);
     } catch (err: any) {
       alert(err.message || "Failed to process sale");
     }
@@ -145,37 +158,44 @@ export default function POSMain() {
   return (
     <div className="h-screen bg-admin-bg flex flex-col">
       {/* Top Toolbar */}
-      <div className="bg-admin-surface border-b border-admin-border p-3 flex items-center gap-2 flex-wrap">
-        <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-          <Search size={16} className="inline mr-2" />
-          Search
-        </button>
-        <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-          <User size={16} className="inline mr-2" />
-          Customer
-        </button>
-        <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-          Discount
-        </button>
-        <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-          New Sale
-        </button>
-        <button
-          onClick={() => setShowPaymentModal(true)}
-          disabled={cart.length === 0}
-          className="px-4 py-2 bg-admin-success text-white text-sm hover:opacity-90 disabled:opacity-50 ml-auto"
-        >
-          F10 Payment
-        </button>
-        <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
-          F12 Cash
-        </button>
-        <button
-          onClick={() => setShowMenu(!showMenu)}
-          className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
-        >
-          <Menu size={16} />
-        </button>
+      <div className="bg-admin-surface border-b border-admin-border p-3 flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
+          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+            <Search size={16} />
+            Search
+          </button>
+          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2">
+            <User size={16} />
+            Customer
+          </button>
+          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
+            Discount
+          </button>
+          <button 
+            onClick={() => { setCart([]); setCartDiscount(0); }}
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          >
+            New Sale
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPaymentModal(true)}
+            disabled={cart.length === 0}
+            className="px-6 py-2 bg-admin-success text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+          >
+            F10 Payment
+          </button>
+          <button className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
+            F12 Cash
+          </button>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          >
+            <Menu size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
@@ -280,13 +300,22 @@ export default function POSMain() {
                   key={product.id}
                   onClick={() => addToCart(product)}
                   disabled={!product.in_stock}
-                  className="bg-admin-surface border border-admin-border p-4 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
                 >
+                  {product.image_url && (
+                    <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                   <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">
                     {product.name}
                   </div>
-                  <div className="text-admin-text font-mono text-lg">
-                    {(product.price / 100).toFixed(2)}
+                  <div className="text-admin-text font-mono text-lg font-bold">
+                    UGX {(product.price / 100).toFixed(0)}
                   </div>
                   {!product.in_stock && (
                     <div className="text-admin-danger text-xs mt-1">Out of stock</div>
@@ -375,6 +404,85 @@ export default function POSMain() {
                 className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90"
               >
                 Complete Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceipt && completedSale && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Davin's Camera Store</h2>
+              <p className="text-sm text-gray-600">Kampala, Uganda</p>
+              <p className="text-sm text-gray-600">+256-XXX-XXXXXX</p>
+              <div className="border-t border-gray-300 my-4"></div>
+              <p className="text-lg font-bold">SALES RECEIPT</p>
+              <p className="text-sm text-gray-600">#{completedSale.sale_number}</p>
+              <p className="text-xs text-gray-500">{new Date(completedSale.created_at).toLocaleString()}</p>
+            </div>
+
+            <div className="mb-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-300">
+                    <th className="text-left py-2">Item</th>
+                    <th className="text-center py-2">Qty</th>
+                    <th className="text-right py-2">Price</th>
+                    <th className="text-right py-2">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedSale.items.map((item: any, idx: number) => (
+                    <tr key={idx} className="border-b border-gray-200">
+                      <td className="py-2">{item.product.name}</td>
+                      <td className="text-center py-2">{item.quantity}</td>
+                      <td className="text-right py-2">UGX {(item.product.price / 100).toFixed(0)}</td>
+                      <td className="text-right py-2">UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-mono">UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Tax ({defaultTax?.rate}%):</span>
+                <span className="font-mono">UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+                <span>TOTAL:</span>
+                <span className="font-mono">UGX {(completedSale.total / 100).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-4">
+                <span className="text-gray-600">Payment Method:</span>
+                <span className="font-semibold">{completedSale.paymentTypeName}</span>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-gray-500 mb-6">
+              <p>Thank you for your business!</p>
+              <p>Please come again</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 px-4 py-2 bg-gray-800 text-white hover:bg-gray-700"
+              >
+                Print Receipt
+              </button>
+              <button
+                onClick={() => setShowReceipt(false)}
+                className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90"
+              >
+                New Sale
               </button>
             </div>
           </div>
