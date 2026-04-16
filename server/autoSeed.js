@@ -72,5 +72,54 @@ export async function autoSeed() {
     );
   }
 
-  console.log("✅ Auto-seed complete (admin + categories + products)");
+  // Seed suppliers
+  const suppliers = [
+    { name: "Sony Professional", contact_person: "John Smith", email: "sales@sonypro.com", phone: "+1-800-686-7669" },
+    { name: "Canon Imaging", contact_person: "Sarah Johnson", email: "b2b@canon.com", phone: "+1-800-652-2666" },
+    { name: "Blackmagic Design", contact_person: "Mike Chen", email: "sales@blackmagicdesign.com", phone: "+61-3-9682-8888" },
+    { name: "Audio-Technica Corp", contact_person: "Lisa Wang", email: "pro@audio-technica.com", phone: "+1-330-686-2600" },
+    { name: "Aputure Imaging", contact_person: "David Lee", email: "wholesale@aputure.com", phone: "+86-755-8621-9300" },
+  ];
+
+  for (const s of suppliers) {
+    await pool.query(
+      `INSERT INTO suppliers (name, contact_person, email, phone) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+      [s.name, s.contact_person, s.email, s.phone]
+    );
+  }
+
+  // Seed chart of accounts
+  const accounts = [
+    { code: "1000", name: "Cash", account_type: "asset" },
+    { code: "1100", name: "Accounts Receivable", account_type: "asset" },
+    { code: "1200", name: "Inventory", account_type: "asset" },
+    { code: "1500", name: "Equipment", account_type: "asset" },
+    { code: "2000", name: "Accounts Payable", account_type: "liability" },
+    { code: "2100", name: "Sales Tax Payable", account_type: "liability" },
+    { code: "3000", name: "Owner's Equity", account_type: "equity" },
+    { code: "4000", name: "Sales Revenue", account_type: "revenue" },
+    { code: "5000", name: "Cost of Goods Sold", account_type: "expense" },
+    { code: "6000", name: "Operating Expenses", account_type: "expense" },
+    { code: "6100", name: "Rent Expense", account_type: "expense" },
+    { code: "6200", name: "Utilities Expense", account_type: "expense" },
+  ];
+
+  for (const a of accounts) {
+    await pool.query(
+      `INSERT INTO accounts (code, name, account_type) VALUES ($1, $2, $3) ON CONFLICT (code) DO NOTHING`,
+      [a.code, a.name, a.account_type]
+    );
+  }
+
+  // Update products with initial inventory quantities and cost prices
+  await pool.query(`
+    UPDATE products SET 
+      quantity_on_hand = 5,
+      quantity_reserved = 0,
+      reorder_level = 2,
+      cost_price = FLOOR(price * 0.6)
+    WHERE quantity_on_hand = 0
+  `);
+
+  console.log("✅ Auto-seed complete (admin + categories + products + suppliers + accounts + inventory)");
 }
