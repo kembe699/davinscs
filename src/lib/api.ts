@@ -8,6 +8,7 @@ function authHeaders(): Record<string, string> {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),

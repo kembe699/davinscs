@@ -173,7 +173,7 @@ router.get("/trial-balance", requireAuth, async (req, res) => {
       params.push(as_of_date);
     }
     
-    const { rows } = await pool.query(`
+    const query = `
       SELECT 
         a.code, a.name, a.account_type,
         COALESCE(SUM(tl.debit), 0) as total_debit,
@@ -182,12 +182,13 @@ router.get("/trial-balance", requireAuth, async (req, res) => {
       FROM accounts a
       LEFT JOIN transaction_lines tl ON a.id = tl.account_id
       LEFT JOIN transactions t ON tl.transaction_id = t.id
-      ${dateCondition}
       WHERE a.is_active = true
+      ${dateCondition ? 'AND t.transaction_date <= $1' : ''}
       GROUP BY a.id, a.code, a.name, a.account_type
-      HAVING COALESCE(SUM(tl.debit), 0) - COALESCE(SUM(tl.credit), 0) != 0
       ORDER BY a.code
-    `, params);
+    `;
+    
+    const { rows } = await pool.query(query, params);
     
     const totalDebit = rows.reduce((sum, row) => sum + parseFloat(row.total_debit), 0);
     const totalCredit = rows.reduce((sum, row) => sum + parseFloat(row.total_credit), 0);

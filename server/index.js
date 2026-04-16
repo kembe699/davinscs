@@ -29,7 +29,7 @@ const PgSession = connectPgSimple(session);
 app.use(cors({
   origin: process.env.NODE_ENV === "production" 
     ? process.env.APP_URL 
-    : "http://localhost:5173",
+    : ["http://localhost:5173", "http://localhost:8080"],
   credentials: true
 }));
 app.use(express.json());
@@ -37,11 +37,12 @@ app.use(session({
   store: new PgSession({ pool, tableName: "session" }),
   secret: process.env.JWT_SECRET || "fallback-secret-change-in-production",
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: { 
     maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production"
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
   }
 }));
 
@@ -248,6 +249,14 @@ async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+    
+    CREATE TABLE IF NOT EXISTS session (
+      sid VARCHAR NOT NULL COLLATE "default",
+      sess JSON NOT NULL,
+      expire TIMESTAMP(6) NOT NULL,
+      PRIMARY KEY (sid)
+    );
+    CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire);
   `);
   console.log("\u2705 Migrations applied");
 }

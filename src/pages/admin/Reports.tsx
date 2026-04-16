@@ -164,7 +164,7 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reportData.accounts.map((acc: any) => (
+                    {reportData.accounts?.map((acc: any) => (
                       <tr key={acc.code} className="border-b border-border-subtle">
                         <td className="py-2">{acc.code} - {acc.name}</td>
                         <td className="text-right font-mono-tech">{(acc.total_debit / 100).toFixed(2)}</td>
@@ -188,7 +188,7 @@ export default function Reports() {
                 
                 <div className="mb-6">
                   <h3 className="font-bold text-foreground mb-2">Revenue</h3>
-                  {reportData.revenue.map((acc: any) => (
+                  {reportData.revenue?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
                       <span>{acc.name}</span>
                       <span className="font-mono-tech">${(acc.amount / 100).toFixed(2)}</span>
@@ -202,7 +202,7 @@ export default function Reports() {
 
                 <div className="mb-6">
                   <h3 className="font-bold text-foreground mb-2">Expenses</h3>
-                  {reportData.expenses.map((acc: any) => (
+                  {reportData.expenses?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
                       <span>{acc.name}</span>
                       <span className="font-mono-tech">${(Math.abs(acc.amount) / 100).toFixed(2)}</span>
@@ -231,7 +231,7 @@ export default function Reports() {
                 <div className="grid grid-cols-2 gap-8">
                   <div>
                     <h3 className="font-bold text-foreground mb-2">Assets</h3>
-                    {reportData.assets.map((acc: any) => (
+                    {reportData.assets?.map((acc: any) => (
                       <div key={acc.code} className="flex justify-between py-1 text-sm">
                         <span>{acc.name}</span>
                         <span className="font-mono-tech">${(acc.balance / 100).toFixed(2)}</span>
@@ -246,7 +246,7 @@ export default function Reports() {
                   <div>
                     <div className="mb-6">
                       <h3 className="font-bold text-foreground mb-2">Liabilities</h3>
-                      {reportData.liabilities.map((acc: any) => (
+                      {reportData.liabilities?.map((acc: any) => (
                         <div key={acc.code} className="flex justify-between py-1 text-sm">
                           <span>{acc.name}</span>
                           <span className="font-mono-tech">${(Math.abs(acc.balance) / 100).toFixed(2)}</span>
@@ -260,7 +260,7 @@ export default function Reports() {
 
                     <div>
                       <h3 className="font-bold text-foreground mb-2">Equity</h3>
-                      {reportData.equity.map((acc: any) => (
+                      {reportData.equity?.map((acc: any) => (
                         <div key={acc.code} className="flex justify-between py-1 text-sm">
                           <span>{acc.name}</span>
                           <span className="font-mono-tech">${(Math.abs(acc.balance) / 100).toFixed(2)}</span>
