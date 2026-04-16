@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingCart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 
@@ -11,11 +11,26 @@ const staticLinks = [
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
     api.categories.list().then(setCategories).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const loadCartCount = async () => {
+      try {
+        const items = await api.cart.get();
+        setCartCount(items.reduce((sum, item) => sum + item.quantity, 0));
+      } catch {
+        setCartCount(0);
+      }
+    };
+    loadCartCount();
+    const interval = setInterval(loadCartCount, 5000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   const categoryLinks = categories.map((c) => ({
     label: `[${String(c.sort_order).padStart(2, "0")}] ${c.name}`,
@@ -43,6 +58,14 @@ const Navbar = () => {
         </div>
       </div>
       <div className="hidden lg:flex items-center gap-6 font-mono-tech text-xs">
+        <Link to="/cart" className="relative text-foreground hover:text-primary transition-colors">
+          <ShoppingCart size={20} />
+          {cartCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-primary text-background text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </Link>
         <span className="text-muted-foreground uppercase tracking-tighter">Status: Open</span>
         <div className="size-2 bg-primary animate-pulse" />
       </div>

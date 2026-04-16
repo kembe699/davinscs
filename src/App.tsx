@@ -24,6 +24,13 @@ import ProductForm from "./pages/admin/ProductForm.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
 import ResetPassword from "./pages/admin/ResetPassword.tsx";
+import Inventory from "./pages/admin/Inventory.tsx";
+import Procurement from "./pages/admin/Procurement.tsx";
+import Accounting from "./pages/admin/Accounting.tsx";
+import Reports from "./pages/admin/Reports.tsx";
+import Cart from "./pages/Cart.tsx";
+import Checkout from "./pages/Checkout.tsx";
+import OrderConfirmation from "./pages/OrderConfirmation.tsx";
 
 const queryClient = new QueryClient();
 
@@ -66,8 +73,16 @@ const App = () => (
             <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
             <Route path="/admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
             <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+            <Route path="/admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
+            <Route path="/admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+            <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
+            {/* E-commerce */}
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

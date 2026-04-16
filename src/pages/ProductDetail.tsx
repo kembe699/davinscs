@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft, Check, X, ShoppingCart, Plus, Minus } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -17,6 +17,9 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<ApiProduct | null>(null);
   const [related, setRelated] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -161,8 +164,56 @@ const ProductDetail = () => {
               </div>
             </div>
 
+            {/* Quantity Selector */}
+            <div className="flex items-center gap-4">
+              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Quantity</span>
+              <div className="flex items-center gap-2 border border-border-subtle">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                  className="px-3 py-2 hover:bg-chassis disabled:opacity-50 transition-colors"
+                >
+                  <Minus size={16} />
+                </button>
+                <span className="font-mono-tech text-sm w-12 text-center">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="px-3 py-2 hover:bg-chassis transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            {cartMessage && (
+              <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-3 font-mono-tech">
+                {cartMessage}
+              </div>
+            )}
+
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={async () => {
+                  setAddingToCart(true);
+                  setCartMessage("");
+                  try {
+                    await api.cart.add(product.id, quantity);
+                    setCartMessage(`Added ${quantity} item(s) to cart!`);
+                    setQuantity(1);
+                    setTimeout(() => setCartMessage(""), 3000);
+                  } catch (err) {
+                    setCartMessage(err instanceof Error ? err.message : "Failed to add to cart");
+                  } finally {
+                    setAddingToCart(false);
+                  }
+                }}
+                disabled={!product.in_stock || addingToCart}
+                className="flex-1 h-14 flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-background font-bold uppercase tracking-widest text-sm transition-colors disabled:opacity-50"
+              >
+                <ShoppingCart size={18} />
+                {addingToCart ? "Adding..." : "Add to Cart"}
+              </button>
               <button
                 onClick={() => orderViaWhatsApp(product, true)}
                 className="flex-1 h-14 flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold uppercase tracking-widest text-sm transition-colors"
