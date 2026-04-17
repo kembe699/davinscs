@@ -5,6 +5,7 @@ import { FileText, Search, Printer, FileSpreadsheet, FileDown, ChevronRight, Che
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { exportToExcel, exportToPDF, printReport, CompanyInfo } from "@/utils/reportExports";
+import ReportTable from "@/components/ReportTable";
 
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics";
 type ReportType = 
@@ -577,181 +578,90 @@ export default function ReportsNew() {
             )}
 
             {reportData && !loading && (
-              <div className="bg-admin-surface border border-admin-border p-6">
-                <h2 className="text-xl font-bold text-admin-text mb-4">{getReportTitle()}</h2>
-                <p className="text-sm text-admin-text-secondary mb-6">
-                  {startDate} to {endDate}
-                </p>
+              <div className="bg-white border border-gray-300 shadow-lg" style={{ minHeight: '800px' }}>
+                {/* Professional Document Header */}
+                <div className="border-b-2 border-gray-800 p-8 text-center bg-white">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-3">{companyInfo.name}</h1>
+                  <p className="text-sm text-gray-600 mb-1">{companyInfo.address}</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Phone: {companyInfo.phone} | Email: {companyInfo.email}
+                  </p>
+                  {companyInfo.website && (
+                    <p className="text-sm text-gray-600 mb-1">Website: {companyInfo.website}</p>
+                  )}
+                  {companyInfo.tax_id && (
+                    <p className="text-sm text-gray-600">Tax ID: {companyInfo.tax_id}</p>
+                  )}
+                </div>
+
+                {/* Report Title Section */}
+                <div className="p-6 bg-white">
+                  <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">{getReportTitle()}</h2>
+                  <p className="text-sm text-gray-600 text-center mb-6">
+                    {startDate} to {endDate}
+                  </p>
+                
+                <div className="bg-white p-6">
 
                 {/* Daily Sales Report */}
                 {selectedReport === "daily-sales" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Date</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Sales Count</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Tax</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Discounts</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Avg Sale</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.date} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.date).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.total_sales}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_tax), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_discounts), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.average_sale), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-admin-bg border-t-2 border-admin-border font-bold">
-                        <tr>
-                          <td className="px-4 py-3 text-admin-text">TOTAL</td>
-                          <td className="px-4 py-3 text-right text-admin-text">
-                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_sales), 0)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-admin-text">
-                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_revenue), 0), baseCurrency?.symbol || 'UGX', false)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-admin-text">
-                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_tax), 0), baseCurrency?.symbol || 'UGX', false)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-admin-text">
-                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_discounts), 0), baseCurrency?.symbol || 'UGX', false)}
-                          </td>
-                          <td className="px-4 py-3"></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Date', accessor: 'date', format: (val) => new Date(val).toLocaleDateString() },
+                      { header: 'Sales Count', accessor: 'total_sales', align: 'right' },
+                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Tax', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Discounts', accessor: 'total_discounts', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['date', 'average_sale']}
+                  />
                 )}
 
                 {/* Sales by User Report */}
                 {selectedReport === "sales-by-user" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">User</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Sales Count</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Tax Collected</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Avg Sale</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.user_id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.user_email}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.total_sales}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_tax), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.average_sale), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'User', accessor: 'user_email' },
+                      { header: 'Sales Count', accessor: 'total_sales', align: 'right' },
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Tax Collected', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['user_email', 'average_sale']}
+                  />
                 )}
 
                 {/* Sales by Customer Report */}
                 {selectedReport === "sales-by-customer" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Customer</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Purchases</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total Spent</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Avg Purchase</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Last Purchase</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any, idx: number) => (
-                          <tr key={`${row.customer_id}-${idx}`} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.customer_name}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.total_purchases}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_spent), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.average_purchase), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-admin-text-secondary">
-                              {new Date(row.last_purchase).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Customer', accessor: 'customer_name' },
+                      { header: 'Purchases', accessor: 'total_purchases', align: 'right' },
+                      { header: 'Total Spent', accessor: 'total_spent', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Avg Purchase', accessor: 'average_purchase', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Last Purchase', accessor: 'last_purchase', align: 'right', format: (val) => new Date(val).toLocaleDateString() }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['customer_name', 'average_purchase', 'last_purchase']}
+                  />
                 )}
 
                 {/* Sales by Product Report */}
                 {selectedReport === "sales-by-product" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Quantity Sold</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Times Sold</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Avg Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.product_id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.product_name}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.total_quantity}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.times_sold}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(Math.round(parseFloat(row.average_price)), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-admin-bg border-t-2 border-admin-border font-bold">
-                        <tr>
-                          <td className="px-4 py-3 text-admin-text">TOTAL</td>
-                          <td className="px-4 py-3 text-right text-admin-text">
-                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_quantity), 0)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-admin-text">
-                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_revenue), 0), baseCurrency?.symbol || 'UGX', false)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-admin-text">
-                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.times_sold), 0)}
-                          </td>
-                          <td className="px-4 py-3"></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'product_name' },
+                      { header: 'Quantity Sold', accessor: 'total_quantity', align: 'right' },
+                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Times Sold', accessor: 'times_sold', align: 'right' },
+                      { header: 'Avg Price', accessor: 'average_price', align: 'right', format: (val) => formatCurrencySync(Math.round(parseFloat(val)), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['product_name', 'average_price']}
+                  />
                 )}
 
                 {/* Sales Comparison Report */}
@@ -1136,10 +1046,19 @@ export default function ReportsNew() {
                 )}
 
                 {reportData && Array.isArray(reportData) && reportData.length === 0 && (
-                  <div className="text-center text-admin-text-secondary py-8">
+                  <div className="text-center text-gray-600 py-8">
                     <p>No data found for the selected date range</p>
                   </div>
                 )}
+
+                </div>
+                </div>
+
+                {/* Document Footer */}
+                <div className="border-t border-gray-300 p-6 bg-gray-50 text-center text-xs text-gray-600">
+                  <p>Generated on {new Date().toLocaleString()}</p>
+                  <p className="mt-1">This is a computer-generated document. No signature is required.</p>
+                </div>
               </div>
             )}
           </div>
