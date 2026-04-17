@@ -213,7 +213,11 @@ export default function Inventory() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={item.id} className="hover:bg-chassis/50 transition-colors">
+                  <tr 
+                    key={item.id} 
+                    onClick={() => setAdjusting(item.id)}
+                    className="hover:bg-chassis/50 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3">
                       <div>
                         <p className="font-medium text-foreground">{item.name}</p>
@@ -233,12 +237,9 @@ export default function Inventory() {
                     </td>
                     <td className="px-4 py-3 text-center font-mono-tech text-muted-foreground">{item.reorder_level}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => setAdjusting(item.id)}
-                        className="px-3 py-1.5 border border-border-subtle text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-                      >
-                        Adjust Stock
-                      </button>
+                      <span className="text-xs text-muted-foreground font-mono-tech uppercase tracking-widest">
+                        Click to adjust
+                      </span>
                     </td>
                   </tr>
                 )
