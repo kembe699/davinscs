@@ -101,8 +101,12 @@ export const exportToExcel = (options: ReportExportOptions) => {
 export const exportToPDF = (options: ReportExportOptions) => {
   const { reportTitle, dateRange, companyInfo, data, columns, currency = 'UGX' } = options;
 
-  // Create PDF document with better margins
-  const doc = new jsPDF();
+  // Create PDF document with A4 size and better margins
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
   
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
