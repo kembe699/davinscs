@@ -51,10 +51,13 @@ export default function Company() {
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('File selected:', file.name, file.size, 'bytes');
       const reader = new FileReader();
       reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-        setCompanyData({ ...companyData, logo: reader.result as string });
+        const logoData = reader.result as string;
+        console.log('Logo data read, length:', logoData.length);
+        setLogoPreview(logoData);
+        setCompanyData({ ...companyData, logo: logoData });
       };
       reader.readAsDataURL(file);
     }
@@ -63,8 +66,10 @@ export default function Company() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Submitting company data, logo length:', companyData.logo?.length || 0);
     try {
       const savedData = await api.company.save(companyData);
+      console.log('Saved data received, logo length:', savedData.logo?.length || 0);
       // Update local state with saved data
       setCompanyData({
         name: savedData.name || "",

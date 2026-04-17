@@ -38,7 +38,19 @@ router.get("/", async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, description } = req.body;
   
-  console.log('Received company data:', { name, address, city, country, postal_code, phone, email, tax_id, website });
+  console.log('Received company data:', { 
+    name, 
+    address, 
+    city, 
+    country, 
+    postal_code, 
+    phone, 
+    email, 
+    tax_id, 
+    website,
+    logoLength: logo ? logo.length : 0,
+    logoPreview: logo ? logo.substring(0, 50) : 'no logo'
+  });
   
   if (!name) {
     console.log('Error: Company name is required');
