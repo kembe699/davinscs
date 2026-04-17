@@ -10,7 +10,24 @@ router.get("/", async (req, res) => {
     const { rows } = await pool.query(
       "SELECT * FROM company_settings LIMIT 1"
     );
-    res.json(rows[0] || null);
+    
+    if (rows[0]) {
+      res.json({
+        name: rows[0].company_name || "",
+        logo: rows[0].logo_url || "",
+        address: rows[0].address || "",
+        city: rows[0].city || "",
+        country: rows[0].country || "",
+        postal_code: rows[0].postal_code || "",
+        phone: rows[0].phone || "",
+        email: rows[0].email || "",
+        tax_id: rows[0].tax_id || "",
+        website: rows[0].website || "",
+        description: rows[0].receipt_footer || ""
+      });
+    } else {
+      res.json(null);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -19,9 +36,9 @@ router.get("/", async (req, res) => {
 
 // Create or update company settings
 router.post("/", requireAuth, async (req, res) => {
-  const { company_name, address, phone, email, tax_id, currency, logo_url, receipt_footer } = req.body;
+  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, description } = req.body;
   
-  if (!company_name) {
+  if (!name) {
     return res.status(400).json({ error: "Company name is required" });
   }
   
@@ -34,20 +51,45 @@ router.post("/", requireAuth, async (req, res) => {
       const { rows } = await pool.query(
         `UPDATE company_settings 
          SET company_name = $1, address = $2, phone = $3, email = $4, 
-             tax_id = $5, currency = $6, logo_url = $7, receipt_footer = $8,
+             tax_id = $5, logo_url = $6, city = $7, country = $8, 
+             postal_code = $9, website = $10, receipt_footer = $11,
              updated_at = NOW()
-         WHERE id = $9 RETURNING *`,
-        [company_name, address, phone, email, tax_id, currency || 'UGX', logo_url, receipt_footer, existing.rows[0].id]
+         WHERE id = $12 RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, existing.rows[0].id]
       );
-      res.json(rows[0]);
+      res.json({
+        name: rows[0].company_name,
+        logo: rows[0].logo_url,
+        address: rows[0].address,
+        city: rows[0].city,
+        country: rows[0].country,
+        postal_code: rows[0].postal_code,
+        phone: rows[0].phone,
+        email: rows[0].email,
+        tax_id: rows[0].tax_id,
+        website: rows[0].website,
+        description: rows[0].receipt_footer
+      });
     } else {
       // Create new
       const { rows } = await pool.query(
-        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, currency, logo_url, receipt_footer) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-        [company_name, address, phone, email, tax_id, currency || 'UGX', logo_url, receipt_footer]
+        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, currency) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, 'UGX']
       );
-      res.json(rows[0]);
+      res.json({
+        name: rows[0].company_name,
+        logo: rows[0].logo_url,
+        address: rows[0].address,
+        city: rows[0].city,
+        country: rows[0].country,
+        postal_code: rows[0].postal_code,
+        phone: rows[0].phone,
+        email: rows[0].email,
+        tax_id: rows[0].tax_id,
+        website: rows[0].website,
+        description: rows[0].receipt_footer
+      });
     }
   } catch (err) {
     console.error(err);
