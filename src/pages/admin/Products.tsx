@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Trash2, Search, RefreshCw, Upload, Download, X, Sparkles } from "lucide-react";
+import { Plus, Trash2, Search, RefreshCw, Upload, Download } from "lucide-react";
 
 const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
 export default function Products() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filtered, setFiltered] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +15,6 @@ export default function Products() {
   const [category, setCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
-  const [showSlidePanel, setShowSlidePanel] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -48,32 +49,15 @@ export default function Products() {
   };
 
   const openEditForm = (product: ApiProduct) => {
-    setSelectedProduct(product);
-    setShowSlidePanel(true);
+    navigate(`/admin/products/${product.id}/edit`);
   };
 
   const openNewForm = () => {
-    setSelectedProduct(null);
-    setShowSlidePanel(true);
-  };
-
-  const generateSKU = () => {
-    return 'SKU-' + Date.now().toString(36).toUpperCase();
+    navigate('/admin/products/new');
   };
 
   return (
     <AdminLayout>
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
-      
       <div className="p-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -168,115 +152,7 @@ export default function Products() {
             </div>
           </div>
         )}
-
-        {showSlidePanel && <ProductFormSlide product={selectedProduct} onClose={() => setShowSlidePanel(false)} onSave={load} generateSKU={generateSKU} />}
       </div>
     </AdminLayout>
-  );
-}
-
-function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
-  const [sku, setSku] = useState(product?.barcode || '');
-  const [formData, setFormData] = useState({
-    name: product?.name || '',
-    category: product?.category || 'cameras',
-    brand: product?.brand || '',
-    description: product?.description || '',
-    price: product?.price ? product.price / 100 : '',
-    specifications: product?.specs?.[0] || '',
-    expiry_date: product?.expiry_date || '',
-    current_stock: product?.quantity_on_hand?.toString() || '',
-    reorder_level: product?.reorder_level?.toString() || '',
-    image_url: product?.image_url || ''
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Generate slug from product name
-      const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      
-      const productData = {
-        name: formData.name,
-        category: formData.category,
-        brand: formData.brand,
-        description: formData.description,
-        price: parseFloat(formData.price.toString()) * 100,
-        slug: slug,
-        specs: formData.specifications ? [formData.specifications] : [],
-        image_url: formData.image_url || '',
-        in_stock: true,
-        is_featured: false,
-        tag: sku || '',
-        barcode: sku || '',
-        expiry_date: formData.expiry_date || null,
-        quantity_on_hand: formData.current_stock ? parseInt(formData.current_stock.toString()) : 0,
-        reorder_level: formData.reorder_level ? parseInt(formData.reorder_level.toString()) : 0
-      };
-
-      if (product) {
-        await api.products.update(product.id, productData);
-        alert('✅ Product updated successfully!');
-      } else {
-        await api.products.create(productData);
-        alert('✅ Product created successfully!');
-      }
-      
-      onSave();
-      onClose();
-    } catch (err: any) {
-      alert('❌ Failed to save product: ' + (err.message || 'Unknown error'));
-      console.error(err);
-    }
-  };
-  
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex justify-end" style={{animation: 'fadeIn 0.3s'}}>
-      <div className="bg-admin-surface w-full max-w-2xl h-full overflow-y-auto shadow-2xl" style={{animation: 'slideIn 0.3s ease-out'}}>
-        <div className="sticky top-0 bg-admin-surface border-b border-admin-border p-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-admin-text">{product ? 'Edit Product' : 'New Product'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-admin-bg"><X size={20} /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Basic Information</h3>
-            <div className="space-y-4">
-              <div><label className="block text-sm text-admin-text mb-1">Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" required /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm text-admin-text mb-1">Category *</label><select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">{CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
-                <div><label className="block text-sm text-admin-text mb-1">Brand</label><input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-              </div>
-              <div><label className="block text-sm text-admin-text mb-1">Description</label><textarea rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
-              <div><label className="block text-sm text-admin-text mb-1">Image URL</label><input type="text" value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} placeholder="https://example.com/image.jpg" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Pricing</h3>
-            <div><label className="block text-sm text-admin-text mb-1">Selling Price *</label><input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" required /></div>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Product Details</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm text-admin-text mb-1">SKU/Barcode</label><div className="flex gap-2"><input type="text" value={sku} onChange={(e) => setSku(e.target.value)} className="flex-1 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /><button type="button" onClick={() => setSku(generateSKU())} className="px-3 py-2 bg-primary text-white hover:bg-primary/90" title="Generate SKU"><Sparkles size={16} /></button></div></div>
-                <div><label className="block text-sm text-admin-text mb-1">Expiry Date</label><input type="date" value={formData.expiry_date} onChange={(e) => setFormData({...formData, expiry_date: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-              </div>
-              <div><label className="block text-sm text-admin-text mb-1">Specifications</label><textarea rows={4} value={formData.specifications} onChange={(e) => setFormData({...formData, specifications: e.target.value})} placeholder="Enter product specifications..." className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Stock Control</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm text-admin-text mb-1">Current Stock</label><input type="number" value={formData.current_stock} onChange={(e) => setFormData({...formData, current_stock: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-              <div><label className="block text-sm text-admin-text mb-1">Reorder Level</label><input type="number" value={formData.reorder_level} onChange={(e) => setFormData({...formData, reorder_level: e.target.value})} placeholder="Min stock" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-            </div>
-          </div>
-          <div className="flex gap-3 pt-4 border-t border-admin-border">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-admin-border text-admin-text">Cancel</button>
-            <button type="submit" className="flex-1 px-4 py-2 bg-primary text-white hover:bg-primary/90">{product ? 'Update' : 'Create'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
