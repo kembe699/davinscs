@@ -57,6 +57,10 @@ export default function POSMain() {
         p.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredProducts(filtered);
+      // Auto-switch to 'all' view when searching
+      if (filtered.length > 0 && !selectedCategory) {
+        setSelectedCategory('all');
+      }
     } else {
       setFilteredProducts(products);
     }
