@@ -252,7 +252,7 @@ export default function Currencies() {
                     <td className="px-4 py-3 text-foreground">{currency.name}</td>
                     <td className="px-4 py-3 font-mono-tech text-foreground">{currency.symbol}</td>
                     <td className="px-4 py-3 text-right font-mono-tech text-foreground">
-                      {currency.exchange_rate.toFixed(6)}
+                      {Number(currency.exchange_rate).toFixed(6)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button

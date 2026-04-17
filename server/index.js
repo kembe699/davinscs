@@ -505,6 +505,23 @@ async function migrate() {
     -- Extend users table
     ALTER TABLE users ADD COLUMN IF NOT EXISTS can_access_pos BOOLEAN DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS pos_pin VARCHAR(10);
+    
+    -- Currencies table
+    CREATE TABLE IF NOT EXISTS currencies (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(3) UNIQUE NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      symbol VARCHAR(10) NOT NULL,
+      is_base BOOLEAN DEFAULT FALSE,
+      exchange_rate DECIMAL(15,6) NOT NULL DEFAULT 1.0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_currencies_code ON currencies(code);
+    CREATE INDEX IF NOT EXISTS idx_currencies_is_base ON currencies(is_base) WHERE is_base = TRUE;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_currencies_single_base ON currencies(is_base) WHERE is_base = TRUE;
   `);
   console.log("\u2705 Migrations applied");
 }
