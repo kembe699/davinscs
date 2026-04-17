@@ -35,7 +35,7 @@ router.get("/:slug", async (req, res) => {
 
 // POST create product (admin)
 router.post("/", requireAuth, async (req, res) => {
-  const { slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, quantity_on_hand, reorder_level } = req.body;
+  const { slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, product_type, quantity_on_hand, reorder_level } = req.body;
   if (!slug || !name || !brand || !price || !category) {
     return res.status(400).json({ error: "slug, name, brand, price and category are required" });
   }
@@ -50,9 +50,9 @@ router.post("/", requireAuth, async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO products (slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, quantity_on_hand, reorder_level)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [slug, name, brand, price, tag || "", description || "", JSON.stringify(specs || []), image_url || "", in_stock ?? true, is_featured ?? false, category, barcode || "", expiry_date || null, quantity_on_hand || 0, reorder_level || 0]
+      `INSERT INTO products (slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, product_type, quantity_on_hand, reorder_level)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [slug, name, brand, price, tag || "", description || "", JSON.stringify(specs || []), image_url || "", in_stock ?? true, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", quantity_on_hand || 0, reorder_level || 0]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -64,7 +64,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 // PUT update product (admin)
 router.put("/:id", requireAuth, async (req, res) => {
-  const { name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, quantity_on_hand, reorder_level } = req.body;
+  const { name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, product_type, quantity_on_hand, reorder_level } = req.body;
   try {
     // Check for duplicate product name (excluding current product)
     const duplicateCheck = await pool.query(
@@ -79,9 +79,9 @@ router.put("/:id", requireAuth, async (req, res) => {
       `UPDATE products SET
         slug=$1, name=$2, brand=$3, price=$4, tag=$5, description=$6,
         specs=$7, image_url=$8, in_stock=$9, is_featured=$10, category=$11, barcode=$12, 
-        expiry_date=$13, quantity_on_hand=$14, reorder_level=$15, updated_at=NOW()
-       WHERE id=$16 RETURNING *`,
-      [slug, name, brand, price, tag, description, JSON.stringify(specs || []), image_url, in_stock, is_featured ?? false, category, barcode || "", expiry_date || null, quantity_on_hand || 0, reorder_level || 0, req.params.id]
+        expiry_date=$13, product_type=$14, quantity_on_hand=$15, reorder_level=$16, updated_at=NOW()
+       WHERE id=$17 RETURNING *`,
+      [slug, name, brand, price, tag, description, JSON.stringify(specs || []), image_url, in_stock, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", quantity_on_hand || 0, reorder_level || 0, req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: "Product not found" });
     res.json(rows[0]);
