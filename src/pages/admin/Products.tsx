@@ -183,10 +183,11 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
     brand: product?.brand || '',
     description: product?.description || '',
     price: product ? product.price / 100 : '',
-    specifications: product?.specifications || '',
-    expiry_date: '',
+    specifications: product?.specs?.[0] || '',
+    expiry_date: product?.expiry_date || '',
     current_stock: product?.quantity_on_hand || '',
-    reorder_level: ''
+    reorder_level: product?.reorder_level || '',
+    image_url: product?.image_url || ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,7 +208,10 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
         in_stock: true,
         is_featured: false,
         tag: sku || '',
-        barcode: sku || ''
+        barcode: sku || '',
+        expiry_date: formData.expiry_date || null,
+        quantity_on_hand: formData.current_stock ? parseInt(formData.current_stock.toString()) : 0,
+        reorder_level: formData.reorder_level ? parseInt(formData.reorder_level.toString()) : 0
       };
 
       if (product) {
@@ -243,6 +247,7 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
                 <div><label className="block text-sm text-admin-text mb-1">Brand</label><input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
               </div>
               <div><label className="block text-sm text-admin-text mb-1">Description</label><textarea rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
+              <div><label className="block text-sm text-admin-text mb-1">Image URL</label><input type="text" value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} placeholder="https://example.com/image.jpg" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
             </div>
           </div>
           <div>
@@ -254,7 +259,7 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm text-admin-text mb-1">SKU/Barcode</label><div className="flex gap-2"><input type="text" value={sku} onChange={(e) => setSku(e.target.value)} className="flex-1 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /><button type="button" onClick={() => setSku(generateSKU())} className="px-3 py-2 bg-primary text-white hover:bg-primary/90" title="Generate SKU"><Sparkles size={16} /></button></div></div>
-                <div><label className="block text-sm text-admin-text mb-1">Expiry Date</label><input type="date" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+                <div><label className="block text-sm text-admin-text mb-1">Expiry Date</label><input type="date" value={formData.expiry_date} onChange={(e) => setFormData({...formData, expiry_date: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
               </div>
               <div><label className="block text-sm text-admin-text mb-1">Specifications</label><textarea rows={4} value={formData.specifications} onChange={(e) => setFormData({...formData, specifications: e.target.value})} placeholder="Enter product specifications..." className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
             </div>
