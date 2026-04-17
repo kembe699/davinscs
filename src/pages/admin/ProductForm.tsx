@@ -121,9 +121,9 @@ export default function ProductForm() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info and Specifications in Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Basic Info */}
-            <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-5">
               <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -276,7 +276,7 @@ export default function ProductForm() {
             </section>
 
             {/* Specs */}
-            <section className="border border-border-subtle p-6 bg-chassis space-y-4">
+            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Specifications</h2>
               <button type="button" onClick={addSpec} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-mono-tech uppercase tracking-widest">
