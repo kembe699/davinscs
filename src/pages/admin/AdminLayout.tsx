@@ -16,7 +16,6 @@ const navItems = [
   { label: "Tax Rates", href: "/admin/tax-rates", icon: Percent },
   { label: "Price Lists", href: "/admin/price-lists", icon: Tag },
   { label: "Promotions", href: "/admin/promotions", icon: Tag },
-  { label: "Countries", href: "/admin/countries", icon: Globe },
   { label: "My Company", href: "/admin/company", icon: Building },
   { label: "Users", href: "/admin/users", icon: Users },
 ];
