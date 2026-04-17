@@ -40,6 +40,15 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "slug, name, brand, price and category are required" });
   }
   try {
+    // Check for duplicate product name
+    const duplicateCheck = await pool.query(
+      `SELECT id FROM products WHERE LOWER(name) = LOWER($1)`,
+      [name]
+    );
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: "A product with this name already exists" });
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO products (slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, quantity_on_hand, reorder_level)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
@@ -56,10 +65,16 @@ router.post("/", requireAuth, async (req, res) => {
 // PUT update product (admin)
 router.put("/:id", requireAuth, async (req, res) => {
   const { name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, quantity_on_hand, reorder_level } = req.body;
-  console.log('UPDATE Product ID:', req.params.id);
-  console.log('Barcode received:', barcode);
-  console.log('Full body:', JSON.stringify(req.body, null, 2));
   try {
+    // Check for duplicate product name (excluding current product)
+    const duplicateCheck = await pool.query(
+      `SELECT id FROM products WHERE LOWER(name) = LOWER($1) AND id != $2`,
+      [name, req.params.id]
+    );
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: "A product with this name already exists" });
+    }
+
     const { rows } = await pool.query(
       `UPDATE products SET
         slug=$1, name=$2, brand=$3, price=$4, tag=$5, description=$6,
