@@ -9,6 +9,7 @@ export interface CompanyInfo {
   email: string;
   website?: string;
   tax_id?: string;
+  logo?: string;
 }
 
 export interface ReportExportOptions {

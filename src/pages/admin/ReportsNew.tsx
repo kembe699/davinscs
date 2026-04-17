@@ -51,7 +51,8 @@ export default function ReportsNew() {
           phone: info.phone || "Phone Number",
           email: info.email || "email@company.com",
           website: info.website,
-          tax_id: info.tax_id
+          tax_id: info.tax_id,
+          logo: info.logo || ""
         });
       }
     } catch (err) {
