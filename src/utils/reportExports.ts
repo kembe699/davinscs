@@ -57,8 +57,27 @@ export const exportToExcel = (options: ReportExportOptions) => {
     })
   );
 
+  // Calculate totals for numeric columns
+  const totalsRow = columns.map((col, idx) => {
+    if (idx === 0) return 'TOTAL';
+    
+    const isNumeric = data.some(row => typeof row[col.dataKey] === 'number');
+    if (isNumeric && !col.dataKey.includes('average') && !col.dataKey.includes('avg')) {
+      const sum = data.reduce((acc, row) => {
+        const val = parseFloat(row[col.dataKey]) || 0;
+        return acc + val;
+      }, 0);
+      
+      if (sum > 1000) {
+        return (sum / 100).toFixed(2);
+      }
+      return sum;
+    }
+    return '';
+  });
+
   // Combine all rows
-  const wsData = [...headerData, ...dataRows];
+  const wsData = [...headerData, ...dataRows, totalsRow];
 
   // Create worksheet
   const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -152,11 +171,32 @@ export const exportToPDF = (options: ReportExportOptions) => {
     })
   );
 
+  // Calculate totals row
+  const totalsRow = columns.map((col, idx) => {
+    if (idx === 0) return 'TOTAL';
+    
+    const isNumeric = data.some(row => typeof row[col.dataKey] === 'number');
+    if (isNumeric && !col.dataKey.includes('average') && !col.dataKey.includes('avg')) {
+      const sum = data.reduce((acc, row) => {
+        const val = parseFloat(row[col.dataKey]) || 0;
+        return acc + val;
+      }, 0);
+      
+      if (sum > 1000 && (col.dataKey.includes('revenue') || col.dataKey.includes('amount') || 
+          col.dataKey.includes('spent') || col.dataKey.includes('price') || 
+          col.dataKey.includes('total') || col.dataKey.includes('sale'))) {
+        return formatCurrency(sum, currency);
+      }
+      return sum.toString();
+    }
+    return '';
+  });
+
   // Add table
   autoTable(doc, {
     startY: yPosition,
     head: [columns.map(col => col.header)],
-    body: tableData,
+    body: [...tableData, totalsRow],
     theme: 'grid',
     styles: {
       fontSize: 9,
@@ -170,7 +210,18 @@ export const exportToPDF = (options: ReportExportOptions) => {
     alternateRowStyles: {
       fillColor: [245, 245, 245],
     },
+    footStyles: {
+      fillColor: [220, 220, 220],
+      fontStyle: 'bold',
+    },
     margin: { left: 15, right: 15 },
+    didParseCell: (data) => {
+      // Style the last row (totals) as footer
+      if (data.row.index === tableData.length) {
+        data.cell.styles.fillColor = [220, 220, 220];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
     didDrawPage: (data) => {
       // Add footer with page number
       const pageCount = (doc as any).internal.getNumberOfPages();
@@ -368,6 +419,31 @@ export const printReport = (options: ReportExportOptions) => {
               </tr>
             `).join('')}
           </tbody>
+          <tfoot style="background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #333;">
+            <tr>
+              ${columns.map((col, idx) => {
+                if (idx === 0) return '<td>TOTAL</td>';
+                
+                const isNumeric = data.some(row => typeof row[col.dataKey] === 'number');
+                if (isNumeric && !col.dataKey.includes('average') && !col.dataKey.includes('avg')) {
+                  const sum = data.reduce((acc, row) => {
+                    const val = parseFloat(row[col.dataKey]) || 0;
+                    return acc + val;
+                  }, 0);
+                  
+                  let displayValue = sum;
+                  if (sum > 1000 && (col.dataKey.includes('revenue') || col.dataKey.includes('amount') || 
+                      col.dataKey.includes('spent') || col.dataKey.includes('price') || 
+                      col.dataKey.includes('total') || col.dataKey.includes('sale'))) {
+                    displayValue = formatCurrency(sum, currency);
+                  }
+                  
+                  return `<td class="text-right">${displayValue}</td>`;
+                }
+                return '<td></td>';
+              }).join('')}
+            </tr>
+          </tfoot>
         </table>
       ` : '<div class="no-data">No data available for the selected date range</div>'}
       

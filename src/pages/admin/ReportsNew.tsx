@@ -617,6 +617,24 @@ export default function ReportsNew() {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="bg-admin-bg border-t-2 border-admin-border font-bold">
+                        <tr>
+                          <td className="px-4 py-3 text-admin-text">TOTAL</td>
+                          <td className="px-4 py-3 text-right text-admin-text">
+                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_sales), 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-admin-text">
+                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_revenue), 0), baseCurrency?.symbol || 'UGX', false)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-admin-text">
+                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_tax), 0), baseCurrency?.symbol || 'UGX', false)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-admin-text">
+                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_discounts), 0), baseCurrency?.symbol || 'UGX', false)}
+                          </td>
+                          <td className="px-4 py-3"></td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 )}
@@ -712,11 +730,26 @@ export default function ReportsNew() {
                             </td>
                             <td className="px-4 py-3 text-right text-admin-text">{row.times_sold}</td>
                             <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.average_price), baseCurrency?.symbol || 'UGX', false)}
+                              {formatCurrencySync(Math.round(parseFloat(row.average_price)), baseCurrency?.symbol || 'UGX', false)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="bg-admin-bg border-t-2 border-admin-border font-bold">
+                        <tr>
+                          <td className="px-4 py-3 text-admin-text">TOTAL</td>
+                          <td className="px-4 py-3 text-right text-admin-text">
+                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_quantity), 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-admin-text">
+                            {formatCurrencySync(reportData.reduce((sum: number, row: any) => sum + parseInt(row.total_revenue), 0), baseCurrency?.symbol || 'UGX', false)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-admin-text">
+                            {reportData.reduce((sum: number, row: any) => sum + parseInt(row.times_sold), 0)}
+                          </td>
+                          <td className="px-4 py-3"></td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 )}
