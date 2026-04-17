@@ -101,78 +101,79 @@ export const exportToExcel = (options: ReportExportOptions) => {
 export const exportToPDF = (options: ReportExportOptions) => {
   const { reportTitle, dateRange, companyInfo, data, columns, currency = 'UGX' } = options;
 
-  // Create PDF document with A4 size and better margins
+  // Create PDF document with A4 size (210mm x 297mm)
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
+    compress: true
   });
   
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  let yPosition = 25;
-  const leftMargin = 20;
-  const rightMargin = pageWidth - 20;
+  const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
+  const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
+  let yPosition = 15;
+  const leftMargin = 15;
+  const rightMargin = pageWidth - 15;
 
   // Add company logo on the left if available
   if (companyInfo.logo) {
     try {
-      doc.addImage(companyInfo.logo, 'JPEG', leftMargin, yPosition, 35, 35);
+      doc.addImage(companyInfo.logo, 'JPEG', leftMargin, yPosition, 25, 25);
     } catch (err) {
       console.log('Could not add logo to PDF');
     }
   }
 
   // Add company header on the right with professional styling
-  const textStartX = pageWidth - 20;
-  doc.setFontSize(22);
+  const textStartX = pageWidth - leftMargin;
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(41, 128, 185); // Professional blue color
-  doc.text(companyInfo.name, textStartX, yPosition + 2, { align: 'right' });
+  doc.text(companyInfo.name, textStartX, yPosition + 5, { align: 'right' });
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80); // Dark gray for contact info
-  yPosition += 10;
+  yPosition += 12;
   doc.text(companyInfo.address, textStartX, yPosition, { align: 'right' });
-  yPosition += 5;
+  yPosition += 4;
 
   doc.text(`Phone: ${companyInfo.phone}`, textStartX, yPosition, { align: 'right' });
-  yPosition += 5;
+  yPosition += 4;
   
   doc.text(`Email: ${companyInfo.email}`, textStartX, yPosition, { align: 'right' });
-  yPosition += 5;
+  yPosition += 4;
 
   if (companyInfo.website) {
     doc.text(`Website: ${companyInfo.website}`, textStartX, yPosition, { align: 'right' });
-    yPosition += 5;
+    yPosition += 4;
   }
 
   if (companyInfo.tax_id) {
     doc.text(`Tax ID: ${companyInfo.tax_id}`, textStartX, yPosition, { align: 'right' });
-    yPosition += 5;
+    yPosition += 4;
   }
 
   // Add professional separator line
-  yPosition = Math.max(yPosition, 65); // Ensure we're below the logo
+  yPosition = Math.max(yPosition, 45); // Ensure we're below the logo
   doc.setDrawColor(41, 128, 185); // Blue line
-  doc.setLineWidth(1);
-  doc.line(20, yPosition, pageWidth - 20, yPosition);
-  yPosition += 15;
+  doc.setLineWidth(0.5);
+  doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition);
+  yPosition += 10;
 
   // Add report title with professional styling
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(44, 62, 80); // Dark blue-gray
   doc.text(reportTitle.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
+  yPosition += 8;
 
   // Add date range with subtle styling
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(127, 140, 141); // Medium gray
   doc.text(`Period: ${dateRange}`, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 12;
+  yPosition += 10;
 
   // Prepare table data
   const tableData = data.map(row => 
@@ -248,7 +249,7 @@ export const exportToPDF = (options: ReportExportOptions) => {
       textColor: [44, 62, 80],
       fontSize: 10,
     },
-    margin: { left: 20, right: 20 },
+    margin: { left: 15, right: 15 },
     didParseCell: (data) => {
       // Style the last row (totals) as footer
       if (data.row.index === tableData.length) {
@@ -272,38 +273,38 @@ export const exportToPDF = (options: ReportExportOptions) => {
       
       // Footer background
       doc.setFillColor(250, 250, 250);
-      doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
+      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
       
       // Footer line
       doc.setDrawColor(189, 195, 199);
-      doc.setLineWidth(0.5);
-      doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20);
+      doc.setLineWidth(0.3);
+      doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
       
       // Page number
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(127, 140, 141);
       doc.text(
         `Page ${data.pageNumber} of ${pageCount}`,
         pageWidth / 2,
-        pageHeight - 12,
+        pageHeight - 8,
         { align: 'center' }
       );
       
       // Generation timestamp
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.text(
         `Generated: ${new Date().toLocaleString()}`,
-        pageWidth - 20,
-        pageHeight - 12,
+        pageWidth - 15,
+        pageHeight - 8,
         { align: 'right' }
       );
       
       // Company name in footer
       doc.text(
         companyInfo.name,
-        20,
-        pageHeight - 12,
+        15,
+        pageHeight - 8,
         { align: 'left' }
       );
     },
