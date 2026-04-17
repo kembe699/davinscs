@@ -25,11 +25,22 @@ export default function POSMain() {
   const [discountValue, setDiscountValue] = useState(0);
   const [heldSales, setHeldSales] = useState<Array<any>>([]);
   const [showHeldSales, setShowHeldSales] = useState(false);
+  const [companyData, setCompanyData] = useState<any>(null);
 
   useEffect(() => {
     loadData();
     checkCashDrawer();
+    loadCompanyData();
   }, []);
+
+  const loadCompanyData = async () => {
+    try {
+      const data = await api.company.get();
+      setCompanyData(data);
+    } catch (err) {
+      console.error("Failed to load company data:", err);
+    }
+  };
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -600,9 +611,17 @@ export default function POSMain() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-black uppercase">Davin's Camera Store</h2>
-              <p className="text-xs text-black">Kampala, Uganda</p>
-              <p className="text-xs text-black">Tel: +256-XXX-XXXXXX</p>
+              {companyData?.logo && (
+                <div className="flex justify-center mb-2">
+                  <img src={companyData.logo} alt={companyData.name} className="h-12 object-contain" />
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-black uppercase">{companyData?.name || "Davin's Camera Store"}</h2>
+              <p className="text-xs text-black">{companyData?.address || "Kampala, Uganda"}</p>
+              {companyData?.city && <p className="text-xs text-black">{companyData.city}, {companyData.country}</p>}
+              <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
+              {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
+              {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
               <div className="border-t border-black my-3"></div>
               <p className="text-sm font-bold text-black">SALES RECEIPT</p>
               <p className="text-xs text-black">#{completedSale.sale_number}</p>

@@ -16,10 +16,21 @@ export default function SalesHistory() {
   const [filterUser, setFilterUser] = useState("");
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [companyData, setCompanyData] = useState<any>(null);
 
   useEffect(() => {
     loadData();
+    loadCompanyData();
   }, []);
+
+  const loadCompanyData = async () => {
+    try {
+      const data = await api.company.get();
+      setCompanyData(data);
+    } catch (err) {
+      console.error("Failed to load company data:", err);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -315,15 +326,23 @@ export default function SalesHistory() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-black uppercase">Davin's Camera Store</h2>
-              <p className="text-xs text-black">Kampala, Uganda</p>
-              <p className="text-xs text-black">Tel: +256-XXX-XXXXXX</p>
+              {companyData?.logo && (
+                <div className="flex justify-center mb-2">
+                  <img src={companyData.logo} alt={companyData.name} className="h-12 object-contain" />
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-black uppercase">{companyData?.name || "Davin's Camera Store"}</h2>
+              <p className="text-xs text-black">{companyData?.address || "Kampala, Uganda"}</p>
+              {companyData?.city && <p className="text-xs text-black">{companyData.city}, {companyData.country}</p>}
+              <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
+              {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
+              {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
               <div className="border-t border-black my-3"></div>
               <p className="text-sm font-bold text-black">SALES RECEIPT</p>
               <p className="text-xs text-black">#{receiptData.sale_number}</p>
               <p className="text-xs text-black">{new Date(receiptData.created_at).toLocaleString()}</p>
               <div className="border-t border-black my-3"></div>
-              <p className="text-xs text-black text-left">Customer: Walk-in Customer</p>
+              <p className="text-xs text-black text-left">Customer: {receiptData.customer_name || 'Walk-in Customer'}</p>
             </div>
 
             <div className="mb-4">
