@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import productRoutes from "./routes/products.js";
 import orderRoutes from "./routes/orders.js";
+import customerOrdersRoutes from "./routes/customer-orders.js";
 import categoryRoutes from "./routes/categories.js";
 import inventoryRoutes from "./routes/inventory.js";
 import procurementRoutes from "./routes/procurement.js";
@@ -62,6 +63,7 @@ app.use(session({
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/customer-orders", customerOrdersRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/inventory", inventoryRoutes);
@@ -307,7 +309,10 @@ async function migrate() {
       shipping_cost INTEGER DEFAULT 0,
       total INTEGER NOT NULL,
       status VARCHAR(50) DEFAULT 'pending',
+      tracking_number VARCHAR(100),
       notes TEXT,
+      cancelled_at TIMESTAMPTZ,
+      cancelled_by INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );

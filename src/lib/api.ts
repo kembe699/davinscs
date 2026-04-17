@@ -250,7 +250,11 @@ export type ApiCustomerOrder = {
   shipping_cost: number;
   total: number;
   status: string;
+  tracking_number?: string;
   notes?: string;
+  item_count?: number;
+  cancelled_at?: string;
+  cancelled_by?: number;
   created_at: string;
   updated_at: string;
   items?: ApiOrderItem[];
@@ -649,6 +653,19 @@ export const api = {
     get: () => request<CompanySettings>("/api/company"),
     save: (data: Partial<CompanySettings>) =>
       request<CompanySettings>("/api/company", { method: "POST", body: JSON.stringify(data) }),
+  },
+  customerOrders: {
+    list: (params?: { status?: string; search?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<{ orders: ApiCustomerOrder[]; total: number; limit: number; offset: number }>(`/api/customer-orders${qs ? `?${qs}` : ""}`);
+    },
+    get: (id: number) => request<ApiCustomerOrder>(`/api/customer-orders/${id}`),
+    updateStatus: (id: number, status: string) =>
+      request<ApiCustomerOrder>(`/api/customer-orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+    update: (id: number, data: Partial<ApiCustomerOrder>) =>
+      request<ApiCustomerOrder>(`/api/customer-orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    cancel: (id: number) =>
+      request<ApiCustomerOrder>(`/api/customer-orders/${id}/cancel`, { method: "POST" }),
   },
   pos: {
     createSale: (data: {

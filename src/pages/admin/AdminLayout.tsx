@@ -1,11 +1,12 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "POS", href: "/pos", icon: Monitor },
+  { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
   { label: "Products", href: "/admin/products", icon: Package },
   { label: "Categories", href: "/admin/categories", icon: Layers },
   { label: "Inventory", href: "/admin/inventory", icon: PackageCheck },

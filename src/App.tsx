@@ -25,6 +25,7 @@ import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
 import ResetPassword from "./pages/admin/ResetPassword.tsx";
 import Inventory from "./pages/admin/Inventory.tsx";
+import Orders from "./pages/admin/Orders.tsx";
 import Procurement from "./pages/admin/Procurement.tsx";
 import Accounting from "./pages/admin/Accounting.tsx";
 import Reports from "./pages/admin/Reports.tsx";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
             <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
             <Route path="/admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
             <Route path="/admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
