@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Trash2, Search, RefreshCw, Upload, Download } from "lucide-react";
+import { Plus, Trash2, Search, RefreshCw, Upload, Download, Edit } from "lucide-react";
 
 const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
@@ -75,6 +75,9 @@ export default function Products() {
             <button onClick={openNewForm} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
               <Plus size={14} /> New product
             </button>
+            <button disabled={!selectedProduct} onClick={() => selectedProduct && openEditForm(selectedProduct)} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg disabled:opacity-50">
+              <Edit size={14} /> Edit
+            </button>
             <button disabled={!selectedProduct} onClick={() => selectedProduct && setConfirmId(selectedProduct.id)} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50">
               <Trash2 size={14} /> Delete
             </button>
@@ -126,7 +129,12 @@ export default function Products() {
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
                     {filtered.map((p) => (
-                      <tr key={p.id} onClick={() => openEditForm(p)} className={`cursor-pointer transition-colors ${selectedProduct?.id === p.id ? 'bg-primary/10' : 'hover:bg-chassis'}`}>
+                      <tr 
+                        key={p.id} 
+                        onClick={() => setSelectedProduct(p)} 
+                        onDoubleClick={() => openEditForm(p)}
+                        className={`cursor-pointer transition-colors ${selectedProduct?.id === p.id ? 'bg-primary/10' : 'hover:bg-chassis'}`}
+                      >
                         <td className="px-4 py-3">{p.name}</td>
                         <td className="px-4 py-3 capitalize">{p.category}</td>
                         <td className="px-4 py-3">{p.brand}</td>
