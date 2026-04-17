@@ -108,7 +108,11 @@ export default function Products() {
             </Link>
             <button
               disabled={selectedProducts.length !== 1}
-              onClick={() => selectedProducts[0] && window.location.href = `/admin/products/${selectedProducts[0]}/edit`}
+              onClick={() => {
+                if (selectedProducts[0]) {
+                  window.location.href = `/admin/products/${selectedProducts[0]}/edit`;
+                }
+              }}
               className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg disabled:opacity-50"
               title="Edit product"
             >
