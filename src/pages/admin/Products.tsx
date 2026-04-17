@@ -182,11 +182,11 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
     category: product?.category || 'cameras',
     brand: product?.brand || '',
     description: product?.description || '',
-    price: product ? product.price / 100 : '',
+    price: product?.price ? product.price / 100 : '',
     specifications: product?.specs?.[0] || '',
     expiry_date: product?.expiry_date || '',
-    current_stock: product?.quantity_on_hand || '',
-    reorder_level: product?.reorder_level || '',
+    current_stock: product?.quantity_on_hand?.toString() || '',
+    reorder_level: product?.reorder_level?.toString() || '',
     image_url: product?.image_url || ''
   });
 
