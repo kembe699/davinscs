@@ -101,16 +101,17 @@ export const exportToExcel = (options: ReportExportOptions) => {
 export const exportToPDF = (options: ReportExportOptions) => {
   const { reportTitle, dateRange, companyInfo, data, columns, currency = 'UGX' } = options;
 
-  // Create PDF document with A4 size (210mm x 297mm)
+  // Create PDF document with explicit A4 size (210mm x 297mm)
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4',
-    compress: true
+    format: [210, 297], // Explicitly set A4 dimensions
+    compress: true,
+    putOnlyUsedFonts: true
   });
   
-  const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
-  const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
+  const pageWidth = 210; // A4 width in mm
+  const pageHeight = 297; // A4 height in mm
   let yPosition = 15;
   const leftMargin = 15;
   const rightMargin = pageWidth - 15;
