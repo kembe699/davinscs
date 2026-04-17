@@ -410,11 +410,54 @@ async function migrate() {
       email VARCHAR(255),
       tax_id VARCHAR(100),
       currency VARCHAR(10) DEFAULT 'UGX',
-      logo_url VARCHAR(500),
+      logo_url TEXT,
       receipt_footer TEXT,
+      city VARCHAR(100),
+      country VARCHAR(100),
+      postal_code VARCHAR(20),
+      website VARCHAR(255),
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+    
+    -- Alter existing table to add missing columns and change logo_url type
+    DO $$ 
+    BEGIN
+      -- Change logo_url to TEXT type
+      BEGIN
+        ALTER TABLE company_settings ALTER COLUMN logo_url TYPE TEXT;
+      EXCEPTION
+        WHEN undefined_column THEN NULL;
+      END;
+      
+      -- Add city column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN city VARCHAR(100);
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+      
+      -- Add country column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN country VARCHAR(100);
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+      
+      -- Add postal_code column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN postal_code VARCHAR(20);
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+      
+      -- Add website column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN website VARCHAR(255);
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+    END $$;
     
     CREATE TABLE IF NOT EXISTS cash_drawer_sessions (
       id SERIAL PRIMARY KEY,
