@@ -204,9 +204,12 @@ export async function autoSeed() {
     );
   }
 
-  // Seed currencies
+  // Seed currencies - check if base currency exists first
+  const existingBase = await pool.query('SELECT id FROM currencies WHERE is_base = true LIMIT 1');
+  const hasBaseCurrency = existingBase.rows.length > 0;
+
   const currencies = [
-    { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX', is_base: true, exchange_rate: 1.0 },
+    { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX', is_base: !hasBaseCurrency, exchange_rate: 1.0 },
     { code: 'USD', name: 'US Dollar', symbol: '$', is_base: false, exchange_rate: 0.00027 },
     { code: 'EUR', name: 'Euro', symbol: '€', is_base: false, exchange_rate: 0.00025 },
     { code: 'GBP', name: 'British Pound', symbol: '£', is_base: false, exchange_rate: 0.00021 },
@@ -215,7 +218,12 @@ export async function autoSeed() {
   for (const currency of currencies) {
     await pool.query(
       `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
-       VALUES ($1, $2, $3, $4, $5, true) ON CONFLICT (code) DO NOTHING`,
+       VALUES ($1, $2, $3, $4, $5, true) 
+       ON CONFLICT (code) DO UPDATE SET
+         name = EXCLUDED.name,
+         symbol = EXCLUDED.symbol,
+         exchange_rate = EXCLUDED.exchange_rate,
+         is_active = EXCLUDED.is_active`,
       [currency.code, currency.name, currency.symbol, currency.is_base, currency.exchange_rate]
     );
   }

@@ -32,6 +32,7 @@ import cashDrawerRoutes from "./routes/cash-drawer.js";
 import posReportsRoutes from "./routes/pos-reports.js";
 import currenciesRoutes from "./routes/currencies.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import exchangeRatesRoutes from "./routes/exchangeRates.js";
 
 dotenv.config();
 
@@ -87,6 +88,7 @@ app.use("/api/cash-drawer", cashDrawerRoutes);
 app.use("/api/pos-reports", posReportsRoutes);
 app.use("/api/currencies", currenciesRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/exchange-rates", exchangeRatesRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -521,7 +523,34 @@ async function migrate() {
     
     CREATE INDEX IF NOT EXISTS idx_currencies_code ON currencies(code);
     CREATE INDEX IF NOT EXISTS idx_currencies_is_base ON currencies(is_base) WHERE is_base = TRUE;
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_currencies_single_base ON currencies(is_base) WHERE is_base = TRUE;
+    DO $$ 
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes WHERE indexname = 'idx_currencies_single_base'
+      ) THEN
+        CREATE UNIQUE INDEX idx_currencies_single_base ON currencies(is_base) WHERE is_base = TRUE;
+      END IF;
+    END $$;
+    
+    -- Exchange rates table
+    CREATE TABLE IF NOT EXISTS exchange_rates (
+      id SERIAL PRIMARY KEY,
+      from_currency_id INTEGER REFERENCES currencies(id) ON DELETE CASCADE,
+      to_currency_id INTEGER REFERENCES currencies(id) ON DELETE CASCADE,
+      rate DECIMAL(15,6) NOT NULL,
+      effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      expiry_date DATE,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(from_currency_id, to_currency_id, effective_date)
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_exchange_rates_from_currency ON exchange_rates(from_currency_id);
+    CREATE INDEX IF NOT EXISTS idx_exchange_rates_to_currency ON exchange_rates(to_currency_id);
+    CREATE INDEX IF NOT EXISTS idx_exchange_rates_active ON exchange_rates(is_active) WHERE is_active = TRUE;
+    CREATE INDEX IF NOT EXISTS idx_exchange_rates_dates ON exchange_rates(effective_date, expiry_date);
   `);
   console.log("\u2705 Migrations applied");
 }

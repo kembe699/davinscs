@@ -39,7 +39,7 @@ import CashManagement from "./pages/pos/CashManagement.tsx";
 import EndOfDay from "./pages/pos/EndOfDay.tsx";
 import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
 import TaxRates from "./pages/admin/TaxRates.tsx";
-import Currencies from "./pages/admin/Currencies.tsx";
+import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
 
 const queryClient = new QueryClient();
 
@@ -89,7 +89,7 @@ const App = () => (
             <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
             <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
-            <Route path="/admin/currencies" element={<ProtectedRoute><Currencies /></ProtectedRoute>} />
+            <Route path="/admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />

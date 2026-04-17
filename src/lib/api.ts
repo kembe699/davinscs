@@ -335,6 +335,25 @@ export type HourlyData = {
   count: number;
 };
 
+export type ApiExchangeRate = {
+  id: number;
+  from_currency_id: number;
+  to_currency_id: number;
+  rate: number;
+  effective_date: string;
+  expiry_date: string | null;
+  is_active: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  from_currency_code?: string;
+  from_currency_name?: string;
+  from_currency_symbol?: string;
+  to_currency_code?: string;
+  to_currency_name?: string;
+  to_currency_symbol?: string;
+};
+
 export type Promotion = {
   id: number;
   name: string;
@@ -829,5 +848,29 @@ export const api = {
     },
     hourlySales: () =>
       request<HourlyData[]>("/api/dashboard/hourly-sales"),
+  },
+  exchangeRates: {
+    list: () => request<ApiExchangeRate[]>("/api/exchange-rates"),
+    getActive: (fromId: number, toId: number) =>
+      request<ApiExchangeRate>(`/api/exchange-rates/active/${fromId}/${toId}`),
+    convert: (data: { from_currency_id: number; to_currency_id: number; amount: number }) =>
+      request<{ from_currency_id: number; to_currency_id: number; original_amount: number; rate: number; converted_amount: number }>("/api/exchange-rates/convert", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    create: (data: Partial<ApiExchangeRate>) =>
+      request<ApiExchangeRate>("/api/exchange-rates", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: number, data: Partial<ApiExchangeRate>) =>
+      request<ApiExchangeRate>(`/api/exchange-rates/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: number) =>
+      request<{ success: boolean }>(`/api/exchange-rates/${id}`, {
+        method: "DELETE",
+      }),
   },
 };
