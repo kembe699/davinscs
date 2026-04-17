@@ -5,13 +5,13 @@ import { api } from "@/lib/api";
 
 export default function Company() {
   const [companyData, setCompanyData] = useState({
-    name: "Davin's Camera Store",
-    logo: "/logo.jpeg",
+    name: "",
+    logo: "",
     email: "",
     phone: "",
     address: "",
     city: "",
-    country: "Uganda",
+    country: "",
     postal_code: "",
     tax_id: "",
     website: "",
@@ -28,8 +28,20 @@ export default function Company() {
     try {
       const data = await api.company.get().catch(() => null);
       if (data) {
-        setCompanyData(data);
-        setLogoPreview(data.logo);
+        setCompanyData({
+          name: data.name || "",
+          logo: data.logo || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          city: data.city || "",
+          country: data.country || "",
+          postal_code: data.postal_code || "",
+          tax_id: data.tax_id || "",
+          website: data.website || "",
+          description: data.description || "",
+        });
+        setLogoPreview(data.logo || "");
       }
     } catch (err) {
       console.error("Failed to load company data:", err);
