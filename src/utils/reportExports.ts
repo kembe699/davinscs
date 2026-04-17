@@ -106,33 +106,45 @@ export const exportToPDF = (options: ReportExportOptions) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   let yPosition = 20;
+  const leftMargin = 15;
+  const rightMargin = pageWidth - 15;
 
-  // Add company header
+  // Add company logo on the left if available
+  if (companyInfo.logo) {
+    try {
+      doc.addImage(companyInfo.logo, 'JPEG', leftMargin, yPosition, 30, 30);
+    } catch (err) {
+      console.log('Could not add logo to PDF');
+    }
+  }
+
+  // Add company header on the right
+  const textStartX = pageWidth - 15;
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(companyInfo.name, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(companyInfo.name, textStartX, yPosition, { align: 'right' });
   yPosition += 8;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(companyInfo.address, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(companyInfo.address, textStartX, yPosition, { align: 'right' });
   yPosition += 5;
 
-  doc.text(`Phone: ${companyInfo.phone} | Email: ${companyInfo.email}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Phone: ${companyInfo.phone} | Email: ${companyInfo.email}`, textStartX, yPosition, { align: 'right' });
   yPosition += 5;
 
   if (companyInfo.website) {
-    doc.text(`Website: ${companyInfo.website}`, pageWidth / 2, yPosition, { align: 'center' });
+    doc.text(`Website: ${companyInfo.website}`, textStartX, yPosition, { align: 'right' });
     yPosition += 5;
   }
 
   if (companyInfo.tax_id) {
-    doc.text(`Tax ID: ${companyInfo.tax_id}`, pageWidth / 2, yPosition, { align: 'center' });
+    doc.text(`Tax ID: ${companyInfo.tax_id}`, textStartX, yPosition, { align: 'right' });
     yPosition += 5;
   }
 
   // Add separator line
-  yPosition += 5;
+  yPosition = Math.max(yPosition, 55); // Ensure we're below the logo
   doc.setLineWidth(0.5);
   doc.line(15, yPosition, pageWidth - 15, yPosition);
   yPosition += 10;
@@ -286,10 +298,27 @@ export const printReport = (options: ReportExportOptions) => {
         }
         
         .header {
-          text-align: center;
+          display: flex;
+          align-items: flex-start;
+          gap: 30px;
           margin-bottom: 30px;
           border-bottom: 2px solid #2980b9;
           padding-bottom: 20px;
+        }
+        
+        .logo-container {
+          flex-shrink: 0;
+        }
+        
+        .logo-container img {
+          width: 120px;
+          height: 120px;
+          object-fit: contain;
+        }
+        
+        .company-details {
+          flex: 1;
+          text-align: right;
         }
         
         .company-name {
@@ -372,12 +401,17 @@ export const printReport = (options: ReportExportOptions) => {
     </head>
     <body>
       <div class="header">
-        <div class="company-name">${companyInfo.name}</div>
-        <div class="company-info">
-          ${companyInfo.address}<br>
-          Phone: ${companyInfo.phone} | Email: ${companyInfo.email}
-          ${companyInfo.website ? `<br>Website: ${companyInfo.website}` : ''}
-          ${companyInfo.tax_id ? `<br>Tax ID: ${companyInfo.tax_id}` : ''}
+        <div class="logo-container">
+          ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="${companyInfo.name}">` : '<div style="width: 120px; height: 120px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; color: #999;">No Logo</div>'}
+        </div>
+        <div class="company-details">
+          <div class="company-name">${companyInfo.name}</div>
+          <div class="company-info">
+            ${companyInfo.address}<br>
+            Phone: ${companyInfo.phone} | Email: ${companyInfo.email}
+            ${companyInfo.website ? `<br>Website: ${companyInfo.website}` : ''}
+            ${companyInfo.tax_id ? `<br>Tax ID: ${companyInfo.tax_id}` : ''}
+          </div>
         </div>
       </div>
       

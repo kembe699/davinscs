@@ -580,18 +580,38 @@ export default function ReportsNew() {
             {reportData && !loading && (
               <div className="bg-white border border-gray-300 shadow-lg" style={{ minHeight: '800px' }}>
                 {/* Professional Document Header */}
-                <div className="border-b-2 border-gray-800 p-8 text-center bg-white">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-3">{companyInfo.name}</h1>
-                  <p className="text-sm text-gray-600 mb-1">{companyInfo.address}</p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Phone: {companyInfo.phone} | Email: {companyInfo.email}
-                  </p>
-                  {companyInfo.website && (
-                    <p className="text-sm text-gray-600 mb-1">Website: {companyInfo.website}</p>
-                  )}
-                  {companyInfo.tax_id && (
-                    <p className="text-sm text-gray-600">Tax ID: {companyInfo.tax_id}</p>
-                  )}
+                <div className="border-b-2 border-gray-800 p-8 bg-white">
+                  <div className="flex items-start gap-6">
+                    {/* Logo on the left */}
+                    <div className="flex-shrink-0">
+                      {companyInfo.logo ? (
+                        <img 
+                          src={companyInfo.logo} 
+                          alt={companyInfo.name} 
+                          className="w-32 h-32 object-contain"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">No Logo</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Company info on the right */}
+                    <div className="flex-1 text-right">
+                      <h1 className="text-3xl font-bold text-gray-900 mb-3">{companyInfo.name}</h1>
+                      <p className="text-sm text-gray-600 mb-1">{companyInfo.address}</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Phone: {companyInfo.phone} | Email: {companyInfo.email}
+                      </p>
+                      {companyInfo.website && (
+                        <p className="text-sm text-gray-600 mb-1">Website: {companyInfo.website}</p>
+                      )}
+                      {companyInfo.tax_id && (
+                        <p className="text-sm text-gray-600">Tax ID: {companyInfo.tax_id}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Report Title Section */}
