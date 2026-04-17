@@ -778,292 +778,138 @@ export default function ReportsNew() {
 
                 {/* Expenses by Category */}
                 {selectedReport === "expenses-by-category" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Account Code</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Category</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Transactions</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.code} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 font-mono text-admin-text">{row.code}</td>
-                            <td className="px-4 py-3 text-admin-text">{row.category_name}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.transaction_count}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_amount), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Account Code', accessor: 'code' },
+                      { header: 'Category', accessor: 'category_name' },
+                      { header: 'Transactions', accessor: 'transaction_count', align: 'right' },
+                      { header: 'Total Amount', accessor: 'total_amount', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['code', 'category_name']}
+                  />
                 )}
 
                 {/* Cash Drawer Expenses */}
                 {selectedReport === "cash-drawer-expenses" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Date</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">User</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Reason</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.created_at).toLocaleString()}</td>
-                            <td className="px-4 py-3 text-admin-text">{row.user_email}</td>
-                            <td className="px-4 py-3 text-admin-text">{row.reason}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.amount), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Date', accessor: 'created_at', format: (val) => new Date(val).toLocaleString() },
+                      { header: 'User', accessor: 'user_email' },
+                      { header: 'Reason', accessor: 'reason' },
+                      { header: 'Amount', accessor: 'amount', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['created_at', 'user_email', 'reason']}
+                  />
                 )}
 
                 {/* Stock Movement */}
                 {selectedReport === "stock-movement" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Date</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Type</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Quantity</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">User</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.created_at).toLocaleString()}</td>
-                            <td className="px-4 py-3 text-admin-text">{row.product_name}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-1 text-xs ${
-                                row.movement_type === 'in' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
-                              }`}>
-                                {row.movement_type}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">{row.quantity}</td>
-                            <td className="px-4 py-3 text-admin-text-secondary">{row.user_email}</td>
-                            <td className="px-4 py-3 text-admin-text-secondary">{row.notes}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Date', accessor: 'created_at', format: (val) => new Date(val).toLocaleString() },
+                      { header: 'Product', accessor: 'product_name' },
+                      { header: 'Type', accessor: 'movement_type' },
+                      { header: 'Quantity', accessor: 'quantity', align: 'right' },
+                      { header: 'User', accessor: 'user_email' },
+                      { header: 'Notes', accessor: 'notes' }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['created_at', 'product_name', 'movement_type', 'user_email', 'notes']}
+                  />
                 )}
 
                 {/* Expiring Products */}
                 {selectedReport === "expiring-products" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Barcode</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Quantity</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Expiry Date</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Days Until Expiry</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.name}</td>
-                            <td className="px-4 py-3 font-mono text-admin-text-secondary">{row.barcode}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.quantity_on_hand}</td>
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.expiry_date).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span className={`px-2 py-1 text-xs ${
-                                row.days_until_expiry <= 7 ? 'bg-red-500/20 text-red-500' : 'bg-yellow-500/20 text-yellow-500'
-                              }`}>
-                                {row.days_until_expiry} days
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'name' },
+                      { header: 'Barcode', accessor: 'barcode' },
+                      { header: 'Quantity', accessor: 'quantity_on_hand', align: 'right' },
+                      { header: 'Expiry Date', accessor: 'expiry_date', format: (val) => new Date(val).toLocaleDateString() },
+                      { header: 'Days Until Expiry', accessor: 'days_until_expiry', align: 'right', format: (val) => `${val} days` }
+                    ]}
+                    data={reportData}
+                    showTotals={false}
+                  />
                 )}
 
                 {/* Expired Products */}
                 {selectedReport === "expired-products" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Barcode</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Quantity</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Expiry Date</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Days Expired</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.name}</td>
-                            <td className="px-4 py-3 font-mono text-admin-text-secondary">{row.barcode}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.quantity_on_hand}</td>
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.expiry_date).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="px-2 py-1 text-xs bg-red-500/20 text-red-500">
-                                {row.days_expired} days ago
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'name' },
+                      { header: 'Barcode', accessor: 'barcode' },
+                      { header: 'Quantity', accessor: 'quantity_on_hand', align: 'right' },
+                      { header: 'Expiry Date', accessor: 'expiry_date', format: (val) => new Date(val).toLocaleDateString() },
+                      { header: 'Days Expired', accessor: 'days_expired', align: 'right', format: (val) => `${val} days ago` }
+                    ]}
+                    data={reportData}
+                    showTotals={false}
+                  />
                 )}
 
                 {/* Low Stock */}
                 {selectedReport === "low-stock" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Barcode</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Current Stock</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Reorder Level</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Below By</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.name}</td>
-                            <td className="px-4 py-3 font-mono text-admin-text-secondary">{row.barcode}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.quantity_on_hand}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.reorder_level}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="px-2 py-1 text-xs bg-yellow-500/20 text-yellow-500">
-                                {row.units_below_reorder} units
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'name' },
+                      { header: 'Barcode', accessor: 'barcode' },
+                      { header: 'Current Stock', accessor: 'quantity_on_hand', align: 'right' },
+                      { header: 'Reorder Level', accessor: 'reorder_level', align: 'right' },
+                      { header: 'Below By', accessor: 'units_below_reorder', align: 'right', format: (val) => `${val} units` }
+                    ]}
+                    data={reportData}
+                    showTotals={false}
+                  />
                 )}
 
                 {/* Out of Stock */}
                 {selectedReport === "out-of-stock" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Barcode</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Reorder Level</th>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Last Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.name}</td>
-                            <td className="px-4 py-3 font-mono text-admin-text-secondary">{row.barcode}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.reorder_level}</td>
-                            <td className="px-4 py-3 text-admin-text-secondary">{new Date(row.updated_at).toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'name' },
+                      { header: 'Barcode', accessor: 'barcode' },
+                      { header: 'Reorder Level', accessor: 'reorder_level', align: 'right' },
+                      { header: 'Last Updated', accessor: 'updated_at', format: (val) => new Date(val).toLocaleString() }
+                    ]}
+                    data={reportData}
+                    showTotals={false}
+                  />
                 )}
 
                 {/* Trending Products */}
                 {selectedReport === "trending-products" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Product</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total Qty</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">POS Qty</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">POS Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Web Qty</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Web Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.product_id} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{row.product_name}</td>
-                            <td className="px-4 py-3 text-right font-bold text-admin-text">{row.total_quantity}</td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-admin-text">
-                              {formatCurrencySync(parseInt(row.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.pos_quantity}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.pos_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.web_quantity}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.web_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Product', accessor: 'product_name' },
+                      { header: 'Total Qty', accessor: 'total_quantity', align: 'right' },
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'POS Qty', accessor: 'pos_quantity', align: 'right' },
+                      { header: 'POS Revenue', accessor: 'pos_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Web Qty', accessor: 'web_quantity', align: 'right' },
+                      { header: 'Web Revenue', accessor: 'web_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData}
+                    totalsExclude={['product_name']}
+                  />
                 )}
 
                 {/* POS vs Web Comparison */}
                 {selectedReport === "pos-vs-web" && Array.isArray(reportData) && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-admin-bg border-b border-admin-border">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-admin-text">Date</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">POS Orders</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">POS Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Web Orders</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Web Revenue</th>
-                          <th className="text-right px-4 py-3 font-medium text-admin-text">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((row: any) => (
-                          <tr key={row.date} className="border-b border-admin-border hover:bg-admin-bg">
-                            <td className="px-4 py-3 text-admin-text">{new Date(row.date).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.pos_orders}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.pos_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-admin-text">{row.web_orders}</td>
-                            <td className="px-4 py-3 text-right font-mono text-admin-text">
-                              {formatCurrencySync(parseInt(row.web_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono font-bold text-admin-text">
-                              {formatCurrencySync(parseInt(row.pos_revenue) + parseInt(row.web_revenue), baseCurrency?.symbol || 'UGX', false)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ReportTable
+                    columns={[
+                      { header: 'Date', accessor: 'date', format: (val) => new Date(val).toLocaleDateString() },
+                      { header: 'POS Orders', accessor: 'pos_orders', align: 'right' },
+                      { header: 'POS Revenue', accessor: 'pos_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Web Orders', accessor: 'web_orders', align: 'right' },
+                      { header: 'Web Revenue', accessor: 'web_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                    ]}
+                    data={reportData.map((row: any) => ({ ...row, total_revenue: parseInt(row.pos_revenue) + parseInt(row.web_revenue) }))}
+                    totalsExclude={['date']}
+                  />
                 )}
 
                 {reportData && Array.isArray(reportData) && reportData.length === 0 && (
