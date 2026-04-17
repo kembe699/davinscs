@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Pencil, Trash2, Search, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download, X } from "lucide-react";
 
 const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
@@ -14,6 +14,8 @@ export default function Products() {
   const [category, setCategory] = useState("all");
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [showSlidePanel, setShowSlidePanel] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -63,12 +65,12 @@ export default function Products() {
             <button onClick={load} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
               <RefreshCw size={14} /> Refresh
             </button>
-            <Link to="/admin/products/new" className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
+            <button onClick={() => { setEditingProductId(null); setShowSlidePanel(true); }} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
               <Plus size={14} /> New product
-            </Link>
+            </button>
             <button
               disabled={selectedProducts.length !== 1}
-              onClick={() => selectedProducts[0] && (window.location.href = `/admin/products/${selectedProducts[0]}/edit`)}
+              onClick={() => { if (selectedProducts[0]) { setEditingProductId(selectedProducts[0]); setShowSlidePanel(true); } }}
               className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg disabled:opacity-50"
             >
               <Pencil size={14} /> Edit product
@@ -79,6 +81,23 @@ export default function Products() {
               className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50"
             >
               <Trash2 size={14} /> Delete product
+            </button>
+            <button
+              onClick={() => {
+                const csvContent = 'data:text/csv;charset=utf-8,' + 
+                  'Name,Category,Brand,Price,Stock\n' +
+                  filtered.map(p => `${p.name},${p.category},${p.brand},${p.price/100},${p.in_stock ? 'In Stock' : 'Out'}`).join('\n');
+                const link = document.createElement('a');
+                link.href = encodeURI(csvContent);
+                link.download = 'products.csv';
+                link.click();
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+            >
+              <Download size={14} /> Export
+            </button>
+            <button className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
+              <Upload size={14} /> Import
             </button>
           </div>
 
@@ -123,11 +142,12 @@ export default function Products() {
           </div>
 
           {/* Products Table */}
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1 flex flex-col">
             {loading ? (
               <div className="py-8 text-center text-muted-foreground">Loading…</div>
             ) : (
-              <table className="w-full text-sm">
+              <div className="flex-1 overflow-auto" style={{ maxHeight: 'calc(11 * 3rem)', minHeight: 'calc(11 * 3rem)' }}>
+                <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle bg-chassis">
                     <th className="w-10 px-4 py-3">
@@ -171,7 +191,8 @@ export default function Products() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -190,6 +211,146 @@ export default function Products() {
                   Delete
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Slide-in Product Form */}
+        {showSlidePanel && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
+            <div className="bg-admin-surface w-full max-w-2xl h-full overflow-y-auto shadow-2xl animate-slide-in">
+              <div className="sticky top-0 bg-admin-surface border-b border-admin-border p-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-admin-text">
+                  {editingProductId ? 'Edit Product' : 'New Product'}
+                </h2>
+                <button onClick={() => setShowSlidePanel(false)} className="p-2 hover:bg-admin-bg rounded">
+                  <X size={20} className="text-admin-text" />
+                </button>
+              </div>
+
+              <form className="p-6 space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-sm font-bold text-admin-text mb-4 uppercase tracking-wider">Basic Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-admin-text mb-1">Product Type *</label>
+                      <select className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">
+                        <option value="product">Product</option>
+                        <option value="service">Service</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-admin-text mb-1">Product Name *</label>
+                      <input type="text" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Category *</label>
+                        <select className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">
+                          {CATEGORIES.filter(c => c !== 'all').map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Brand</label>
+                        <input type="text" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-admin-text mb-1">Description</label>
+                      <textarea rows={3} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <h3 className="text-sm font-bold text-admin-text mb-4 uppercase tracking-wider">Pricing</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-admin-text mb-1">Cost Price</label>
+                      <input type="number" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-admin-text mb-1">Selling Price *</label>
+                      <input type="number" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product-specific fields */}
+                <div id="product-fields">
+                  <h3 className="text-sm font-bold text-admin-text mb-4 uppercase tracking-wider">Product Details</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">SKU/Barcode</label>
+                        <input type="text" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Expiry Date</label>
+                        <input type="date" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stock Control */}
+                <div>
+                  <h3 className="text-sm font-bold text-admin-text mb-4 uppercase tracking-wider">Stock Control</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Current Stock</label>
+                        <input type="number" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Reorder Level</label>
+                        <input type="number" placeholder="Min stock" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Reorder Quantity</label>
+                        <input type="number" placeholder="Order qty" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Maximum Stock Level</label>
+                        <input type="number" placeholder="Max stock" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-admin-text mb-1">Unit of Measure</label>
+                        <select className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">
+                          <option value="pcs">Pieces</option>
+                          <option value="box">Box</option>
+                          <option value="kg">Kilogram</option>
+                          <option value="ltr">Liter</option>
+                          <option value="mtr">Meter</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex gap-3 pt-4 border-t border-admin-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowSlidePanel(false)}
+                    className="flex-1 px-4 py-2 border border-admin-border text-admin-text hover:bg-admin-bg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-primary text-white hover:bg-primary/90"
+                  >
+                    {editingProductId ? 'Update Product' : 'Create Product'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
