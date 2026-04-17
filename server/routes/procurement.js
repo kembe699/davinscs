@@ -146,9 +146,9 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     for (const item of items) {
       await client.query(
         `INSERT INTO purchase_order_items 
-         (po_id, product_id, quantity, unit_price) 
-         VALUES ($1, $2, $3, $4)`,
-        [poId, item.product_id, item.quantity, item.unit_price]
+         (po_id, product_id, item_name, quantity, unit_price) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        [poId, item.product_id || null, item.item_name || null, item.quantity, item.unit_price]
       );
     }
     
@@ -175,6 +175,39 @@ router.put("/purchase-orders/:id", requireAuth, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: "Purchase order not found" });
     res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET PO print/PDF data
+router.get("/purchase-orders/:id/pdf", requireAuth, async (req, res) => {
+  try {
+    const poResult = await pool.query(
+      `SELECT po.*, s.name as supplier_name, s.email as supplier_email, s.phone as supplier_phone, s.address as supplier_address
+       FROM purchase_orders po
+       LEFT JOIN suppliers s ON po.supplier_id = s.id
+       WHERE po.id = $1`,
+      [req.params.id]
+    );
+    
+    if (!poResult.rows[0]) {
+      return res.status(404).json({ error: "Purchase order not found" });
+    }
+    
+    const itemsResult = await pool.query(
+      `SELECT poi.*, COALESCE(p.name, poi.item_name) as product_name
+       FROM purchase_order_items poi
+       LEFT JOIN products p ON poi.product_id = p.id
+       WHERE poi.po_id = $1`,
+      [req.params.id]
+    );
+    
+    res.json({
+      ...poResult.rows[0],
+      items: itemsResult.rows
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

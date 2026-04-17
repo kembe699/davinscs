@@ -9,7 +9,15 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT 
-        grn.*,
+        grn.id,
+        grn.grn_number,
+        grn.po_id,
+        grn.supplier_id,
+        grn.received_date,
+        grn.status,
+        grn.notes,
+        grn.created_at,
+        grn.updated_at,
         s.name as supplier_name,
         po.po_number,
         COUNT(gi.id) as item_count
@@ -17,7 +25,8 @@ router.get("/", requireAuth, async (req, res) => {
       LEFT JOIN suppliers s ON grn.supplier_id = s.id
       LEFT JOIN purchase_orders po ON grn.po_id = po.id
       LEFT JOIN grn_items gi ON grn.id = gi.grn_id
-      GROUP BY grn.id, s.name, po.po_number
+      GROUP BY grn.id, grn.grn_number, grn.po_id, grn.supplier_id, grn.received_date, 
+               grn.status, grn.notes, grn.created_at, grn.updated_at, s.name, po.po_number
       ORDER BY grn.created_at DESC
     `);
     res.json(rows);
