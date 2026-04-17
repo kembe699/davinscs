@@ -118,11 +118,75 @@ export type ApiPurchaseOrderItem = {
   id: number;
   po_id: number;
   product_id: number;
+  item_name?: string;
   product_name?: string;
   product_slug?: string;
   quantity: number;
   unit_price: number;
   received_quantity: number;
+};
+
+export type ApiGRN = {
+  id: number;
+  grn_number: string;
+  po_id: number;
+  po_number?: string;
+  supplier_id: number;
+  supplier_name?: string;
+  received_date: string;
+  status: string;
+  notes?: string;
+  item_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiGRNItem = {
+  id: number;
+  grn_id: number;
+  po_item_id: number;
+  product_id: number;
+  product_name?: string;
+  barcode?: string;
+  ordered_quantity: number;
+  received_quantity: number;
+  unit_price: number;
+  notes?: string;
+};
+
+export type ApiSupplierBill = {
+  id: number;
+  bill_number: string;
+  supplier_id: number;
+  supplier_name?: string;
+  grn_id?: number;
+  grn_number?: string;
+  po_id?: number;
+  po_number?: string;
+  bill_date: string;
+  due_date?: string;
+  total_amount: number;
+  paid_amount: number;
+  balance?: number;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiSupplierPayment = {
+  id: number;
+  payment_number: string;
+  supplier_id: number;
+  supplier_name?: string;
+  bill_id?: number;
+  bill_number?: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  reference?: string;
+  notes?: string;
+  created_at: string;
 };
 
 export type ApiAccount = {
@@ -407,7 +471,7 @@ export const api = {
     purchaseOrders: {
       list: () => request<ApiPurchaseOrder[]>("/api/procurement/purchase-orders"),
       get: (id: number) => request<ApiPurchaseOrder & { items: ApiPurchaseOrderItem[] }>(`/api/procurement/purchase-orders/${id}`),
-      create: (data: { supplier_id: number; order_date: string; items: { product_id: number; quantity: number; unit_price: number }[]; notes?: string }) =>
+      create: (data: { supplier_id: number; order_date: string; items: { product_id?: number; item_name?: string; quantity: number; unit_price: number }[]; notes?: string }) =>
         request<ApiPurchaseOrder>("/api/procurement/purchase-orders", { method: "POST", body: JSON.stringify(data) }),
       updateStatus: (id: number, status: string) =>
         request<ApiPurchaseOrder>(`/api/procurement/purchase-orders/${id}`, { method: "PUT", body: JSON.stringify({ status }) }),
@@ -416,6 +480,46 @@ export const api = {
           method: "POST",
           body: JSON.stringify({ items }),
         }),
+      print: (id: number) => request<any>(`/api/procurement/purchase-orders/${id}/pdf`),
+    },
+    grn: {
+      list: () => request<ApiGRN[]>("/api/procurement/grn"),
+      get: (id: number) => request<ApiGRN & { items: ApiGRNItem[] }>(`/api/procurement/grn/${id}`),
+      create: (data: { po_id: number; received_date: string; items: { po_item_id: number; received_quantity: number; notes?: string }[]; notes?: string }) =>
+        request<ApiGRN>("/api/procurement/grn", { method: "POST", body: JSON.stringify(data) }),
+      print: (id: number) => request<any>(`/api/procurement/grn/${id}/print`),
+    },
+    bills: {
+      list: (status?: string, supplier_id?: number) => {
+        const params = new URLSearchParams();
+        if (status) params.set("status", status);
+        if (supplier_id) params.set("supplier_id", supplier_id.toString());
+        const qs = params.toString();
+        return request<ApiSupplierBill[]>(`/api/procurement/bills${qs ? `?${qs}` : ""}`);
+      },
+      get: (id: number) => request<ApiSupplierBill & { payments: ApiSupplierPayment[] }>(`/api/procurement/bills/${id}`),
+      create: (data: { supplier_id: number; grn_id?: number; po_id?: number; bill_date: string; due_date?: string; total_amount: number; notes?: string }) =>
+        request<ApiSupplierBill>("/api/procurement/bills", { method: "POST", body: JSON.stringify(data) }),
+      update: (id: number, data: Partial<ApiSupplierBill>) =>
+        request<ApiSupplierBill>(`/api/procurement/bills/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      delete: (id: number) =>
+        request<{ success: boolean }>(`/api/procurement/bills/${id}`, { method: "DELETE" }),
+      print: (id: number) => request<any>(`/api/procurement/bills/${id}/print`),
+    },
+    payments: {
+      list: (supplier_id?: number, payment_method?: string) => {
+        const params = new URLSearchParams();
+        if (supplier_id) params.set("supplier_id", supplier_id.toString());
+        if (payment_method) params.set("payment_method", payment_method);
+        const qs = params.toString();
+        return request<ApiSupplierPayment[]>(`/api/procurement/payments${qs ? `?${qs}` : ""}`);
+      },
+      get: (id: number) => request<ApiSupplierPayment>(`/api/procurement/payments/${id}`),
+      getBySupplier: (supplierId: number) => request<ApiSupplierPayment[]>(`/api/procurement/payments/supplier/${supplierId}`),
+      create: (data: { supplier_id: number; bill_id?: number; payment_date: string; amount: number; payment_method: string; reference?: string; notes?: string }) =>
+        request<ApiSupplierPayment>("/api/procurement/payments", { method: "POST", body: JSON.stringify(data) }),
+      delete: (id: number) =>
+        request<{ success: boolean }>(`/api/procurement/payments/${id}`, { method: "DELETE" }),
     },
   },
   accounting: {

@@ -14,6 +14,9 @@ import orderRoutes from "./routes/orders.js";
 import categoryRoutes from "./routes/categories.js";
 import inventoryRoutes from "./routes/inventory.js";
 import procurementRoutes from "./routes/procurement.js";
+import grnRoutes from "./routes/grn.js";
+import billsRoutes from "./routes/bills.js";
+import paymentsRoutes from "./routes/payments.js";
 import accountingRoutes from "./routes/accounting.js";
 import cartRoutes from "./routes/cart.js";
 import checkoutRoutes from "./routes/checkout.js";
@@ -63,6 +66,9 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/procurement", procurementRoutes);
+app.use("/api/procurement/grn", grnRoutes);
+app.use("/api/procurement/bills", billsRoutes);
+app.use("/api/procurement/payments", paymentsRoutes);
 app.use("/api/accounting", accountingRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
@@ -181,9 +187,66 @@ async function migrate() {
       id SERIAL PRIMARY KEY,
       po_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
       product_id INTEGER REFERENCES products(id),
+      item_name VARCHAR(255),
       quantity INTEGER NOT NULL,
       unit_price INTEGER NOT NULL,
       received_quantity INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS goods_received_notes (
+      id SERIAL PRIMARY KEY,
+      grn_number VARCHAR(50) UNIQUE NOT NULL,
+      po_id INTEGER REFERENCES purchase_orders(id),
+      supplier_id INTEGER REFERENCES suppliers(id),
+      received_date DATE NOT NULL,
+      status VARCHAR(50) DEFAULT 'draft',
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS grn_items (
+      id SERIAL PRIMARY KEY,
+      grn_id INTEGER REFERENCES goods_received_notes(id) ON DELETE CASCADE,
+      po_item_id INTEGER REFERENCES purchase_order_items(id),
+      product_id INTEGER REFERENCES products(id),
+      ordered_quantity INTEGER NOT NULL,
+      received_quantity INTEGER NOT NULL,
+      unit_price INTEGER NOT NULL,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS supplier_bills (
+      id SERIAL PRIMARY KEY,
+      bill_number VARCHAR(50) UNIQUE NOT NULL,
+      supplier_id INTEGER REFERENCES suppliers(id),
+      grn_id INTEGER REFERENCES goods_received_notes(id),
+      po_id INTEGER REFERENCES purchase_orders(id),
+      bill_date DATE NOT NULL,
+      due_date DATE,
+      total_amount INTEGER NOT NULL,
+      paid_amount INTEGER DEFAULT 0,
+      status VARCHAR(50) DEFAULT 'unpaid',
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS supplier_payments (
+      id SERIAL PRIMARY KEY,
+      payment_number VARCHAR(50) UNIQUE NOT NULL,
+      supplier_id INTEGER REFERENCES suppliers(id),
+      bill_id INTEGER REFERENCES supplier_bills(id),
+      payment_date DATE NOT NULL,
+      amount INTEGER NOT NULL,
+      payment_method VARCHAR(50) NOT NULL,
+      reference VARCHAR(255),
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     
