@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X } from "lucide-react";
-import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession } from "@/lib/api";
+import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -31,11 +31,14 @@ export default function POSMain() {
   const [companyData, setCompanyData] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [secondaryCurrency, setSecondaryCurrency] = useState<ApiCurrency | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
     checkCashDrawer();
     loadCompanyData();
+    loadSecondaryCurrency();
   }, []);
 
   useEffect(() => {
@@ -43,6 +46,32 @@ export default function POSMain() {
     const uniqueCategories = [...new Set(products.map(p => p.category))].filter(Boolean);
     setCategories(uniqueCategories);
   }, [products]);
+
+  const loadSecondaryCurrency = async () => {
+    try {
+      const currencies = await api.currencies.list();
+      // Get first non-base active currency as secondary
+      const secondary = currencies.find(c => !c.is_base && c.is_active);
+      if (secondary) {
+        setSecondaryCurrency(secondary);
+        // Get base currency
+        const base = currencies.find(c => c.is_base);
+        if (base) {
+          // Try to get exchange rate from base to secondary
+          try {
+            const rate = await api.exchangeRates.getActive(base.id, secondary.id);
+            setExchangeRate(parseFloat(rate.rate.toString()));
+          } catch (err) {
+            // If no rate found, calculate from exchange_rate fields
+            const calculatedRate = parseFloat(secondary.exchange_rate.toString()) / parseFloat(base.exchange_rate.toString());
+            setExchangeRate(calculatedRate);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error loading secondary currency:", err);
+    }
+  };
 
   const loadCompanyData = async () => {
     try {
@@ -402,9 +431,16 @@ export default function POSMain() {
                         <Plus size={12} />
                       </button>
                     </div>
-                    <span className="text-admin-text font-mono">
-                      {((item.product.price * item.quantity - item.discount) / 100).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-admin-text font-mono">
+                        {formatCurrencySync(item.product.price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}
+                      </div>
+                      {secondaryCurrency && exchangeRate && (
+                        <div className="text-xs text-admin-text-secondary font-mono">
+                          {formatCurrencySync(Math.round((item.product.price * item.quantity - item.discount) * exchangeRate), secondaryCurrency.symbol, false)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
@@ -415,21 +451,49 @@ export default function POSMain() {
           <div className="border-t border-admin-border p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Subtotal</span>
-              <span className="text-admin-text font-mono">{formatCurrencySync(subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
+              <div className="text-right">
+                <div className="text-admin-text font-mono">{formatCurrencySync(subtotal, baseCurrency?.symbol || 'UGX', false)}</div>
+                {secondaryCurrency && exchangeRate && (
+                  <div className="text-xs text-admin-text-secondary font-mono">
+                    {formatCurrencySync(Math.round(subtotal * exchangeRate), secondaryCurrency.symbol, false)}
+                  </div>
+                )}
+              </div>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-admin-text-secondary">Discount</span>
-                <span className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, baseCurrency?.symbol || 'UGX', false)}</span>
+                <div className="text-right">
+                  <div className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, baseCurrency?.symbol || 'UGX', false)}</div>
+                  {secondaryCurrency && exchangeRate && (
+                    <div className="text-xs text-admin-text-secondary font-mono">
+                      -{formatCurrencySync(Math.round(discountAmount * exchangeRate), secondaryCurrency.symbol, false)}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
-              <span className="text-admin-text font-mono">{formatCurrencySync(taxAmount, baseCurrency?.symbol || 'UGX', false)}</span>
+              <div className="text-right">
+                <div className="text-admin-text font-mono">{formatCurrencySync(taxAmount, baseCurrency?.symbol || 'UGX', false)}</div>
+                {secondaryCurrency && exchangeRate && (
+                  <div className="text-xs text-admin-text-secondary font-mono">
+                    {formatCurrencySync(Math.round(taxAmount * exchangeRate), secondaryCurrency.symbol, false)}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
               <span className="text-admin-text">Total</span>
-              <span className="text-admin-text font-mono">{formatCurrencySync(total, baseCurrency?.symbol || 'UGX', false)}</span>
+              <div className="text-right">
+                <div className="text-admin-text font-mono">{formatCurrencySync(total, baseCurrency?.symbol || 'UGX', false)}</div>
+                {secondaryCurrency && exchangeRate && (
+                  <div className="text-sm text-admin-text-secondary font-mono">
+                    {formatCurrencySync(Math.round(total * exchangeRate), secondaryCurrency.symbol, false)}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
