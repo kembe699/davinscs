@@ -192,15 +192,21 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Generate slug from product name
+      const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      
       const productData = {
         name: formData.name,
         category: formData.category,
         brand: formData.brand,
         description: formData.description,
         price: parseFloat(formData.price.toString()) * 100,
-        barcode: sku,
-        specifications: formData.specifications,
-        in_stock: true
+        slug: slug,
+        specs: formData.specifications ? [formData.specifications] : [],
+        image_url: formData.image_url || '',
+        in_stock: true,
+        is_featured: false,
+        tag: sku || ''
       };
 
       if (product) {
