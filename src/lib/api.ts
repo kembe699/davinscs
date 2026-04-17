@@ -250,17 +250,17 @@ export type Country = {
 };
 
 export type CompanySettings = {
-  id: number;
-  company_name: string;
+  name: string;
+  logo: string;
   address: string;
+  city: string;
+  country: string;
+  postal_code: string;
   phone: string;
   email: string;
   tax_id: string;
-  currency: string;
-  logo_url: string;
-  receipt_footer: string;
-  created_at: string;
-  updated_at: string;
+  website: string;
+  description: string;
 };
 
 export type POSSale = {
