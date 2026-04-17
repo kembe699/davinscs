@@ -177,6 +177,45 @@ export default function Products() {
 
 function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
   const [sku, setSku] = useState(product?.barcode || '');
+  const [formData, setFormData] = useState({
+    name: product?.name || '',
+    category: product?.category || 'cameras',
+    brand: product?.brand || '',
+    description: product?.description || '',
+    price: product ? product.price / 100 : '',
+    specifications: product?.specifications || '',
+    expiry_date: '',
+    current_stock: product?.quantity_on_hand || '',
+    reorder_level: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const productData = {
+        name: formData.name,
+        category: formData.category,
+        brand: formData.brand,
+        description: formData.description,
+        price: parseFloat(formData.price.toString()) * 100,
+        barcode: sku,
+        specifications: formData.specifications,
+        in_stock: true
+      };
+
+      if (product) {
+        await api.products.update(product.id, productData);
+      } else {
+        await api.products.create(productData);
+      }
+      
+      onSave();
+      onClose();
+    } catch (err) {
+      alert('Failed to save product');
+      console.error(err);
+    }
+  };
   
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex justify-end" style={{animation: 'fadeIn 0.3s'}}>
@@ -185,21 +224,21 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
           <h2 className="text-xl font-bold text-admin-text">{product ? 'Edit Product' : 'New Product'}</h2>
           <button onClick={onClose} className="p-2 hover:bg-admin-bg"><X size={20} /></button>
         </div>
-        <form className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Basic Information</h3>
             <div className="space-y-4">
-              <div><label className="block text-sm text-admin-text mb-1">Name *</label><input type="text" defaultValue={product?.name} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+              <div><label className="block text-sm text-admin-text mb-1">Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" required /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm text-admin-text mb-1">Category *</label><select defaultValue={product?.category} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">{CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
-                <div><label className="block text-sm text-admin-text mb-1">Brand</label><input type="text" defaultValue={product?.brand} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+                <div><label className="block text-sm text-admin-text mb-1">Category *</label><select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text">{CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
+                <div><label className="block text-sm text-admin-text mb-1">Brand</label><input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
               </div>
-              <div><label className="block text-sm text-admin-text mb-1">Description</label><textarea rows={3} defaultValue={product?.description} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
+              <div><label className="block text-sm text-admin-text mb-1">Description</label><textarea rows={3} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
             </div>
           </div>
           <div>
             <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Pricing</h3>
-            <div><label className="block text-sm text-admin-text mb-1">Selling Price *</label><input type="number" defaultValue={product ? product.price / 100 : ''} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+            <div><label className="block text-sm text-admin-text mb-1">Selling Price *</label><input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" required /></div>
           </div>
           <div>
             <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Product Details</h3>
@@ -208,14 +247,14 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
                 <div><label className="block text-sm text-admin-text mb-1">SKU/Barcode</label><div className="flex gap-2"><input type="text" value={sku} onChange={(e) => setSku(e.target.value)} className="flex-1 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /><button type="button" onClick={() => setSku(generateSKU())} className="px-3 py-2 bg-primary text-white hover:bg-primary/90" title="Generate SKU"><Sparkles size={16} /></button></div></div>
                 <div><label className="block text-sm text-admin-text mb-1">Expiry Date</label><input type="date" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
               </div>
-              <div><label className="block text-sm text-admin-text mb-1">Specifications</label><textarea rows={4} placeholder="Enter product specifications..." className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
+              <div><label className="block text-sm text-admin-text mb-1">Specifications</label><textarea rows={4} value={formData.specifications} onChange={(e) => setFormData({...formData, specifications: e.target.value})} placeholder="Enter product specifications..." className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"></textarea></div>
             </div>
           </div>
           <div>
             <h3 className="text-sm font-bold text-admin-text mb-4 uppercase">Stock Control</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm text-admin-text mb-1">Current Stock</label><input type="number" defaultValue={product?.quantity_on_hand} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
-              <div><label className="block text-sm text-admin-text mb-1">Reorder Level</label><input type="number" placeholder="Min stock" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+              <div><label className="block text-sm text-admin-text mb-1">Current Stock</label><input type="number" value={formData.current_stock} onChange={(e) => setFormData({...formData, current_stock: e.target.value})} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
+              <div><label className="block text-sm text-admin-text mb-1">Reorder Level</label><input type="number" value={formData.reorder_level} onChange={(e) => setFormData({...formData, reorder_level: e.target.value})} placeholder="Min stock" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text" /></div>
             </div>
           </div>
           <div className="flex gap-3 pt-4 border-t border-admin-border">
