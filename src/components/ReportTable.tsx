@@ -18,8 +18,13 @@ export default function ReportTable({ columns, data, showTotals = true, totalsEx
   const calculateTotal = (accessor: string) => {
     if (totalsExclude.includes(accessor)) return '';
     
-    const isNumeric = data.some(row => typeof row[accessor] === 'number');
-    if (!isNumeric) return '';
+    // Check if any row has a numeric value for this accessor
+    const hasNumericValues = data.some(row => {
+      const val = row[accessor];
+      return val !== null && val !== undefined && val !== '' && !isNaN(parseFloat(val));
+    });
+    
+    if (!hasNumericValues) return '';
     
     const sum = data.reduce((acc, row) => {
       const val = parseFloat(row[accessor]) || 0;
