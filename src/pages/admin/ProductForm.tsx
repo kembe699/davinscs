@@ -275,65 +275,68 @@ export default function ProductForm() {
             </div>
             </section>
 
-            {/* Specs */}
-            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Specifications</h2>
-              <button type="button" onClick={addSpec} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-mono-tech uppercase tracking-widest">
-                <Plus size={12} /> Add Spec
-              </button>
-            </div>
-            {form.specs.length === 0 && (
-              <p className="text-xs text-muted-foreground">No specs added yet.</p>
-            )}
-            {form.specs.map((spec, i) => (
-              <div key={i} className="flex gap-3 items-center">
-                <input
-                  type="text" placeholder="Label (e.g. Sensor)"
-                  value={spec.label}
-                  onChange={(e) => updateSpec(i, "label", e.target.value)}
-                  className="field-input flex-1"
-                />
-                <input
-                  type="text" placeholder="Value (e.g. Full-Frame CMOS)"
-                  value={spec.value}
-                  onChange={(e) => updateSpec(i, "value", e.target.value)}
-                  className="field-input flex-1"
-                />
-                <button type="button" onClick={() => removeSpec(i)} className="text-muted-foreground hover:text-red-400 transition-colors shrink-0">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            </section>
+            {/* Right Column: Specs and Stock Control */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Specs */}
+              <section className="border border-border-subtle p-6 bg-chassis space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Specifications</h2>
+                  <button type="button" onClick={addSpec} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-mono-tech uppercase tracking-widest">
+                    <Plus size={12} /> Add Spec
+                  </button>
+                </div>
+                {form.specs.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No specs added yet.</p>
+                )}
+                {form.specs.map((spec, i) => (
+                  <div key={i} className="flex gap-3 items-center">
+                    <input
+                      type="text" placeholder="Label (e.g. Sensor)"
+                      value={spec.label}
+                      onChange={(e) => updateSpec(i, "label", e.target.value)}
+                      className="field-input flex-1"
+                    />
+                    <input
+                      type="text" placeholder="Value (e.g. Full-Frame CMOS)"
+                      value={spec.value}
+                      onChange={(e) => updateSpec(i, "value", e.target.value)}
+                      className="field-input flex-1"
+                    />
+                    <button type="button" onClick={() => removeSpec(i)} className="text-muted-foreground hover:text-red-400 transition-colors shrink-0">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </section>
 
-            {/* Stock Control */}
-            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-5">
-              <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
-              
-              <div className="space-y-5">
-                <div>
-                  <label className="field-label">Current Stock</label>
-                  <input
-                    type="number" min={0} value={(form as any).quantity_on_hand}
-                    onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
-                    placeholder="0"
-                    className="field-input"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+              {/* Stock Control */}
+              <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
+                
+                <div className="space-y-5">
+                  <div>
+                    <label className="field-label">Current Stock</label>
+                    <input
+                      type="number" min={0} value={(form as any).quantity_on_hand}
+                      onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
+                      placeholder="0"
+                      className="field-input"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+                  </div>
+                  <div>
+                    <label className="field-label">Reorder Level</label>
+                    <input
+                      type="number" min={0} value={(form as any).reorder_level}
+                      onChange={(e) => set("reorder_level", Number(e.target.value))}
+                      placeholder="10"
+                      className="field-input"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="field-label">Reorder Level</label>
-                  <input
-                    type="number" min={0} value={(form as any).reorder_level}
-                    onChange={(e) => set("reorder_level", Number(e.target.value))}
-                    placeholder="10"
-                    className="field-input"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
-                </div>
-              </div>
-            </section>
+              </section>
+            </div>
           </div>
 
           <div className="flex gap-3">
