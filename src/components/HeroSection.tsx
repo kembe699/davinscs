@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import heroCamera from "@/assets/hero-camera.jpg";
 import { api, ApiProduct } from "@/lib/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 const HeroSection = () => {
+  const { baseCurrency } = useCurrency();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   useEffect(() => {
@@ -116,7 +119,7 @@ const HeroSection = () => {
                         {p.name}
                       </h4>
                       <p className="font-mono-tech text-[10px] text-muted-foreground">{p.brand}</p>
-                      <p className="mt-1 text-xs text-primary">UGX {p.price.toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-primary">{formatCurrencySync(p.price, baseCurrency?.symbol || 'UGX', false)}</p>
                     </div>
                   </Link>
                 ))}

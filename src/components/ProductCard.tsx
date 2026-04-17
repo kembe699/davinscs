@@ -1,12 +1,15 @@
 import { Link } from "react-router-dom";
 import { ApiProduct } from "@/lib/api";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 type Props = {
   product: ApiProduct;
 };
 
 const ProductCard = ({ product }: Props) => {
+  const { baseCurrency } = useCurrency();
   return (
     <Link
       to={`/${product.category}/${product.slug}`}
@@ -41,7 +44,7 @@ const ProductCard = ({ product }: Props) => {
         </h3>
         <div className="flex items-center justify-between pt-4 border-t border-border-subtle mt-auto">
           <span className="text-primary font-mono-tech text-sm font-medium">
-            UGX {product.price.toLocaleString()}
+            {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}
           </span>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); orderViaWhatsApp(product); }}

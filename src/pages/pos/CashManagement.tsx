@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { api, CashDrawerSession } from "@/lib/api";
+import { api } from "@/lib/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
+import { CashDrawerSession } from "@/lib/api";
 
 export default function CashManagement() {
   const navigate = useNavigate();
+  const { baseCurrency } = useCurrency();
   const [currentSession, setCurrentSession] = useState<CashDrawerSession | null>(null);
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
   const [showCashInModal, setShowCashInModal] = useState(false);
@@ -73,7 +77,7 @@ export default function CashManagement() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-admin-text-secondary">Opening Cash</p>
-              <p className="text-xl font-mono text-admin-text">UGX {(currentSession.opening_cash / 100).toFixed(0)}</p>
+              <p className="text-xl font-mono text-admin-text">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', false)}</p>
             </div>
             <div>
               <p className="text-sm text-admin-text-secondary">Opened At</p>
@@ -123,15 +127,15 @@ export default function CashManagement() {
                   {session.closed_at ? new Date(session.closed_at).toLocaleString() : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-admin-text text-right font-mono">
-                  UGX {(session.opening_cash / 100).toFixed(0)}
+                  {formatCurrencySync(session.opening_cash, baseCurrency?.symbol || 'UGX', false)}
                 </td>
                 <td className="px-4 py-3 text-sm text-admin-text text-right font-mono">
-                  {session.closing_cash ? `UGX ${(session.closing_cash / 100).toFixed(0)}` : '-'}
+                  {session.closing_cash ? formatCurrencySync(session.closing_cash, baseCurrency?.symbol || 'UGX', false) : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-right font-mono">
                   {session.cash_difference ? (
                     <span className={session.cash_difference >= 0 ? 'text-admin-success' : 'text-admin-danger'}>
-                      UGX {(session.cash_difference / 100).toFixed(0)}
+                      {formatCurrencySync(session.cash_difference, baseCurrency?.symbol || 'UGX', false)}
                     </span>
                   ) : '-'}
                 </td>

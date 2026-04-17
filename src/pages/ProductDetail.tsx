@@ -8,8 +8,11 @@ import ProductCard from "@/components/ProductCard";
 import { categoryMeta } from "@/data/products";
 import type { Category } from "@/data/products";
 import { api, ApiProduct } from "@/lib/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 const ProductDetail = () => {
+  const { baseCurrency } = useCurrency();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const category = location.pathname.split("/")[1] as Category;
@@ -142,7 +145,7 @@ const ProductDetail = () => {
                   Price
                 </span>
                 <span className="text-3xl font-bold text-primary">
-                  UGX {product.price.toLocaleString()}
+                  {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}
                 </span>
               </div>
               <div className="flex items-center gap-2">

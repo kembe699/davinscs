@@ -30,6 +30,8 @@ import companyRoutes from "./routes/company.js";
 import posRoutes from "./routes/pos.js";
 import cashDrawerRoutes from "./routes/cash-drawer.js";
 import posReportsRoutes from "./routes/pos-reports.js";
+import currenciesRoutes from "./routes/currencies.js";
+import dashboardRoutes from "./routes/dashboard.js";
 
 dotenv.config();
 
@@ -83,6 +85,8 @@ app.use("/api/company", companyRoutes);
 app.use("/api/pos", posRoutes);
 app.use("/api/cash-drawer", cashDrawerRoutes);
 app.use("/api/pos-reports", posReportsRoutes);
+app.use("/api/currencies", currenciesRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {

@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 export default function EndOfDay() {
   const navigate = useNavigate();
+  const { baseCurrency } = useCurrency();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -63,19 +66,19 @@ export default function EndOfDay() {
             <div className="bg-admin-surface border border-admin-border p-4">
               <p className="text-sm text-admin-text-secondary mb-1">Total Revenue</p>
               <p className="text-2xl font-bold text-admin-text font-mono">
-                UGX {((report.total_revenue || 0) / 100).toFixed(0)}
+                {formatCurrencySync(report.total_revenue || 0, baseCurrency?.symbol || 'UGX', false)}
               </p>
             </div>
             <div className="bg-admin-surface border border-admin-border p-4">
               <p className="text-sm text-admin-text-secondary mb-1">Tax Collected</p>
               <p className="text-2xl font-bold text-admin-text font-mono">
-                UGX {((report.total_tax || 0) / 100).toFixed(0)}
+                {formatCurrencySync(report.total_tax || 0, baseCurrency?.symbol || 'UGX', false)}
               </p>
             </div>
             <div className="bg-admin-surface border border-admin-border p-4">
               <p className="text-sm text-admin-text-secondary mb-1">Discounts Given</p>
               <p className="text-2xl font-bold text-admin-danger font-mono">
-                UGX {((report.total_discounts || 0) / 100).toFixed(0)}
+                {formatCurrencySync(report.total_discounts || 0, baseCurrency?.symbol || 'UGX', false)}
               </p>
             </div>
           </div>
@@ -99,7 +102,7 @@ export default function EndOfDay() {
                     <td className="px-4 py-3 text-sm text-admin-text">{pm.payment_type || 'Unknown'}</td>
                     <td className="px-4 py-3 text-sm text-admin-text text-right">{pm.count}</td>
                     <td className="px-4 py-3 text-sm text-admin-text text-right font-mono">
-                      UGX {((pm.total || 0) / 100).toFixed(0)}
+                      {formatCurrencySync(pm.total || 0, baseCurrency?.symbol || 'UGX', false)}
                     </td>
                   </tr>
                 )) || (

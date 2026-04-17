@@ -12,6 +12,7 @@ const navItems = [
   { label: "Inventory", href: "/admin/inventory", icon: PackageCheck },
   { label: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
   { label: "Accounting", href: "/admin/accounting", icon: DollarSign },
+  { label: "Currencies", href: "/admin/currencies", icon: Globe },
   { label: "Reports", href: "/admin/reports", icon: FileText },
   { label: "Payment Types", href: "/admin/payment-types", icon: CreditCard },
   { label: "Tax Rates", href: "/admin/tax-rates", icon: Percent },

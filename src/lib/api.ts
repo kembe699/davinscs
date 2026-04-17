@@ -297,6 +297,44 @@ export type PriceList = {
   created_at: string;
 };
 
+export type ApiCurrency = {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
+  is_base: boolean;
+  exchange_rate: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MonthlyData = {
+  month: string;
+  sales: number;
+  count: number;
+};
+
+export type TopProduct = {
+  name: string;
+  category: string;
+  quantity: number;
+  total: number;
+};
+
+export type SalesSummary = {
+  totalSales: number;
+  totalCount: number;
+  topMonth: string;
+  topMonthAmount: number;
+};
+
+export type HourlyData = {
+  hour: string;
+  amount: number;
+  count: number;
+};
+
 export type Promotion = {
   id: number;
   name: string;
@@ -753,5 +791,43 @@ export const api = {
       const qs = new URLSearchParams(params as any).toString();
       return request<any>(`/api/pos-reports/end-of-day${qs ? `?${qs}` : ""}`);
     },
+  },
+  currencies: {
+    list: () => request<ApiCurrency[]>("/api/currencies"),
+    getBase: () => request<ApiCurrency>("/api/currencies/base"),
+    create: (data: Partial<ApiCurrency>) =>
+      request<ApiCurrency>("/api/currencies", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: number, data: Partial<ApiCurrency>) =>
+      request<ApiCurrency>(`/api/currencies/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    setBase: (id: number) =>
+      request<ApiCurrency>(`/api/currencies/${id}/set-base`, {
+        method: "PUT",
+      }),
+    delete: (id: number) =>
+      request<{ success: boolean }>(`/api/currencies/${id}`, {
+        method: "DELETE",
+      }),
+  },
+  dashboard: {
+    monthlySales: (year?: number) => {
+      const qs = year ? `?year=${year}` : "";
+      return request<MonthlyData[]>(`/api/dashboard/monthly-sales${qs}`);
+    },
+    topProducts: (limit?: number) => {
+      const qs = limit ? `?limit=${limit}` : "";
+      return request<TopProduct[]>(`/api/dashboard/top-products${qs}`);
+    },
+    salesSummary: (year?: number) => {
+      const qs = year ? `?year=${year}` : "";
+      return request<SalesSummary>(`/api/dashboard/sales-summary${qs}`);
+    },
+    hourlySales: () =>
+      request<HourlyData[]>("/api/dashboard/hourly-sales"),
   },
 };

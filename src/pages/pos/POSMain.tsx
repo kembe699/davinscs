@@ -2,9 +2,12 @@ import { useState, useEffect } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X } from "lucide-react";
 import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 export default function POSMain() {
   const navigate = useNavigate();
+  const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -243,10 +246,10 @@ export default function POSMain() {
           <div class="line"></div>
           <h3>Items:</h3>
           ${sale.items.map((item: any) => `
-            <p>${item.product.name} x ${item.quantity} - UGX ${(item.product.price / 100).toFixed(0)}</p>
+            <p>${item.product.name} x ${item.quantity} - ${formatCurrencySync(item.product.price, baseCurrency?.symbol || 'UGX', false)}</p>
           `).join('')}
           <div class="line"></div>
-          <p><strong>Total: UGX ${(sale.total / 100).toFixed(0)}</strong></p>
+          <p><strong>Total: ${formatCurrencySync(sale.total, baseCurrency?.symbol || 'UGX', false)}</strong></p>
           <p style="text-align: center; margin-top: 20px;">*** HELD - NOT PAID ***</p>
         </body>
       </html>
@@ -334,7 +337,7 @@ export default function POSMain() {
             onClick={() => setShowDiscountModal(true)}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
           >
-            Discount {cartDiscount > 0 ? `(-${discountType === 'percentage' ? discountValue + '%' : 'UGX ' + (discountValue/100).toFixed(0)})` : ''}
+            Discount {cartDiscount > 0 ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', false)})` : ''}
           </button>
           <button 
             onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
@@ -412,21 +415,21 @@ export default function POSMain() {
           <div className="border-t border-admin-border p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Subtotal</span>
-              <span className="text-admin-text font-mono">UGX {(subtotal / 100).toFixed(0)}</span>
+              <span className="text-admin-text font-mono">{formatCurrencySync(subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-admin-text-secondary">Discount</span>
-                <span className="text-admin-danger font-mono">-UGX {(discountAmount / 100).toFixed(0)}</span>
+                <span className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
-              <span className="text-admin-text font-mono">UGX {(taxAmount / 100).toFixed(0)}</span>
+              <span className="text-admin-text font-mono">{formatCurrencySync(taxAmount, baseCurrency?.symbol || 'UGX', false)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
               <span className="text-admin-text">Total</span>
-              <span className="text-admin-text font-mono">UGX {(total / 100).toFixed(0)}</span>
+              <span className="text-admin-text font-mono">{formatCurrencySync(total, baseCurrency?.symbol || 'UGX', false)}</span>
             </div>
           </div>
 
@@ -557,7 +560,7 @@ export default function POSMain() {
                           </div>
                           <div className="flex justify-between items-center mb-1">
                             <div className="text-admin-text font-mono text-lg font-bold">
-                              UGX {(product.price / 100).toFixed(0)}
+                              {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}
                             </div>
                             <div className={`text-xs font-bold ${
                               remainingStock <= 0 ? 'text-admin-danger' : 
@@ -716,8 +719,8 @@ export default function POSMain() {
                   <div className="flex justify-between text-xs text-black">
                     <span></span>
                     <span>{item.quantity}</span>
-                    <span>UGX {(item.product.price / 100).toFixed(0)}</span>
-                    <span>UGX {((item.product.price * item.quantity - item.discount) / 100).toFixed(0)}</span>
+                    <span>{formatCurrencySync(item.product.price, baseCurrency?.symbol || 'UGX', false)}</span>
+                    <span>{formatCurrencySync(item.product.price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}</span>
                   </div>
                 </div>
               ))}
@@ -726,15 +729,15 @@ export default function POSMain() {
             <div className="border-t border-black pt-2 mb-4">
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Subtotal:</span>
-                <span>UGX {(completedSale.subtotal / 100).toFixed(0)}</span>
+                <span>{formatCurrencySync(completedSale.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Tax ({defaultTax?.rate}%):</span>
-                <span>UGX {(completedSale.taxAmount / 100).toFixed(0)}</span>
+                <span>{formatCurrencySync(completedSale.taxAmount, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
                 <span className="text-black">TOTAL:</span>
-                <span className="text-black">UGX {(completedSale.total / 100).toFixed(0)}</span>
+                <span className="text-black">{formatCurrencySync(completedSale.total, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-xs text-black mt-3">
                 <span>Payment:</span>
@@ -827,7 +830,7 @@ export default function POSMain() {
                         : "bg-admin-bg border border-admin-border text-admin-text"
                     }`}
                   >
-                    Amount (UGX)
+                    Amount ({baseCurrency?.symbol || 'UGX'})
                   </button>
                 </div>
               </div>
@@ -896,7 +899,7 @@ export default function POSMain() {
                         <p className="text-xs text-admin-text-secondary">{sale.customerName}</p>
                       </div>
                       <p className="text-sm font-bold text-admin-text font-mono">
-                        UGX {(sale.total / 100).toFixed(0)}
+                        {formatCurrencySync(sale.total, baseCurrency?.symbol || 'UGX', false)}
                       </p>
                     </div>
                     <div className="text-xs text-admin-text-secondary">

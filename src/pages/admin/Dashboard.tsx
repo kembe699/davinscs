@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiOrderStats, ApiProduct } from "@/lib/api";
+import { api, ApiOrderStats, ApiProduct, MonthlyData, TopProduct, SalesSummary } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Package, ShoppingBag, TrendingUp, Plus, DollarSign, ArrowUp, ArrowDown, Activity } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 const CATEGORIES = ["cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
 export default function Dashboard() {
+  const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [stats, setStats] = useState<ApiOrderStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [salesData, setSalesData] = useState<any>(null);
   const [financialData, setFinancialData] = useState<any>(null);
+  const [monthlySales, setMonthlySales] = useState<MonthlyData[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [salesSummary, setSalesSummary] = useState<SalesSummary | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -19,15 +26,21 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [p, s, sales] = await Promise.all([
+      const [p, s, sales, monthly, topProds, summary] = await Promise.all([
         api.products.list(),
         api.orders.stats(),
-        api.pos.getSales().catch(() => [])
+        api.pos.getSales().catch(() => []),
+        api.dashboard.monthlySales().catch(() => []),
+        api.dashboard.topProducts(5).catch(() => []),
+        api.dashboard.salesSummary().catch(() => null)
       ]);
       
       setProducts(p);
       setStats(s);
       setSalesData(sales);
+      setMonthlySales(monthly);
+      setTopProducts(topProds);
+      setSalesSummary(summary);
       
       // Calculate financial metrics
       const totalRevenue = sales.reduce((sum: number, sale: any) => sum + sale.total_amount, 0);
@@ -108,7 +121,7 @@ export default function Dashboard() {
                   <DollarSign size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Total Revenue</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">UGX {((financialData?.totalRevenue || 0) / 100).toFixed(0)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalRevenue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
                 <div className="flex items-center gap-2 mt-2">
                   {financialData?.revenueChange >= 0 ? (
                     <ArrowUp size={14} className="text-green-500" />
@@ -127,7 +140,7 @@ export default function Dashboard() {
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Today's Sales</span>
                 </div>
                 <p className="text-3xl font-bold text-foreground">{financialData?.todaySales || 0}</p>
-                <p className="text-xs text-muted-foreground mt-2 font-mono">UGX {((financialData?.todayRevenue || 0) / 100).toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground mt-2 font-mono">{formatCurrencySync(financialData?.todayRevenue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
               </div>
               
               <div className="border border-border-subtle bg-chassis p-6">
@@ -135,7 +148,7 @@ export default function Dashboard() {
                   <TrendingUp size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Avg Order Value</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">UGX {((financialData?.averageOrderValue || 0) / 100).toFixed(0)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.averageOrderValue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
                 <p className="text-xs text-muted-foreground mt-2">{financialData?.totalSales || 0} total sales</p>
               </div>
               
@@ -144,8 +157,8 @@ export default function Dashboard() {
                   <Package size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Tax Collected</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">UGX {((financialData?.totalTax || 0) / 100).toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground mt-2">Discounts: UGX {((financialData?.totalDiscount || 0) / 100).toFixed(0)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalTax || 0, baseCurrency?.symbol || 'UGX', false)}</p>
+                <p className="text-xs text-muted-foreground mt-2">Discounts: {formatCurrencySync(financialData?.totalDiscount || 0, baseCurrency?.symbol || 'UGX', false)}</p>
               </div>
             </div>
 
@@ -171,6 +184,79 @@ export default function Dashboard() {
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">In Stock</span>
                 </div>
                 <p className="text-3xl font-bold text-foreground">{products.filter((p) => p.in_stock).length}</p>
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Monthly Sales Chart */}
+              <div className="border border-border-subtle bg-chassis lg:col-span-2">
+                <div className="px-6 py-4 border-b border-border-subtle">
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Monthly Sales - {new Date().getFullYear()}</h2>
+                  <p className="text-xs text-muted-foreground mt-1">Sales data grouped by month</p>
+                </div>
+                <div className="p-6">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={monthlySales}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                      <XAxis dataKey="month" stroke="#888" style={{ fontSize: '12px' }} />
+                      <YAxis stroke="#888" style={{ fontSize: '12px' }} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                        formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
+                      />
+                      <Line type="monotone" dataKey="sales" stroke="#00ff00" strokeWidth={2} dot={{ fill: '#00ff00' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Total Sales Summary */}
+              <div className="border border-border-subtle bg-chassis">
+                <div className="px-6 py-4 border-b border-border-subtle">
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Total Sales</h2>
+                </div>
+                <div className="p-6">
+                  <div className="text-center mb-6">
+                    <p className="text-6xl font-bold text-primary font-mono">
+                      {salesSummary ? formatCurrencySync(salesSummary.totalSales, baseCurrency?.symbol || 'UGX', false).split(' ')[1] : '0'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2 font-mono-tech uppercase tracking-widest">
+                      {baseCurrency?.symbol || 'UGX'}
+                    </p>
+                  </div>
+                  <div className="border-t border-border-subtle pt-4">
+                    <p className="text-xs text-muted-foreground font-mono-tech uppercase tracking-widest mb-1">
+                      Top performing month:
+                    </p>
+                    <p className="text-lg font-bold text-foreground">{salesSummary?.topMonth || '---'}</p>
+                    <p className="text-sm text-primary font-mono mt-1">
+                      {salesSummary ? formatCurrencySync(salesSummary.topMonthAmount, baseCurrency?.symbol || 'UGX', false) : '0'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Products Chart */}
+            <div className="border border-border-subtle bg-chassis mb-8">
+              <div className="px-6 py-4 border-b border-border-subtle">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Top Products</h2>
+                <p className="text-xs text-muted-foreground mt-1">Best selling products by revenue</p>
+              </div>
+              <div className="p-6">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topProducts}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="name" stroke="#888" style={{ fontSize: '11px' }} angle={-45} textAnchor="end" height={100} />
+                    <YAxis stroke="#888" style={{ fontSize: '12px' }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                      formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
+                    />
+                    <Bar dataKey="total" fill="#00ff00" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 

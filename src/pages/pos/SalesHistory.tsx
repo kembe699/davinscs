@@ -2,9 +2,12 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, RefreshCw, User, Printer, Mail, Trash2, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 export default function SalesHistory() {
   const navigate = useNavigate();
+  const { baseCurrency } = useCurrency();
   const [sales, setSales] = useState<any[]>([]);
   const [saleItems, setSaleItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,8 +363,8 @@ export default function SalesHistory() {
                   <div className="flex justify-between text-xs text-black">
                     <span></span>
                     <span>{item.quantity}</span>
-                    <span>UGX {(item.unit_price / 100).toFixed(0)}</span>
-                    <span>UGX {(item.subtotal / 100).toFixed(0)}</span>
+                    <span>{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
+                    <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
                   </div>
                 </div>
               ))}
@@ -370,15 +373,15 @@ export default function SalesHistory() {
             <div className="border-t border-black pt-2 mb-4">
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Subtotal:</span>
-                <span>UGX {(receiptData.subtotal / 100).toFixed(0)}</span>
+                <span>{formatCurrencySync(receiptData.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Tax (18%):</span>
-                <span>UGX {(receiptData.tax_amount / 100).toFixed(0)}</span>
+                <span>{formatCurrencySync(receiptData.tax_amount, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
                 <span className="text-black">TOTAL:</span>
-                <span className="text-black">UGX {(receiptData.total_amount / 100).toFixed(0)}</span>
+                <span className="text-black">{formatCurrencySync(receiptData.total_amount, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
               <div className="flex justify-between text-xs text-black mt-3">
                 <span>Payment:</span>

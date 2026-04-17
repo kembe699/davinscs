@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 type Spec = { label: string; value: string };
 
@@ -14,6 +15,7 @@ const empty = {
 
 export default function ProductForm() {
   const { id } = useParams<{ id: string }>();
+  const { baseCurrency } = useCurrency();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
 
@@ -224,7 +226,7 @@ export default function ProductForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="field-label">Price (UGX) *</label>
+                    <label className="field-label">Price ({baseCurrency?.code || 'UGX'}) *</label>
                     <input
                       required type="number" min={0} value={form.price}
                       onChange={(e) => set("price", Number(e.target.value))}

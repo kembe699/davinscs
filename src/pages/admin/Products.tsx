@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, Search, RefreshCw, Upload, Download, Edit } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
 export default function Products() {
   const navigate = useNavigate();
+  const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filtered, setFiltered] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +142,7 @@ export default function Products() {
                         <td className="px-4 py-3">{p.name}</td>
                         <td className="px-4 py-3 capitalize">{p.category}</td>
                         <td className="px-4 py-3">{p.brand}</td>
-                        <td className="px-4 py-3 font-mono">UGX {(p.price / 100).toFixed(0)}</td>
+                        <td className="px-4 py-3 font-mono">{formatCurrencySync(p.price, baseCurrency?.symbol || 'UGX', false)}</td>
                         <td className="px-4 py-3"><span className={p.in_stock ? "text-green-600" : "text-red-600"}>{p.in_stock ? "In Stock" : "Out"}</span></td>
                       </tr>
                     ))}

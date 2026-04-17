@@ -204,5 +204,21 @@ export async function autoSeed() {
     );
   }
 
-  console.log("✅ Auto-seed complete (admin + categories + products + suppliers + accounts + inventory + POS data)");
+  // Seed currencies
+  const currencies = [
+    { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX', is_base: true, exchange_rate: 1.0 },
+    { code: 'USD', name: 'US Dollar', symbol: '$', is_base: false, exchange_rate: 0.00027 },
+    { code: 'EUR', name: 'Euro', symbol: '€', is_base: false, exchange_rate: 0.00025 },
+    { code: 'GBP', name: 'British Pound', symbol: '£', is_base: false, exchange_rate: 0.00021 },
+  ];
+
+  for (const currency of currencies) {
+    await pool.query(
+      `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
+       VALUES ($1, $2, $3, $4, $5, true) ON CONFLICT (code) DO NOTHING`,
+      [currency.code, currency.name, currency.symbol, currency.is_base, currency.exchange_rate]
+    );
+  }
+
+  console.log("✅ Auto-seed complete (admin + categories + products + suppliers + accounts + inventory + POS data + currencies)");
 }
