@@ -43,7 +43,8 @@ export default function Products() {
       setProducts((prev) => prev.filter((p) => p.id !== id));
       setSelectedProduct(null);
     } catch (err) {
-      alert("Delete failed");
+      const errorMessage = err instanceof Error ? err.message : "Delete failed";
+      alert(errorMessage);
     } finally {
       setConfirmId(null);
     }
