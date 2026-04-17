@@ -105,9 +105,18 @@ export const exportToPDF = (options: ReportExportOptions) => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [210, 297], // Explicitly set A4 dimensions
+    format: 'a4', // Use standard A4 format
     compress: true,
     putOnlyUsedFonts: true
+  });
+  
+  // Set PDF metadata
+  doc.setProperties({
+    title: reportTitle,
+    subject: `${reportTitle} - ${dateRange}`,
+    author: companyInfo.name,
+    keywords: 'report, sales, business',
+    creator: companyInfo.name
   });
   
   const pageWidth = 210; // A4 width in mm
