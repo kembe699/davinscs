@@ -176,29 +176,42 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
     const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
-    // Accounting expenses
-    const accountingExpenses = await pool.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) as total
-       FROM transactions t
-       JOIN accounts a ON t.account_id = a.id
-       WHERE a.type = 'expense' 
-         AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
-      [startDate, endDate]
-    );
+    let accountingTotal = 0;
+    let cashDrawerTotal = 0;
 
-    // Cash drawer expenses
-    const cashDrawerExpenses = await pool.query(
-      `SELECT COALESCE(SUM(amount), 0) as total
-       FROM cash_drawer_transactions
-       WHERE type = 'cash_out'
-         AND DATE(created_at) BETWEEN $1 AND $2`,
-      [startDate, endDate]
-    );
+    // Try to get accounting expenses
+    try {
+      const accountingExpenses = await pool.query(
+        `SELECT COALESCE(SUM(ABS(amount)), 0) as total
+         FROM transactions t
+         JOIN accounts a ON t.account_id = a.id
+         WHERE a.type = 'expense' 
+           AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      accountingTotal = parseInt(accountingExpenses.rows[0].total);
+    } catch (err) {
+      console.log("Accounting expenses table not available");
+    }
+
+    // Try to get cash drawer expenses
+    try {
+      const cashDrawerExpenses = await pool.query(
+        `SELECT COALESCE(SUM(amount), 0) as total
+         FROM cash_drawer_transactions
+         WHERE type = 'cash_out'
+           AND DATE(created_at) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      cashDrawerTotal = parseInt(cashDrawerExpenses.rows[0].total);
+    } catch (err) {
+      console.log("Cash drawer transactions table not available");
+    }
 
     res.json({
-      accounting_expenses: accountingExpenses.rows[0].total,
-      cash_drawer_expenses: cashDrawerExpenses.rows[0].total,
-      total_expenses: parseInt(accountingExpenses.rows[0].total) + parseInt(cashDrawerExpenses.rows[0].total)
+      accounting_expenses: accountingTotal,
+      cash_drawer_expenses: cashDrawerTotal,
+      total_expenses: accountingTotal + cashDrawerTotal
     });
   } catch (err) {
     console.error("Error in expenses summary:", err);
@@ -213,23 +226,27 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
     const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
-    const { rows } = await pool.query(
-      `SELECT 
-        a.code,
-        a.name as category_name,
-        COUNT(t.id) as transaction_count,
-        COALESCE(SUM(ABS(t.amount)), 0) as total_amount
-       FROM accounts a
-       LEFT JOIN transactions t ON a.id = t.account_id
-         AND DATE(t.transaction_date) BETWEEN $1 AND $2
-       WHERE a.type = 'expense'
-       GROUP BY a.id, a.code, a.name
-       HAVING COUNT(t.id) > 0
-       ORDER BY total_amount DESC`,
-      [startDate, endDate]
-    );
-
-    res.json(rows);
+    try {
+      const { rows } = await pool.query(
+        `SELECT 
+          a.code,
+          a.name as category_name,
+          COUNT(t.id) as transaction_count,
+          COALESCE(SUM(ABS(t.amount)), 0) as total_amount
+         FROM accounts a
+         LEFT JOIN transactions t ON a.id = t.account_id
+           AND DATE(t.transaction_date) BETWEEN $1 AND $2
+         WHERE a.type = 'expense'
+         GROUP BY a.id, a.code, a.name
+         HAVING COUNT(t.id) > 0
+         ORDER BY total_amount DESC`,
+        [startDate, endDate]
+      );
+      res.json(rows);
+    } catch (err) {
+      console.log("Accounts/transactions tables not available");
+      res.json([]);
+    }
   } catch (err) {
     console.error("Error in expenses by category:", err);
     res.status(500).json({ error: "Server error" });
@@ -243,24 +260,28 @@ router.get("/expenses/cash-drawer", requireAuth, async (req, res) => {
     const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
-    const { rows } = await pool.query(
-      `SELECT 
-        cdt.id,
-        cdt.amount,
-        cdt.reason,
-        cdt.created_at,
-        u.email as user_email,
-        cds.id as session_id
-       FROM cash_drawer_transactions cdt
-       LEFT JOIN users u ON cdt.user_id = u.id
-       LEFT JOIN cash_drawer_sessions cds ON cdt.session_id = cds.id
-       WHERE cdt.type = 'cash_out'
-         AND DATE(cdt.created_at) BETWEEN $1 AND $2
-       ORDER BY cdt.created_at DESC`,
-      [startDate, endDate]
-    );
-
-    res.json(rows);
+    try {
+      const { rows } = await pool.query(
+        `SELECT 
+          cdt.id,
+          cdt.amount,
+          cdt.reason,
+          cdt.created_at,
+          u.email as user_email,
+          cds.id as session_id
+         FROM cash_drawer_transactions cdt
+         LEFT JOIN users u ON cdt.user_id = u.id
+         LEFT JOIN cash_drawer_sessions cds ON cdt.session_id = cds.id
+         WHERE cdt.type = 'cash_out'
+           AND DATE(cdt.created_at) BETWEEN $1 AND $2
+         ORDER BY cdt.created_at DESC`,
+        [startDate, endDate]
+      );
+      res.json(rows);
+    } catch (err) {
+      console.log("Cash drawer transactions table not available");
+      res.json([]);
+    }
   } catch (err) {
     console.error("Error in cash drawer expenses:", err);
     res.status(500).json({ error: "Server error" });
@@ -314,23 +335,27 @@ router.get("/inventory/stock-movement", requireAuth, async (req, res) => {
 // Expiring soon products
 router.get("/inventory/expiring", requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT 
-        id,
-        name,
-        barcode,
-        quantity_on_hand,
-        expiry_date,
-        EXTRACT(DAY FROM (expiry_date - CURRENT_DATE)) as days_until_expiry
-       FROM products
-       WHERE expiry_date IS NOT NULL
-         AND expiry_date > CURRENT_DATE
-         AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
-         AND quantity_on_hand > 0
-       ORDER BY expiry_date ASC`
-    );
-
-    res.json(rows);
+    try {
+      const { rows } = await pool.query(
+        `SELECT 
+          id,
+          name,
+          barcode,
+          quantity_on_hand,
+          expiry_date,
+          EXTRACT(DAY FROM (expiry_date - CURRENT_DATE)) as days_until_expiry
+         FROM products
+         WHERE expiry_date IS NOT NULL
+           AND expiry_date > CURRENT_DATE
+           AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
+           AND quantity_on_hand > 0
+         ORDER BY expiry_date ASC`
+      );
+      res.json(rows);
+    } catch (err) {
+      console.log("Expiry date column not available in products table");
+      res.json([]);
+    }
   } catch (err) {
     console.error("Error in expiring products report:", err);
     res.status(500).json({ error: "Server error" });
@@ -340,22 +365,26 @@ router.get("/inventory/expiring", requireAuth, async (req, res) => {
 // Expired products
 router.get("/inventory/expired", requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT 
-        id,
-        name,
-        barcode,
-        quantity_on_hand,
-        expiry_date,
-        EXTRACT(DAY FROM (CURRENT_DATE - expiry_date)) as days_expired
-       FROM products
-       WHERE expiry_date IS NOT NULL
-         AND expiry_date < CURRENT_DATE
-         AND quantity_on_hand > 0
-       ORDER BY expiry_date ASC`
-    );
-
-    res.json(rows);
+    try {
+      const { rows } = await pool.query(
+        `SELECT 
+          id,
+          name,
+          barcode,
+          quantity_on_hand,
+          expiry_date,
+          EXTRACT(DAY FROM (CURRENT_DATE - expiry_date)) as days_expired
+         FROM products
+         WHERE expiry_date IS NOT NULL
+           AND expiry_date < CURRENT_DATE
+           AND quantity_on_hand > 0
+         ORDER BY expiry_date ASC`
+      );
+      res.json(rows);
+    } catch (err) {
+      console.log("Expiry date column not available in products table");
+      res.json([]);
+    }
   } catch (err) {
     console.error("Error in expired products report:", err);
     res.status(500).json({ error: "Server error" });
@@ -435,20 +464,25 @@ router.get("/trending/products", requireAuth, async (req, res) => {
     );
 
     // Website orders
-    const webOrders = await pool.query(
-      `SELECT 
-        oi.product_id,
-        p.name as product_name,
-        SUM(oi.quantity) as quantity_sold,
-        COALESCE(SUM(oi.price * oi.quantity), 0) as revenue,
-        'Website' as source
-       FROM order_items oi
-       JOIN customer_orders co ON oi.order_id = co.id
-       JOIN products p ON oi.product_id = p.id
-       WHERE DATE(co.created_at) BETWEEN $1 AND $2 AND co.status != 'cancelled'
-       GROUP BY oi.product_id, p.name`,
-      [startDate, endDate]
-    );
+    let webOrders = { rows: [] };
+    try {
+      webOrders = await pool.query(
+        `SELECT 
+          oi.product_id,
+          p.name as product_name,
+          SUM(oi.quantity) as quantity_sold,
+          COALESCE(SUM(oi.price * oi.quantity), 0) as revenue,
+          'Website' as source
+         FROM order_items oi
+         JOIN customer_orders co ON oi.order_id = co.id
+         JOIN products p ON oi.product_id = p.id
+         WHERE DATE(co.created_at) BETWEEN $1 AND $2 AND co.status != 'cancelled'
+         GROUP BY oi.product_id, p.name`,
+        [startDate, endDate]
+      );
+    } catch (err) {
+      console.log("Order items table not available");
+    }
 
     // Combine and aggregate
     const combined = {};
