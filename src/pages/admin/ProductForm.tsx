@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 
 type Spec = { label: string; value: string };
 
 const empty = {
   slug: "", name: "", brand: "", price: 0, tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "cameras",
+  barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: 0, reorder_level: 0,
 };
 
 export default function ProductForm() {
@@ -37,6 +38,9 @@ export default function ProductForm() {
           tag: p.tag, description: p.description,
           specs: Array.isArray(p.specs) ? p.specs : [],
           image_url: p.image_url, in_stock: p.in_stock, is_featured: p.is_featured, category: p.category,
+          barcode: (p as any).barcode || "", expiry_date: (p as any).expiry_date || "",
+          product_type: (p as any).product_type || "product",
+          quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
         });
       })
       .catch(() => navigate("/admin/products"))
@@ -56,6 +60,10 @@ export default function ProductForm() {
 
   const autoSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const generateBarcode = () => {
+    return 'SKU-' + Date.now().toString(36).toUpperCase();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +120,11 @@ export default function ProductForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info */}
-          <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
+          {/* Basic Info and Specifications in Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Basic Info */}
+            <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+              <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
@@ -174,11 +184,43 @@ export default function ProductForm() {
                 />
               </div>
               <div>
-                <label className="field-label">Tag</label>
+                <label className="field-label">Product Type *</label>
+                <select
+                  required value={(form as any).product_type}
+                  onChange={(e) => set("product_type", e.target.value)}
+                  className="field-input appearance-none"
+                >
+                  <option value="product">Product</option>
+                  <option value="service">Service</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="field-label">Barcode/SKU</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text" value={(form as any).barcode}
+                    onChange={(e) => set("barcode", e.target.value)}
+                    placeholder="SKU-ABC123"
+                    className="field-input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => set("barcode", generateBarcode())}
+                    className="px-3 py-2 bg-primary text-background hover:bg-primary/90 transition-colors"
+                    title="Generate Barcode"
+                  >
+                    <Sparkles size={16} />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="field-label">Expiry Date</label>
                 <input
-                  type="text" value={form.tag}
-                  onChange={(e) => set("tag", e.target.value)}
-                  placeholder="FULL_FRAME"
+                  type="date" value={(form as any).expiry_date}
+                  onChange={(e) => set("expiry_date", e.target.value)}
                   className="field-input"
                 />
               </div>
@@ -231,10 +273,10 @@ export default function ProductForm() {
                 <span className="text-sm text-foreground">{form.is_featured ? "★ Featured" : "Not Featured"}</span>
               </div>
             </div>
-          </section>
+            </section>
 
-          {/* Specs */}
-          <section className="border border-border-subtle p-6 bg-chassis space-y-4">
+            {/* Specs */}
+            <section className="border border-border-subtle p-6 bg-chassis space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Specifications</h2>
               <button type="button" onClick={addSpec} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-mono-tech uppercase tracking-widest">
@@ -263,6 +305,35 @@ export default function ProductForm() {
                 </button>
               </div>
             ))}
+            </section>
+          </div>
+
+          {/* Stock Control */}
+          <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="field-label">Current Stock</label>
+                <input
+                  type="number" min={0} value={(form as any).quantity_on_hand}
+                  onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
+                  placeholder="0"
+                  className="field-input"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+              </div>
+              <div>
+                <label className="field-label">Reorder Level</label>
+                <input
+                  type="number" min={0} value={(form as any).reorder_level}
+                  onChange={(e) => set("reorder_level", Number(e.target.value))}
+                  placeholder="10"
+                  className="field-input"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
+              </div>
+            </div>
           </section>
 
           <div className="flex gap-3">
