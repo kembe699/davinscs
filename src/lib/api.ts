@@ -354,6 +354,149 @@ export type ApiExchangeRate = {
   to_currency_symbol?: string;
 };
 
+// Report Types
+export type DailySalesReport = {
+  date: string;
+  total_sales: number;
+  total_revenue: number;
+  total_tax: number;
+  total_discounts: number;
+  average_sale: number;
+};
+
+export type SalesByUserReport = {
+  user_id: number;
+  user_email: string;
+  total_sales: number;
+  total_revenue: number;
+  total_tax: number;
+  average_sale: number;
+};
+
+export type SalesByCustomerReport = {
+  customer_name: string;
+  customer_id: number | null;
+  total_purchases: number;
+  total_spent: number;
+  average_purchase: number;
+  last_purchase: string;
+};
+
+export type SalesByProductReport = {
+  product_id: number;
+  product_name: string;
+  total_quantity: number;
+  total_revenue: number;
+  total_tax: number;
+  times_sold: number;
+  average_price: number;
+};
+
+export type SalesComparisonReport = {
+  pos: {
+    total_orders: number;
+    total_revenue: number;
+    average_order_value: number;
+  };
+  website: {
+    total_orders: number;
+    total_revenue: number;
+    average_order_value: number;
+  };
+  total_revenue: number;
+  total_orders: number;
+};
+
+export type ExpensesSummaryReport = {
+  accounting_expenses: number;
+  cash_drawer_expenses: number;
+  total_expenses: number;
+};
+
+export type ExpensesByCategoryReport = {
+  code: string;
+  category_name: string;
+  transaction_count: number;
+  total_amount: number;
+};
+
+export type CashDrawerExpenseReport = {
+  id: number;
+  amount: number;
+  reason: string;
+  created_at: string;
+  user_email: string;
+  session_id: number;
+};
+
+export type StockMovementReport = {
+  id: number;
+  product_id: number;
+  product_name: string;
+  movement_type: string;
+  quantity: number;
+  reference_type: string;
+  reference_id: number;
+  notes: string;
+  created_at: string;
+  user_email: string;
+};
+
+export type ExpiringProductReport = {
+  id: number;
+  name: string;
+  barcode: string;
+  quantity_on_hand: number;
+  expiry_date: string;
+  days_until_expiry: number;
+};
+
+export type ExpiredProductReport = {
+  id: number;
+  name: string;
+  barcode: string;
+  quantity_on_hand: number;
+  expiry_date: string;
+  days_expired: number;
+};
+
+export type LowStockReport = {
+  id: number;
+  name: string;
+  barcode: string;
+  quantity_on_hand: number;
+  reorder_level: number;
+  units_below_reorder: number;
+};
+
+export type OutOfStockReport = {
+  id: number;
+  name: string;
+  barcode: string;
+  reorder_level: number;
+  in_stock: boolean;
+  updated_at: string;
+};
+
+export type TrendingProductReport = {
+  product_id: number;
+  product_name: string;
+  total_quantity: number;
+  total_revenue: number;
+  pos_quantity: number;
+  pos_revenue: number;
+  web_quantity: number;
+  web_revenue: number;
+};
+
+export type POSvsWebReport = {
+  date: string;
+  pos_orders: number;
+  pos_revenue: number;
+  web_orders: number;
+  web_revenue: number;
+};
+
 export type Promotion = {
   id: number;
   name: string;
@@ -872,5 +1015,87 @@ export const api = {
       request<{ success: boolean }>(`/api/exchange-rates/${id}`, {
         method: "DELETE",
       }),
+  },
+  reports: {
+    sales: {
+      daily: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<DailySalesReport[]>(`/api/reports/sales/daily?${params}`);
+      },
+      byUser: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<SalesByUserReport[]>(`/api/reports/sales/by-user?${params}`);
+      },
+      byCustomer: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<SalesByCustomerReport[]>(`/api/reports/sales/by-customer?${params}`);
+      },
+      byProduct: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<SalesByProductReport[]>(`/api/reports/sales/by-product?${params}`);
+      },
+      comparison: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<SalesComparisonReport>(`/api/reports/sales/comparison?${params}`);
+      },
+    },
+    expenses: {
+      summary: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<ExpensesSummaryReport>(`/api/reports/expenses/summary?${params}`);
+      },
+      byCategory: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<ExpensesByCategoryReport[]>(`/api/reports/expenses/by-category?${params}`);
+      },
+      cashDrawer: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<CashDrawerExpenseReport[]>(`/api/reports/expenses/cash-drawer?${params}`);
+      },
+    },
+    inventory: {
+      stockMovement: (startDate?: string, endDate?: string, productId?: number) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (productId) params.append('product_id', productId.toString());
+        return request<StockMovementReport[]>(`/api/reports/inventory/stock-movement?${params}`);
+      },
+      expiring: () => request<ExpiringProductReport[]>("/api/reports/inventory/expiring"),
+      expired: () => request<ExpiredProductReport[]>("/api/reports/inventory/expired"),
+      lowStock: () => request<LowStockReport[]>("/api/reports/inventory/low-stock"),
+      outOfStock: () => request<OutOfStockReport[]>("/api/reports/inventory/out-of-stock"),
+    },
+    trending: {
+      products: (startDate?: string, endDate?: string, limit?: number) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (limit) params.append('limit', limit.toString());
+        return request<TrendingProductReport[]>(`/api/reports/trending/products?${params}`);
+      },
+      posVsWeb: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<POSvsWebReport[]>(`/api/reports/trending/pos-vs-web?${params}`);
+      },
+    },
   },
 };

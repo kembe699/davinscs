@@ -33,6 +33,7 @@ import posReportsRoutes from "./routes/pos-reports.js";
 import currenciesRoutes from "./routes/currencies.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import exchangeRatesRoutes from "./routes/exchangeRates.js";
+import reportsRoutes from "./routes/reports.js";
 
 dotenv.config();
 
@@ -89,6 +90,7 @@ app.use("/api/pos-reports", posReportsRoutes);
 app.use("/api/currencies", currenciesRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/exchange-rates", exchangeRatesRoutes);
+app.use("/api/reports", reportsRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {

@@ -28,7 +28,7 @@ import Inventory from "./pages/admin/Inventory.tsx";
 import Orders from "./pages/admin/Orders.tsx";
 import Procurement from "./pages/admin/Procurement.tsx";
 import Accounting from "./pages/admin/Accounting.tsx";
-import Reports from "./pages/admin/Reports.tsx";
+import ReportsNew from "./pages/admin/ReportsNew.tsx";
 import Company from "./pages/admin/Company.tsx";
 import Cart from "./pages/Cart.tsx";
 import Checkout from "./pages/Checkout.tsx";
@@ -86,7 +86,7 @@ const App = () => (
             <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
             <Route path="/admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
-            <Route path="/admin/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/admin/reports" element={<ProtectedRoute><ReportsNew /></ProtectedRoute>} />
             <Route path="/admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
             <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
             <Route path="/admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />

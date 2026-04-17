@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, PaymentType } from "@/lib/api";
+import AdminLayout from "./AdminLayout";
 
 export default function PaymentTypes() {
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
@@ -65,9 +66,10 @@ export default function PaymentTypes() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-admin-text">Payment Types</h1>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-admin-text">Payment Types</h1>
         <button
           onClick={() => {
             setEditingId(null);
@@ -187,6 +189,7 @@ export default function PaymentTypes() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
