@@ -100,6 +100,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error(err);
+    // Check if it's a foreign key constraint error
+    if (err.code === "23503") {
+      return res.status(409).json({ 
+        error: "Cannot delete product: it is referenced in sales, orders, or other records. Please remove those references first." 
+      });
+    }
     res.status(500).json({ error: "Server error" });
   }
 });
