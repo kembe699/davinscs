@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, TaxRate } from "@/lib/api";
+import AdminLayout from "./AdminLayout";
 
 export default function TaxRates() {
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
@@ -65,9 +66,10 @@ export default function TaxRates() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-admin-text">Tax Rates</h1>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-admin-text">Tax Rates</h1>
         <button
           onClick={() => {
             setEditingId(null);
@@ -192,6 +194,7 @@ export default function TaxRates() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
