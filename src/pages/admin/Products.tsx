@@ -206,19 +206,22 @@ function ProductFormSlide({ product, onClose, onSave, generateSKU }: any) {
         image_url: formData.image_url || '',
         in_stock: true,
         is_featured: false,
-        tag: sku || ''
+        tag: sku || '',
+        barcode: sku || ''
       };
 
       if (product) {
         await api.products.update(product.id, productData);
+        alert('✅ Product updated successfully!');
       } else {
         await api.products.create(productData);
+        alert('✅ Product created successfully!');
       }
       
       onSave();
       onClose();
-    } catch (err) {
-      alert('Failed to save product');
+    } catch (err: any) {
+      alert('❌ Failed to save product: ' + (err.message || 'Unknown error'));
       console.error(err);
     }
   };
