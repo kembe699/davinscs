@@ -64,7 +64,22 @@ export default function Company() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.company.save(companyData);
+      const savedData = await api.company.save(companyData);
+      // Update local state with saved data
+      setCompanyData({
+        name: savedData.name || "",
+        logo: savedData.logo || "",
+        email: savedData.email || "",
+        phone: savedData.phone || "",
+        address: savedData.address || "",
+        city: savedData.city || "",
+        country: savedData.country || "",
+        postal_code: savedData.postal_code || "",
+        tax_id: savedData.tax_id || "",
+        website: savedData.website || "",
+        description: savedData.description || "",
+      });
+      setLogoPreview(savedData.logo || "");
       alert("Company details updated successfully!");
     } catch (err: any) {
       alert(err.message || "Failed to update company details");

@@ -38,16 +38,21 @@ router.get("/", async (req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, description } = req.body;
   
+  console.log('Received company data:', { name, address, city, country, postal_code, phone, email, tax_id, website });
+  
   if (!name) {
+    console.log('Error: Company name is required');
     return res.status(400).json({ error: "Company name is required" });
   }
   
   try {
     // Check if settings exist
     const existing = await pool.query("SELECT id FROM company_settings LIMIT 1");
+    console.log('Existing company settings:', existing.rows[0]);
     
     if (existing.rows[0]) {
       // Update existing
+      console.log('Updating existing company settings...');
       const { rows } = await pool.query(
         `UPDATE company_settings 
          SET company_name = $1, address = $2, phone = $3, email = $4, 
@@ -57,7 +62,8 @@ router.post("/", requireAuth, async (req, res) => {
          WHERE id = $12 RETURNING *`,
         [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, existing.rows[0].id]
       );
-      res.json({
+      console.log('Updated successfully:', rows[0]);
+      const response = {
         name: rows[0].company_name,
         logo: rows[0].logo_url,
         address: rows[0].address,
@@ -69,15 +75,19 @@ router.post("/", requireAuth, async (req, res) => {
         tax_id: rows[0].tax_id,
         website: rows[0].website,
         description: rows[0].receipt_footer
-      });
+      };
+      console.log('Sending response:', response);
+      res.json(response);
     } else {
       // Create new
+      console.log('Creating new company settings...');
       const { rows } = await pool.query(
         `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, currency) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, 'UGX']
       );
-      res.json({
+      console.log('Created successfully:', rows[0]);
+      const response = {
         name: rows[0].company_name,
         logo: rows[0].logo_url,
         address: rows[0].address,
@@ -89,11 +99,13 @@ router.post("/", requireAuth, async (req, res) => {
         tax_id: rows[0].tax_id,
         website: rows[0].website,
         description: rows[0].receipt_footer
-      });
+      };
+      console.log('Sending response:', response);
+      res.json(response);
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error('Error saving company settings:', err);
+    res.status(500).json({ error: "Server error: " + err.message });
   }
 });
 
