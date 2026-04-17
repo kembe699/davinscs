@@ -449,19 +449,24 @@ router.get("/trending/products", requireAuth, async (req, res) => {
     const maxLimit = limit || 20;
 
     // POS sales
-    const posSales = await pool.query(
-      `SELECT 
-        product_id,
-        product_name,
-        SUM(quantity) as quantity_sold,
-        COALESCE(SUM(subtotal), 0) as revenue,
-        'POS' as source
-       FROM pos_sale_items si
-       JOIN pos_sales s ON si.sale_id = s.id
-       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
-       GROUP BY product_id, product_name`,
-      [startDate, endDate]
-    );
+    let posSales = { rows: [] };
+    try {
+      posSales = await pool.query(
+        `SELECT 
+          product_id,
+          product_name,
+          SUM(quantity) as quantity_sold,
+          COALESCE(SUM(subtotal), 0) as revenue,
+          'POS' as source
+         FROM pos_sale_items si
+         JOIN pos_sales s ON si.sale_id = s.id
+         WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
+         GROUP BY product_id, product_name`,
+        [startDate, endDate]
+      );
+    } catch (err) {
+      console.log("POS sale items table not available");
+    }
 
     // Website orders
     let webOrders = { rows: [] };

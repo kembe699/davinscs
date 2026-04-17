@@ -405,8 +405,8 @@ export default function ReportsNew() {
                         </tr>
                       </thead>
                       <tbody>
-                        {reportData.map((row: any, idx: number) => (
-                          <tr key={idx} className="border-b border-admin-border hover:bg-admin-bg">
+                        {reportData.map((row: any) => (
+                          <tr key={row.date} className="border-b border-admin-border hover:bg-admin-bg">
                             <td className="px-4 py-3 text-admin-text">{new Date(row.date).toLocaleDateString()}</td>
                             <td className="px-4 py-3 text-right text-admin-text">{row.total_sales}</td>
                             <td className="px-4 py-3 text-right font-mono text-admin-text">
@@ -477,7 +477,7 @@ export default function ReportsNew() {
                       </thead>
                       <tbody>
                         {reportData.map((row: any, idx: number) => (
-                          <tr key={idx} className="border-b border-admin-border hover:bg-admin-bg">
+                          <tr key={`${row.customer_id}-${idx}`} className="border-b border-admin-border hover:bg-admin-bg">
                             <td className="px-4 py-3 text-admin-text">{row.customer_name}</td>
                             <td className="px-4 py-3 text-right text-admin-text">{row.total_purchases}</td>
                             <td className="px-4 py-3 text-right font-mono text-admin-text">
