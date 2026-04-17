@@ -56,6 +56,9 @@ router.post("/", requireAuth, async (req, res) => {
 // PUT update product (admin)
 router.put("/:id", requireAuth, async (req, res) => {
   const { name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, quantity_on_hand, reorder_level } = req.body;
+  console.log('UPDATE Product ID:', req.params.id);
+  console.log('Barcode received:', barcode);
+  console.log('Full body:', JSON.stringify(req.body, null, 2));
   try {
     const { rows } = await pool.query(
       `UPDATE products SET
