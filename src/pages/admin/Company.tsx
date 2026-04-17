@@ -57,7 +57,7 @@ export default function Company() {
         const logoData = reader.result as string;
         console.log('Logo data read, length:', logoData.length);
         setLogoPreview(logoData);
-        setCompanyData({ ...companyData, logo: logoData });
+        setCompanyData(prev => ({ ...prev, logo: logoData }));
       };
       reader.readAsDataURL(file);
     }
