@@ -122,158 +122,151 @@ export default function ProductForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info and Specifications in Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Basic Info */}
-            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-5">
-              <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
+            {/* Left Column: Basic Info Cards */}
+            <div className="lg:col-span-6 space-y-6">
+              {/* Basic Info Card */}
+              <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="field-label">Product Name *</label>
-                <input
-                  required type="text" value={form.name}
-                  onChange={(e) => {
-                    set("name", e.target.value);
-                    if (!isEdit) set("slug", autoSlug(e.target.value));
-                  }}
-                  placeholder="Sony FX3 Full-Frame Cinema Camera"
-                  className="field-input"
-                />
-              </div>
-              <div>
-                <label className="field-label">Slug *</label>
-                <input
-                  required type="text" value={form.slug}
-                  onChange={(e) => set("slug", e.target.value)}
-                  placeholder="sony-fx3"
-                  className="field-input"
-                />
-              </div>
-              <div>
-                <label className="field-label">Brand *</label>
-                <input
-                  required type="text" value={form.brand}
-                  onChange={(e) => set("brand", e.target.value)}
-                  placeholder="Sony"
-                  className="field-input"
-                />
-              </div>
-              <div>
-                <label className="field-label">Category *</label>
-                <select
-                  required value={form.category}
-                  onChange={(e) => set("category", e.target.value)}
-                  className="field-input appearance-none"
-                >
-                  {categories.length > 0
-                    ? categories.map((c) => (
-                        <option key={c.id} value={c.slug}>{c.name}</option>
-                      ))
-                    : ["cameras","lenses","microphones","teleprompters","lighting"].map((c) => (
-                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                      ))
-                  }
-                </select>
-              </div>
-              <div>
-                <label className="field-label">Price (UGX) *</label>
-                <input
-                  required type="number" min={0} value={form.price}
-                  onChange={(e) => set("price", Number(e.target.value))}
-                  placeholder="795000"
-                  className="field-input"
-                />
-              </div>
-              <div>
-                <label className="field-label">Product Type *</label>
-                <select
-                  required value={(form as any).product_type}
-                  onChange={(e) => set("product_type", e.target.value)}
-                  className="field-input appearance-none"
-                >
-                  <option value="product">Product</option>
-                  <option value="service">Service</option>
-                </select>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="field-label">Product Name *</label>
+                    <input
+                      required type="text" value={form.name}
+                      onChange={(e) => {
+                        set("name", e.target.value);
+                        if (!isEdit) set("slug", autoSlug(e.target.value));
+                      }}
+                      placeholder="Sony FX3 Full-Frame Cinema Camera"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Slug *</label>
+                    <input
+                      required type="text" value={form.slug}
+                      onChange={(e) => set("slug", e.target.value)}
+                      placeholder="sony-fx3"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Brand *</label>
+                    <input
+                      required type="text" value={form.brand}
+                      onChange={(e) => set("brand", e.target.value)}
+                      placeholder="Sony"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Category *</label>
+                    <select
+                      required value={form.category}
+                      onChange={(e) => set("category", e.target.value)}
+                      className="field-input appearance-none"
+                    >
+                      {categories.length > 0
+                        ? categories.map((c) => (
+                            <option key={c.id} value={c.slug}>{c.name}</option>
+                          ))
+                        : ["cameras","lenses","microphones","teleprompters","lighting"].map((c) => (
+                            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                          ))
+                      }
+                    </select>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="field-label">Barcode/SKU</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text" value={(form as any).barcode}
-                    onChange={(e) => set("barcode", e.target.value)}
-                    placeholder="SKU-ABC123"
-                    className="field-input flex-1"
+                <div>
+                  <label className="field-label">Description</label>
+                  <textarea
+                    rows={3} value={form.description}
+                    onChange={(e) => set("description", e.target.value)}
+                    placeholder="A compact full-frame cinema camera…"
+                    className="field-input resize-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => set("barcode", generateBarcode())}
-                    className="px-3 py-2 bg-primary text-background hover:bg-primary/90 transition-colors"
-                    title="Generate Barcode"
-                  >
-                    <Sparkles size={16} />
-                  </button>
                 </div>
-              </div>
-              <div>
-                <label className="field-label">Expiry Date</label>
-                <input
-                  type="date" value={(form as any).expiry_date}
-                  onChange={(e) => set("expiry_date", e.target.value)}
-                  className="field-input"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="field-label">Description</label>
-              <textarea
-                rows={3} value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-                placeholder="A compact full-frame cinema camera…"
-                className="field-input resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="field-label">Image URL</label>
-              <input
-                type="text" value={form.image_url}
-                onChange={(e) => set("image_url", e.target.value)}
-                placeholder="/products/sony-fx3.jpg"
-                className="field-input"
-              />
-              {form.image_url && (
-                <div className="mt-2 size-20 border border-border-subtle overflow-hidden">
-                  <img src={form.image_url} alt="preview" className="size-full object-cover opacity-80" />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => set("in_stock", !form.in_stock)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${form.in_stock ? "bg-primary" : "bg-border-subtle"}`}
+                    >
+                      <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.in_stock ? "translate-x-5" : "translate-x-0.5"}`} />
+                    </button>
+                    <span className="text-sm text-foreground">{form.in_stock ? "In Stock" : "Out of Stock"}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => set("is_featured", !form.is_featured)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${form.is_featured ? "bg-yellow-500" : "bg-border-subtle"}`}
+                    >
+                      <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.is_featured ? "translate-x-5" : "translate-x-0.5"}`} />
+                    </button>
+                    <span className="text-sm text-foreground">{form.is_featured ? "★ Featured" : "Not Featured"}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+              </section>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => set("in_stock", !form.in_stock)}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${form.in_stock ? "bg-primary" : "bg-border-subtle"}`}
-                >
-                  <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.in_stock ? "translate-x-5" : "translate-x-0.5"}`} />
-                </button>
-                <span className="text-sm text-foreground">{form.in_stock ? "In Stock" : "Out of Stock"}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => set("is_featured", !form.is_featured)}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${form.is_featured ? "bg-yellow-500" : "bg-border-subtle"}`}
-                >
-                  <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.is_featured ? "translate-x-5" : "translate-x-0.5"}`} />
-                </button>
-                <span className="text-sm text-foreground">{form.is_featured ? "★ Featured" : "Not Featured"}</span>
-              </div>
+              {/* Pricing & Type Card */}
+              <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Pricing & Type</h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="field-label">Price (UGX) *</label>
+                    <input
+                      required type="number" min={0} value={form.price}
+                      onChange={(e) => set("price", Number(e.target.value))}
+                      placeholder="795000"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Product Type *</label>
+                    <select
+                      required value={(form as any).product_type}
+                      onChange={(e) => set("product_type", e.target.value)}
+                      className="field-input appearance-none"
+                    >
+                      <option value="product">Product</option>
+                      <option value="service">Service</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Barcode/SKU</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text" value={(form as any).barcode}
+                        onChange={(e) => set("barcode", e.target.value)}
+                        placeholder="SKU-ABC123"
+                        className="field-input flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => set("barcode", generateBarcode())}
+                        className="px-3 py-2 bg-primary text-background hover:bg-primary/90 transition-colors"
+                        title="Generate Barcode"
+                      >
+                        <Sparkles size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="field-label">Expiry Date</label>
+                    <input
+                      type="date" value={(form as any).expiry_date}
+                      onChange={(e) => set("expiry_date", e.target.value)}
+                      className="field-input"
+                    />
+                  </div>
+                </div>
+              </section>
             </div>
-            </section>
 
             {/* Right Column: Specs and Stock Control */}
             <div className="lg:col-span-6 space-y-6">
@@ -334,6 +327,26 @@ export default function ProductForm() {
                     />
                     <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
                   </div>
+                </div>
+              </section>
+
+              {/* Image URL Card */}
+              <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Product Image</h2>
+                
+                <div>
+                  <label className="field-label">Image URL</label>
+                  <input
+                    type="text" value={form.image_url}
+                    onChange={(e) => set("image_url", e.target.value)}
+                    placeholder="/products/sony-fx3.jpg"
+                    className="field-input"
+                  />
+                  {form.image_url && (
+                    <div className="mt-3 size-32 border border-border-subtle overflow-hidden">
+                      <img src={form.image_url} alt="preview" className="size-full object-cover opacity-80" />
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
