@@ -33,12 +33,18 @@ export default function ProductForm() {
       .then((products) => {
         const p = products.find((x) => x.id === Number(id));
         if (!p) return navigate("/admin/products");
+        // Convert expiry_date to yyyy-MM-dd format if it exists
+        const expiryDate = (p as any).expiry_date 
+          ? new Date((p as any).expiry_date).toISOString().split('T')[0]
+          : "";
+        
         setForm({
           slug: p.slug, name: p.name, brand: p.brand, price: p.price,
           tag: p.tag, description: p.description,
           specs: Array.isArray(p.specs) ? p.specs : [],
           image_url: p.image_url, in_stock: p.in_stock, is_featured: p.is_featured, category: p.category,
-          barcode: (p as any).barcode || "", expiry_date: (p as any).expiry_date || "",
+          barcode: (p as any).barcode || "",
+          expiry_date: expiryDate,
           product_type: (p as any).product_type || "product",
           quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
         });
@@ -70,9 +76,6 @@ export default function ProductForm() {
     setError("");
     setLoading(true);
     try {
-      console.log('Form data being sent:', form);
-      console.log('Expiry date:', (form as any).expiry_date);
-      console.log('Product type:', (form as any).product_type);
       if (isEdit) {
         await api.products.update(Number(id), form as Partial<ApiProduct>);
       } else {
