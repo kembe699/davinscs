@@ -306,35 +306,35 @@ export default function ProductForm() {
               </div>
             ))}
             </section>
-          </div>
 
-          {/* Stock Control */}
-          <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="field-label">Current Stock</label>
-                <input
-                  type="number" min={0} value={(form as any).quantity_on_hand}
-                  onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
-                  placeholder="0"
-                  className="field-input"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+            {/* Stock Control */}
+            <section className="lg:col-span-6 border border-border-subtle p-6 bg-chassis space-y-5">
+              <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
+              
+              <div className="space-y-5">
+                <div>
+                  <label className="field-label">Current Stock</label>
+                  <input
+                    type="number" min={0} value={(form as any).quantity_on_hand}
+                    onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
+                    placeholder="0"
+                    className="field-input"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+                </div>
+                <div>
+                  <label className="field-label">Reorder Level</label>
+                  <input
+                    type="number" min={0} value={(form as any).reorder_level}
+                    onChange={(e) => set("reorder_level", Number(e.target.value))}
+                    placeholder="10"
+                    className="field-input"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
+                </div>
               </div>
-              <div>
-                <label className="field-label">Reorder Level</label>
-                <input
-                  type="number" min={0} value={(form as any).reorder_level}
-                  onChange={(e) => set("reorder_level", Number(e.target.value))}
-                  placeholder="10"
-                  className="field-input"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
-              </div>
-            </div>
-          </section>
+            </section>
+          </div>
 
           <div className="flex gap-3">
             <button
