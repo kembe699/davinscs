@@ -36,6 +36,7 @@ router.get("/:slug", async (req, res) => {
 // POST create product (admin)
 router.post("/", requireAuth, async (req, res) => {
   const { slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, product_type, quantity_on_hand, reorder_level } = req.body;
+  console.log('CREATE Product - expiry_date:', expiry_date, 'product_type:', product_type);
   if (!slug || !name || !brand || !price || !category) {
     return res.status(400).json({ error: "slug, name, brand, price and category are required" });
   }
@@ -65,6 +66,7 @@ router.post("/", requireAuth, async (req, res) => {
 // PUT update product (admin)
 router.put("/:id", requireAuth, async (req, res) => {
   const { name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, product_type, quantity_on_hand, reorder_level } = req.body;
+  console.log('UPDATE Product ID:', req.params.id, '- expiry_date:', expiry_date, 'product_type:', product_type);
   try {
     // Check for duplicate product name (excluding current product)
     const duplicateCheck = await pool.query(

@@ -70,6 +70,9 @@ export default function ProductForm() {
     setError("");
     setLoading(true);
     try {
+      console.log('Form data being sent:', form);
+      console.log('Expiry date:', (form as any).expiry_date);
+      console.log('Product type:', (form as any).product_type);
       if (isEdit) {
         await api.products.update(Number(id), form as Partial<ApiProduct>);
       } else {
