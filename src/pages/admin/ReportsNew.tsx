@@ -4,6 +4,7 @@ import AdminLayout from "./AdminLayout";
 import { FileText, Search, Printer, FileSpreadsheet, FileDown, ChevronRight, ChevronDown } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { exportToExcel, exportToPDF, printReport, CompanyInfo } from "@/utils/reportExports";
 
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics";
 type ReportType = 
@@ -22,6 +23,12 @@ export default function ReportsNew() {
   const [error, setError] = useState("");
   const [reportData, setReportData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
+    name: "Your Company Name",
+    address: "Company Address",
+    phone: "Phone Number",
+    email: "email@company.com"
+  });
   
   // Date filters
   const [datePreset, setDatePreset] = useState<DatePreset>("this-month");
@@ -30,7 +37,26 @@ export default function ReportsNew() {
 
   useEffect(() => {
     applyDatePreset(datePreset);
+    loadCompanyInfo();
   }, [datePreset]);
+
+  const loadCompanyInfo = async () => {
+    try {
+      const info = await api.company.get();
+      if (info) {
+        setCompanyInfo({
+          name: info.name || "Your Company Name",
+          address: info.address || "Company Address",
+          phone: info.phone || "Phone Number",
+          email: info.email || "email@company.com",
+          website: info.website,
+          tax_id: info.tax_id
+        });
+      }
+    } catch (err) {
+      console.log("Company info not available, using defaults");
+    }
+  };
 
   const applyDatePreset = (preset: DatePreset) => {
     const today = new Date();
@@ -155,16 +181,183 @@ export default function ReportsNew() {
     }
   };
 
+  const getReportColumns = () => {
+    const columnMaps: Record<ReportType, { header: string; dataKey: string }[]> = {
+      "daily-sales": [
+        { header: "Date", dataKey: "date" },
+        { header: "Sales Count", dataKey: "total_sales" },
+        { header: "Revenue", dataKey: "total_revenue" },
+        { header: "Tax", dataKey: "total_tax" },
+        { header: "Discounts", dataKey: "total_discounts" },
+        { header: "Avg Sale", dataKey: "average_sale" }
+      ],
+      "sales-by-user": [
+        { header: "User", dataKey: "user_email" },
+        { header: "Sales Count", dataKey: "total_sales" },
+        { header: "Revenue", dataKey: "total_revenue" },
+        { header: "Tax", dataKey: "total_tax" },
+        { header: "Avg Sale", dataKey: "average_sale" }
+      ],
+      "sales-by-customer": [
+        { header: "Customer", dataKey: "customer_name" },
+        { header: "Purchases", dataKey: "total_purchases" },
+        { header: "Total Spent", dataKey: "total_spent" },
+        { header: "Avg Purchase", dataKey: "average_purchase" },
+        { header: "Last Purchase", dataKey: "last_purchase" }
+      ],
+      "sales-by-product": [
+        { header: "Product", dataKey: "product_name" },
+        { header: "Quantity Sold", dataKey: "total_quantity" },
+        { header: "Revenue", dataKey: "total_revenue" },
+        { header: "Times Sold", dataKey: "times_sold" },
+        { header: "Avg Price", dataKey: "average_price" }
+      ],
+      "sales-comparison": [
+        { header: "Channel", dataKey: "channel" },
+        { header: "Orders", dataKey: "orders" },
+        { header: "Revenue", dataKey: "revenue" },
+        { header: "Avg Order", dataKey: "avg_order" }
+      ],
+      "expenses-summary": [
+        { header: "Category", dataKey: "category" },
+        { header: "Amount", dataKey: "amount" }
+      ],
+      "expenses-by-category": [
+        { header: "Code", dataKey: "code" },
+        { header: "Category", dataKey: "category_name" },
+        { header: "Transactions", dataKey: "transaction_count" },
+        { header: "Total Amount", dataKey: "total_amount" }
+      ],
+      "cash-drawer-expenses": [
+        { header: "Date", dataKey: "created_at" },
+        { header: "User", dataKey: "user_email" },
+        { header: "Reason", dataKey: "reason" },
+        { header: "Amount", dataKey: "amount" }
+      ],
+      "stock-movement": [
+        { header: "Date", dataKey: "created_at" },
+        { header: "Product", dataKey: "product_name" },
+        { header: "Type", dataKey: "movement_type" },
+        { header: "Quantity", dataKey: "quantity" },
+        { header: "User", dataKey: "user_email" }
+      ],
+      "expiring-products": [
+        { header: "Product", dataKey: "name" },
+        { header: "Barcode", dataKey: "barcode" },
+        { header: "Quantity", dataKey: "quantity_on_hand" },
+        { header: "Expiry Date", dataKey: "expiry_date" },
+        { header: "Days Until Expiry", dataKey: "days_until_expiry" }
+      ],
+      "expired-products": [
+        { header: "Product", dataKey: "name" },
+        { header: "Barcode", dataKey: "barcode" },
+        { header: "Quantity", dataKey: "quantity_on_hand" },
+        { header: "Expiry Date", dataKey: "expiry_date" },
+        { header: "Days Expired", dataKey: "days_expired" }
+      ],
+      "low-stock": [
+        { header: "Product", dataKey: "name" },
+        { header: "Barcode", dataKey: "barcode" },
+        { header: "Current Stock", dataKey: "quantity_on_hand" },
+        { header: "Reorder Level", dataKey: "reorder_level" },
+        { header: "Below By", dataKey: "units_below_reorder" }
+      ],
+      "out-of-stock": [
+        { header: "Product", dataKey: "name" },
+        { header: "Barcode", dataKey: "barcode" },
+        { header: "Reorder Level", dataKey: "reorder_level" },
+        { header: "Last Updated", dataKey: "updated_at" }
+      ],
+      "trending-products": [
+        { header: "Product", dataKey: "product_name" },
+        { header: "Total Qty", dataKey: "total_quantity" },
+        { header: "Total Revenue", dataKey: "total_revenue" },
+        { header: "POS Qty", dataKey: "pos_quantity" },
+        { header: "POS Revenue", dataKey: "pos_revenue" },
+        { header: "Web Qty", dataKey: "web_quantity" },
+        { header: "Web Revenue", dataKey: "web_revenue" }
+      ],
+      "pos-vs-web": [
+        { header: "Date", dataKey: "date" },
+        { header: "POS Orders", dataKey: "pos_orders" },
+        { header: "POS Revenue", dataKey: "pos_revenue" },
+        { header: "Web Orders", dataKey: "web_orders" },
+        { header: "Web Revenue", dataKey: "web_revenue" }
+      ]
+    };
+
+    return columnMaps[selectedReport] || [];
+  };
+
+  const prepareExportData = () => {
+    if (!reportData) return [];
+    
+    // Handle special case for sales comparison
+    if (selectedReport === "sales-comparison" && !Array.isArray(reportData)) {
+      return [
+        { channel: "POS", orders: reportData.pos.total_orders, revenue: reportData.pos.total_revenue, avg_order: reportData.pos.average_order_value },
+        { channel: "Website", orders: reportData.website.total_orders, revenue: reportData.website.total_revenue, avg_order: reportData.website.average_order_value },
+        { channel: "Total", orders: reportData.total_orders, revenue: reportData.total_revenue, avg_order: Math.round(reportData.total_revenue / reportData.total_orders) }
+      ];
+    }
+
+    // Handle expenses summary
+    if (selectedReport === "expenses-summary" && !Array.isArray(reportData)) {
+      return [
+        { category: "Accounting Expenses", amount: reportData.accounting_expenses },
+        { category: "Cash Drawer Expenses", amount: reportData.cash_drawer_expenses },
+        { category: "Total Expenses", amount: reportData.total_expenses }
+      ];
+    }
+
+    return Array.isArray(reportData) ? reportData : [];
+  };
+
   const handlePrint = () => {
-    window.print();
+    if (!reportData) {
+      alert("Please generate a report first");
+      return;
+    }
+
+    printReport({
+      reportTitle: getReportTitle(),
+      dateRange: `${startDate} to ${endDate}`,
+      companyInfo,
+      data: prepareExportData(),
+      columns: getReportColumns(),
+      currency: baseCurrency?.symbol || 'UGX'
+    });
   };
 
   const handleExportExcel = () => {
-    alert("Excel export coming soon!");
+    if (!reportData) {
+      alert("Please generate a report first");
+      return;
+    }
+
+    exportToExcel({
+      reportTitle: getReportTitle(),
+      dateRange: `${startDate} to ${endDate}`,
+      companyInfo,
+      data: prepareExportData(),
+      columns: getReportColumns()
+    });
   };
 
   const handleExportPDF = () => {
-    alert("PDF export coming soon!");
+    if (!reportData) {
+      alert("Please generate a report first");
+      return;
+    }
+
+    exportToPDF({
+      reportTitle: getReportTitle(),
+      dateRange: `${startDate} to ${endDate}`,
+      companyInfo,
+      data: prepareExportData(),
+      columns: getReportColumns(),
+      currency: baseCurrency?.symbol || 'UGX'
+    });
   };
 
   const reportCategories = [
