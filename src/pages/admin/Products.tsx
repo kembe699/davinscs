@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, RefreshCw, FolderPlus, FolderEdit, FolderMinus, Upload, Download, Printer, FileText, Tag, ArrowUpDown, HelpCircle } from "lucide-react";
 
 const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
@@ -14,6 +14,10 @@ export default function Products() {
   const [category, setCategory] = useState("all");
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryAction, setCategoryAction] = useState<'new' | 'edit' | 'delete'>('new');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const load = () => {
     setLoading(true);
@@ -52,17 +56,125 @@ export default function Products() {
     <AdminLayout>
       <div className="p-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Inventory</p>
-            <h1 className="text-2xl font-bold text-foreground">Products</h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Inventory</p>
+              <h1 className="text-2xl font-bold text-foreground">Products</h1>
+            </div>
           </div>
-          <Link
-            to="/admin/products/new"
-            className="flex items-center gap-2 h-10 px-5 bg-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={14} /> Add Product
-          </Link>
+
+          {/* Action Toolbar */}
+          <div className="flex flex-wrap gap-2 mb-4 p-3 bg-chassis border border-border-subtle">
+            <button
+              onClick={load}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Refresh"
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+            <button
+              onClick={() => { setCategoryAction('new'); setShowCategoryModal(true); }}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="New group"
+            >
+              <FolderPlus size={14} />
+              New group
+            </button>
+            <button
+              onClick={() => { setCategoryAction('edit'); setShowCategoryModal(true); }}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Edit group"
+            >
+              <FolderEdit size={14} />
+              Edit group
+            </button>
+            <button
+              onClick={() => { setCategoryAction('delete'); setShowCategoryModal(true); }}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Delete group"
+            >
+              <FolderMinus size={14} />
+              Delete group
+            </button>
+            <Link
+              to="/admin/products/new"
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="New product"
+            >
+              <Plus size={14} />
+              New product
+            </Link>
+            <button
+              disabled={selectedProducts.length !== 1}
+              onClick={() => selectedProducts[0] && window.location.href = `/admin/products/${selectedProducts[0]}/edit`}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg disabled:opacity-50"
+              title="Edit product"
+            >
+              <Pencil size={14} />
+              Edit product
+            </button>
+            <button
+              disabled={selectedProducts.length === 0}
+              onClick={() => selectedProducts.length > 0 && setConfirmId(selectedProducts[0])}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50"
+              title="Delete product"
+            >
+              <Trash2 size={14} />
+              Delete product
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Import"
+            >
+              <Upload size={14} />
+              Import
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Export"
+            >
+              <Download size={14} />
+              Export
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Print"
+            >
+              <Printer size={14} />
+              Print
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Save as PDF"
+            >
+              <FileText size={14} />
+              Save as PDF
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Price tags"
+            >
+              <Tag size={14} />
+              Price tags
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Sorting"
+            >
+              <ArrowUpDown size={14} />
+              Sorting
+            </button>
+            <button
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Help"
+            >
+              <HelpCircle size={14} />
+              Help
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

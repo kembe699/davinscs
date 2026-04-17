@@ -26,12 +26,20 @@ export default function POSMain() {
   const [heldSales, setHeldSales] = useState<Array<any>>([]);
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
     checkCashDrawer();
     loadCompanyData();
   }, []);
+
+  useEffect(() => {
+    // Extract unique categories from products
+    const uniqueCategories = [...new Set(products.map(p => p.category))].filter(Boolean);
+    setCategories(uniqueCategories);
+  }, [products]);
 
   const loadCompanyData = async () => {
     try {
@@ -460,56 +468,115 @@ export default function POSMain() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredProducts.map(product => {
-                const availableStock = product.quantity_on_hand - product.quantity_reserved;
-                const inCart = cart.find(item => item.product.id === product.id);
-                const qtyInCart = inCart ? inCart.quantity : 0;
-                const remainingStock = availableStock - qtyInCart;
-                
-                return (
+            {!selectedCategory ? (
+              // Show category folders
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-admin-text font-medium">Categories</h3>
                   <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    disabled={!product.in_stock || availableStock <= 0}
-                    className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
+                    onClick={() => setSelectedCategory('all')}
+                    className="text-xs text-admin-text-secondary hover:text-admin-text"
                   >
-                    {product.image_url && (
-                      <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">
-                      {product.name}
-                    </div>
-                    <div className="flex justify-between items-center mb-1">
-                      <div className="text-admin-text font-mono text-lg font-bold">
-                        UGX {(product.price / 100).toFixed(0)}
-                      </div>
-                      <div className={`text-xs font-bold ${
-                        remainingStock <= 0 ? 'text-admin-danger' : 
-                        remainingStock <= 5 ? 'text-yellow-600' : 
-                        'text-admin-success'
-                      }`}>
-                        Stock: {remainingStock}
-                      </div>
-                    </div>
-                    {qtyInCart > 0 && (
-                      <div className="text-xs text-blue-600 mt-1">
-                        {qtyInCart} in cart
-                      </div>
-                    )}
-                    {(!product.in_stock || availableStock <= 0) && (
-                      <div className="text-admin-danger text-xs mt-1">Out of stock</div>
-                    )}
+                    View All Products
                   </button>
-                );
-              })}
-            </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {categories.map(category => {
+                    const categoryProducts = products.filter(p => p.category === category);
+                    const productCount = categoryProducts.length;
+                    
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className="bg-admin-surface border-2 border-admin-border p-6 hover:border-admin-text transition-colors flex flex-col items-center justify-center gap-3 min-h-[150px]"
+                      >
+                        <div className="w-16 h-16 bg-admin-bg rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-admin-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                          </svg>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-admin-text font-medium capitalize mb-1">
+                            {category}
+                          </div>
+                          <div className="text-xs text-admin-text-secondary">
+                            {productCount} product{productCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              // Show products in selected category
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-admin-text-secondary hover:text-admin-text"
+                  >
+                    ← Back to Categories
+                  </button>
+                  <h3 className="text-admin-text font-medium capitalize">
+                    {selectedCategory === 'all' ? 'All Products' : selectedCategory}
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {filteredProducts
+                    .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+                    .map(product => {
+                      const availableStock = product.quantity_on_hand - product.quantity_reserved;
+                      const inCart = cart.find(item => item.product.id === product.id);
+                      const qtyInCart = inCart ? inCart.quantity : 0;
+                      const remainingStock = availableStock - qtyInCart;
+                      
+                      return (
+                        <button
+                          key={product.id}
+                          onClick={() => addToCart(product)}
+                          disabled={!product.in_stock || availableStock <= 0}
+                          className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
+                        >
+                          {product.image_url && (
+                            <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">
+                            {product.name}
+                          </div>
+                          <div className="flex justify-between items-center mb-1">
+                            <div className="text-admin-text font-mono text-lg font-bold">
+                              UGX {(product.price / 100).toFixed(0)}
+                            </div>
+                            <div className={`text-xs font-bold ${
+                              remainingStock <= 0 ? 'text-admin-danger' : 
+                              remainingStock <= 5 ? 'text-yellow-600' : 
+                              'text-admin-success'
+                            }`}>
+                              Stock: {remainingStock}
+                            </div>
+                          </div>
+                          {qtyInCart > 0 && (
+                            <div className="text-xs text-blue-600 mt-1">
+                              {qtyInCart} in cart
+                            </div>
+                          )}
+                          {(!product.in_stock || availableStock <= 0) && (
+                            <div className="text-admin-danger text-xs mt-1">Out of stock</div>
+                          )}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
