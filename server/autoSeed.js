@@ -164,12 +164,14 @@ export async function autoSeed() {
      VALUES ('Wholesale', 'Wholesale pricing with 10% discount', 10, true) ON CONFLICT DO NOTHING`
   );
 
-  // Seed company settings
-  await pool.query(
-    `INSERT INTO company_settings (company_name, address, phone, email, currency, receipt_footer)
-     VALUES ('Davin''s Camera Store', 'Kampala, Uganda', '+256-XXX-XXXXXX', 'info@divinsstore.com', 'UGX', 'Thank you for your business!')
-     ON CONFLICT DO NOTHING`
-  );
+  // Seed company settings (only if none exist)
+  const existingCompany = await pool.query('SELECT id FROM company_settings LIMIT 1');
+  if (existingCompany.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO company_settings (company_name, address, phone, email, currency, receipt_footer)
+       VALUES ('Davin''s Camera Store', 'Kampala, Uganda', '+256-XXX-XXXXXX', 'info@divinsstore.com', 'UGX', 'Thank you for your business!')`
+    );
+  }
 
   // Seed countries
   const countries = [

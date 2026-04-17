@@ -7,12 +7,24 @@ const router = express.Router();
 // Get company settings
 router.get("/", async (req, res) => {
   try {
+    // Clean up duplicate rows (keep only the most recent one)
+    await pool.query(`
+      DELETE FROM company_settings 
+      WHERE id NOT IN (
+        SELECT id FROM company_settings ORDER BY updated_at DESC LIMIT 1
+      )
+    `);
+    
     const { rows } = await pool.query(
-      "SELECT * FROM company_settings LIMIT 1"
+      "SELECT * FROM company_settings ORDER BY updated_at DESC LIMIT 1"
     );
     
+    console.log('GET company - rows found:', rows.length);
     if (rows[0]) {
-      res.json({
+      console.log('GET company - logo_url length:', rows[0].logo_url ? rows[0].logo_url.length : 0);
+      console.log('GET company - company_name:', rows[0].company_name);
+      
+      const response = {
         name: rows[0].company_name || "",
         logo: rows[0].logo_url || "",
         address: rows[0].address || "",
@@ -24,12 +36,16 @@ router.get("/", async (req, res) => {
         tax_id: rows[0].tax_id || "",
         website: rows[0].website || "",
         description: rows[0].receipt_footer || ""
-      });
+      };
+      
+      console.log('GET company - response logo length:', response.logo ? response.logo.length : 0);
+      res.json(response);
     } else {
+      console.log('GET company - no rows found');
       res.json(null);
     }
   } catch (err) {
-    console.error(err);
+    console.error('GET company error:', err);
     res.status(500).json({ error: "Server error" });
   }
 });
