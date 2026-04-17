@@ -31,7 +31,8 @@ export default function Products() {
     if (category !== "all") list = list.filter((p) => p.category === category);
     if (search) list = list.filter((p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand.toLowerCase().includes(search.toLowerCase())
+      p.brand.toLowerCase().includes(search.toLowerCase()) ||
+      ((p as any).barcode && (p as any).barcode.toLowerCase().includes(search.toLowerCase()))
     );
     setFiltered(list);
   }, [search, category, products]);
