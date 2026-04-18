@@ -178,6 +178,7 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
       `SELECT 
         COALESCE(pl.name, 'Cash (Standard)') as scheme_name,
         COALESCE(c.code, '') as currency_code,
+        COALESCE(c.symbol, '') as currency_symbol,
         COUNT(s.id) as total_sales,
         COALESCE(SUM(s.total_amount), 0) as total_revenue,
         COALESCE(SUM(s.tax_amount), 0) as total_tax,
@@ -187,7 +188,7 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
        LEFT JOIN price_lists pl ON s.price_list_id = pl.id
        LEFT JOIN currencies c ON pl.currency_id = c.id
        WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND COALESCE(s.voided, false) = false
-       GROUP BY pl.id, pl.name, c.code
+       GROUP BY pl.id, pl.name, c.code, c.symbol
        ORDER BY total_revenue DESC`,
       [startDate, endDate]
     );

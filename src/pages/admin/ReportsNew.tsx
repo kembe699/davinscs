@@ -925,6 +925,37 @@ export default function ReportsNew() {
                   />
                 )}
 
+                {/* Sales by Scheme Report */}
+                {selectedReport === "sales-by-scheme" && Array.isArray(reportData) && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#2980b9', color: 'white' }}>
+                          {['Scheme', 'Currency', 'Sales Count', 'Revenue', 'Tax', 'Discounts', 'Avg Sale'].map((h, i) => (
+                            <th key={i} className={`px-4 py-3 font-bold border border-gray-400 ${i >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.map((row: any, i: number) => {
+                          const sym = row.currency_symbol || baseCurrency?.symbol || 'UGX';
+                          return (
+                            <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f5f5f5' }}>
+                              <td className="px-4 py-3 border border-gray-300">{row.scheme_name}</td>
+                              <td className="px-4 py-3 border border-gray-300">{row.currency_code || baseCurrency?.code || 'UGX'}</td>
+                              <td className="px-4 py-3 border border-gray-300 text-right font-mono">{row.total_sales}</td>
+                              <td className="px-4 py-3 border border-gray-300 text-right font-mono">{formatCurrencySync(parseInt(row.total_revenue), sym, false)}</td>
+                              <td className="px-4 py-3 border border-gray-300 text-right font-mono">{formatCurrencySync(parseInt(row.total_tax), sym, false)}</td>
+                              <td className="px-4 py-3 border border-gray-300 text-right font-mono">{formatCurrencySync(parseInt(row.total_discounts), sym, false)}</td>
+                              <td className="px-4 py-3 border border-gray-300 text-right font-mono">{formatCurrencySync(Math.round(parseFloat(row.average_sale)), sym, false)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 {reportData && Array.isArray(reportData) && reportData.length === 0 && (
                   <div className="text-center text-gray-600 py-8">
                     <p>No data found for the selected date range</p>
