@@ -1076,10 +1076,11 @@ export const api = {
         if (endDate) params.append('end_date', endDate);
         return request<SalesComparisonReport>(`/api/reports/sales/comparison?${params}`);
       },
-      byScheme: (startDate?: string, endDate?: string) => {
+      byScheme: (startDate?: string, endDate?: string, schemeId?: number | null) => {
         const params = new URLSearchParams();
         if (startDate) params.append('start_date', startDate);
         if (endDate) params.append('end_date', endDate);
+        if (schemeId) params.append('price_list_id', String(schemeId));
         return request<any[]>(`/api/reports/sales/by-scheme?${params}`);
       },
     },

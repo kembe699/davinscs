@@ -170,9 +170,20 @@ router.get("/sales/comparison", requireAuth, async (req, res) => {
 // Sales by scheme / price list
 router.get("/sales/by-scheme", requireAuth, async (req, res) => {
   try {
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, price_list_id } = req.query;
     const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
     const endDate = end_date || new Date().toISOString().split('T')[0];
+    const schemeId = price_list_id !== undefined ? parseInt(price_list_id) : null;
+
+    const params = [startDate, endDate];
+    let schemeFilter = '';
+    if (schemeId === 0) {
+      // 0 = Cash (Standard) — sales with no scheme assigned
+      schemeFilter = 'AND s.price_list_id IS NULL';
+    } else if (schemeId) {
+      schemeFilter = 'AND s.price_list_id = $3';
+      params.push(schemeId);
+    }
 
     const { rows } = await pool.query(
       `SELECT 
@@ -187,10 +198,12 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
        FROM pos_sales s
        LEFT JOIN price_lists pl ON s.price_list_id = pl.id
        LEFT JOIN currencies c ON pl.currency_id = c.id
-       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND COALESCE(s.voided, false) = false
+       WHERE DATE(s.created_at) BETWEEN $1 AND $2
+         AND COALESCE(s.voided, false) = false
+         ${schemeFilter}
        GROUP BY pl.id, pl.name, c.code, c.symbol
        ORDER BY total_revenue DESC`,
-      [startDate, endDate]
+      params
     );
 
     res.json(rows);

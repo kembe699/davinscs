@@ -36,9 +36,14 @@ export default function ReportsNew() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  // Scheme filter (only used for sales-by-scheme)
+  const [filterSchemeId, setFilterSchemeId] = useState<number | null>(null);
+  const [schemesList, setSchemesList] = useState<any[]>([]);
+
   useEffect(() => {
     applyDatePreset(datePreset);
     loadCompanyInfo();
+    api.priceLists.active().then(setSchemesList).catch(() => {});
   }, [datePreset]);
 
   const loadCompanyInfo = async () => {
@@ -138,7 +143,7 @@ export default function ReportsNew() {
           data = await api.reports.sales.comparison(startDate, endDate);
           break;
         case "sales-by-scheme":
-          data = await api.reports.sales.byScheme(startDate, endDate);
+          data = await api.reports.sales.byScheme(startDate, endDate, filterSchemeId);
           break;
         
         // Expenses Reports
@@ -533,7 +538,7 @@ export default function ReportsNew() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={generateReport}
                 disabled={loading}
@@ -566,6 +571,22 @@ export default function ReportsNew() {
                 <FileDown size={16} />
                 PDF
               </button>
+
+              {selectedReport === "sales-by-scheme" && (
+                <select
+                  value={filterSchemeId ?? ""}
+                  onChange={e => setFilterSchemeId(e.target.value === "" ? null : Number(e.target.value))}
+                  className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+                >
+                  <option value="">All Schemes</option>
+                  <option value="0">Cash (Standard)</option>
+                  {schemesList.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}{s.currency_code ? ` (${s.currency_code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
