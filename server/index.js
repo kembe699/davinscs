@@ -34,6 +34,7 @@ import currenciesRoutes from "./routes/currencies.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import exchangeRatesRoutes from "./routes/exchangeRates.js";
 import reportsRoutes from "./routes/reports.js";
+import invoicesRoutes from "./routes/invoices.js";
 
 dotenv.config();
 
@@ -92,6 +93,7 @@ app.use("/api/currencies", currenciesRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/exchange-rates", exchangeRatesRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/invoices", invoicesRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -656,6 +658,48 @@ async function migrate() {
         INSERT INTO _migrations (name) VALUES ('price_list_items_multiply_100');
       END IF;
     END $$;
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id SERIAL PRIMARY KEY,
+      invoice_number VARCHAR(50) UNIQUE NOT NULL,
+      customer_name VARCHAR(200) NOT NULL,
+      customer_email VARCHAR(200),
+      customer_phone VARCHAR(50),
+      pos_sale_id INTEGER REFERENCES pos_sales(id),
+      price_list_id INTEGER REFERENCES price_lists(id),
+      subtotal INTEGER NOT NULL DEFAULT 0,
+      tax_amount INTEGER NOT NULL DEFAULT 0,
+      discount_amount INTEGER NOT NULL DEFAULT 0,
+      total_amount INTEGER NOT NULL DEFAULT 0,
+      paid_amount INTEGER NOT NULL DEFAULT 0,
+      status VARCHAR(20) DEFAULT 'unpaid',
+      due_date DATE,
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_items (
+      id SERIAL PRIMARY KEY,
+      invoice_id INTEGER REFERENCES invoices(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id),
+      product_name VARCHAR(200) NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      unit_price INTEGER NOT NULL DEFAULT 0,
+      discount_amount INTEGER NOT NULL DEFAULT 0,
+      total_price INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_payments (
+      id SERIAL PRIMARY KEY,
+      invoice_id INTEGER REFERENCES invoices(id) ON DELETE CASCADE,
+      amount INTEGER NOT NULL,
+      payment_method VARCHAR(100) DEFAULT 'Cash',
+      notes TEXT,
+      recorded_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
   console.log("\u2705 Migrations applied");
 }

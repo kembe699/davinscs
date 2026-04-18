@@ -29,6 +29,12 @@ export default function POSMain() {
   const [heldSales, setHeldSales] = useState<Array<any>>([]);
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
+  const [paymentMode, setPaymentMode] = useState<'cash' | 'credit'>('cash');
+  const [creditCustomerName, setCreditCustomerName] = useState('');
+  const [creditCustomerEmail, setCreditCustomerEmail] = useState('');
+  const [creditCustomerPhone, setCreditCustomerPhone] = useState('');
+  const [creditDueDate, setCreditDueDate] = useState('');
+  const [createdInvoice, setCreatedInvoice] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [secondaryCurrency, setSecondaryCurrency] = useState<ApiCurrency | null>(null);
@@ -342,6 +348,45 @@ export default function POSMain() {
     setCartDiscount(heldSale.items.reduce((sum: number, item: any) => sum + item.discount, 0));
     setHeldSales(heldSales.filter(s => s.id !== heldSale.id));
     setShowHeldSales(false);
+  };
+
+  const handleCreditPayment = async () => {
+    if (!creditCustomerName.trim()) {
+      alert('Customer name is required for credit sales');
+      return;
+    }
+    if (cart.length === 0) { alert('Cart is empty'); return; }
+    try {
+      const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
+      const invoice = await api.invoices.create({
+        customer_name: creditCustomerName.trim(),
+        customer_email: creditCustomerEmail || undefined,
+        customer_phone: creditCustomerPhone || undefined,
+        price_list_id: selectedSchemeId || undefined,
+        subtotal, tax_amount: taxAmount, discount_amount: discountAmount, total_amount: total,
+        due_date: creditDueDate || undefined,
+        items: cart.map(item => ({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_amount: item.discount,
+        })),
+      });
+      setCreatedInvoice(invoice);
+      setCart([]);
+      setCartDiscount(0);
+      setCustomerName('');
+      setCreditCustomerName('');
+      setCreditCustomerEmail('');
+      setCreditCustomerPhone('');
+      setCreditDueDate('');
+      setPaymentMode('cash');
+      setShowPaymentModal(false);
+      alert(`Invoice ${invoice.invoice_number} created! Total: ${formatCurrencySync(total, schemeCurrencySymbol(), false)}`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to create invoice');
+    }
   };
 
   const handlePayment = async () => {
@@ -764,52 +809,127 @@ export default function POSMain() {
       {/* Payment Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-96">
+          <div className="bg-admin-surface border border-admin-border p-6 w-[420px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-admin-text mb-4">Process Payment</h2>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Payment Type</label>
-                <select
-                  value={selectedPaymentType || ""}
-                  onChange={(e) => setSelectedPaymentType(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
-                >
-                  {paymentTypes.map(pt => (
-                    <option key={pt.id} value={pt.id}>{pt.name}</option>
-                  ))}
-                </select>
-              </div>
 
-              <div className="bg-admin-bg border border-admin-border p-4 space-y-2">
+            {/* Mode tabs */}
+            <div className="flex gap-1 mb-4 bg-admin-bg border border-admin-border p-1">
+              <button
+                onClick={() => setPaymentMode('cash')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                  paymentMode === 'cash' ? 'bg-admin-text text-admin-bg' : 'text-admin-text-secondary hover:text-admin-text'
+                }`}
+              >Cash / Card</button>
+              <button
+                onClick={() => setPaymentMode('credit')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                  paymentMode === 'credit' ? 'bg-orange-500 text-white' : 'text-admin-text-secondary hover:text-admin-text'
+                }`}
+              >Credit (Invoice)</button>
+            </div>
+
+            {/* Order summary */}
+            <div className="bg-admin-bg border border-admin-border p-4 space-y-2 mb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-admin-text-secondary">Subtotal</span>
+                <span className="text-admin-text font-mono">{formatCurrencySync(subtotal, schemeCurrencySymbol(), false)}</span>
+              </div>
+              {discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-admin-text-secondary">Subtotal</span>
-                  <span className="text-admin-text font-mono">{(subtotal / 100).toFixed(2)}</span>
+                  <span className="text-admin-text-secondary">Discount</span>
+                  <span className="text-red-400 font-mono">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
-                  <span className="text-admin-text font-mono">{(taxAmount / 100).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
-                  <span className="text-admin-text">Total</span>
-                  <span className="text-admin-text font-mono">{(total / 100).toFixed(2)}</span>
-                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
+                <span className="text-admin-text font-mono">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), false)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
+                <span className="text-admin-text">Total</span>
+                <span className="text-admin-text font-mono">{formatCurrencySync(total, schemeCurrencySymbol(), false)}</span>
               </div>
             </div>
 
+            {paymentMode === 'cash' ? (
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-sm text-admin-text-secondary mb-1">Payment Type</label>
+                  <select
+                    value={selectedPaymentType || ""}
+                    onChange={(e) => setSelectedPaymentType(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
+                  >
+                    {paymentTypes.map(pt => (
+                      <option key={pt.id} value={pt.id}>{pt.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 mb-4">
+                <p className="text-xs text-orange-400 bg-orange-400/10 border border-orange-400/20 px-3 py-2">
+                  Credit sale — an invoice will be created and payment tracked separately.
+                </p>
+                <div>
+                  <label className="block text-sm text-admin-text-secondary mb-1">Customer Name <span className="text-red-400">*</span></label>
+                  <input
+                    type="text"
+                    value={creditCustomerName}
+                    onChange={e => setCreditCustomerName(e.target.value)}
+                    placeholder="Full name"
+                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm text-admin-text-secondary mb-1">Phone</label>
+                    <input
+                      type="text"
+                      value={creditCustomerPhone}
+                      onChange={e => setCreditCustomerPhone(e.target.value)}
+                      placeholder="+256..."
+                      className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-admin-text-secondary mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={creditCustomerEmail}
+                      onChange={e => setCreditCustomerEmail(e.target.value)}
+                      placeholder="email@..."
+                      className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-admin-text-secondary mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={creditDueDate}
+                    onChange={e => setCreditDueDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => setShowPaymentModal(false)}
+                onClick={() => { setShowPaymentModal(false); setPaymentMode('cash'); }}
                 className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
               >
                 Cancel
               </button>
-              <button
-                onClick={handlePayment}
-                className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90"
-              >
-                Complete Sale
-              </button>
+              {paymentMode === 'cash' ? (
+                <button onClick={handlePayment} className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90">
+                  Complete Sale
+                </button>
+              ) : (
+                <button onClick={handleCreditPayment} className="flex-1 px-4 py-2 bg-orange-500 text-white hover:opacity-90">
+                  Create Invoice
+                </button>
+              )}
             </div>
           </div>
         </div>

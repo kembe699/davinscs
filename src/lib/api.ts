@@ -1133,4 +1133,16 @@ export const api = {
       },
     },
   },
+  invoices: {
+    list: (params?: { status?: string; search?: string; start_date?: string; end_date?: string }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any[]>(`/api/invoices${qs ? `?${qs}` : ''}`);
+    },
+    get: (id: number) => request<any>(`/api/invoices/${id}`),
+    create: (data: any) => request<any>('/api/invoices', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/api/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    recordPayment: (id: number, data: { amount: number; payment_method?: string; notes?: string }) =>
+      request<any>(`/api/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(data) }),
+    void: (id: number) => request<any>(`/api/invoices/${id}`, { method: 'DELETE' }),
+  },
 };

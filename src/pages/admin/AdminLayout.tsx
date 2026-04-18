@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const navItems = [
   { label: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
   { label: "Accounting", href: "/admin/accounting", icon: DollarSign },
   { label: "Currencies", href: "/admin/currencies", icon: Globe },
+  { label: "Invoices", href: "/admin/invoices", icon: Receipt },
   { label: "Reports", href: "/admin/reports", icon: FileText },
   { label: "Payment Types", href: "/admin/payment-types", icon: CreditCard },
   { label: "Tax Rates", href: "/admin/tax-rates", icon: Percent },
