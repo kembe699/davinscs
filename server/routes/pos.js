@@ -16,7 +16,7 @@ function generateSaleNumber() {
 
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
-  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id } = req.body;
+  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id } = req.body;
   const user_id = req.user.id;
   
   if (!items || items.length === 0) {
@@ -102,16 +102,26 @@ router.post("/sales", requireAuth, async (req, res) => {
     const total_amount = subtotal + tax_amount - total_discount;
     const sale_number = generateSaleNumber();
     
+    // Look up promotion name if a promotion was applied
+    let promo_name = null;
+    let resolved_promotion_id = promotion_id || null;
+    if (resolved_promotion_id) {
+      const promoRes = await client.query('SELECT name FROM promotions WHERE id = $1', [resolved_promotion_id]);
+      promo_name = promoRes.rows[0]?.name || null;
+    }
+    
     // Determine payment status
     const payment_status = sale_type === 'credit' ? 'pending' : 'paid';
     
     // Create sale
     const saleResult = await client.query(
       `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, price_list_id, subtotal, tax_amount, 
-                              discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+                              discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes,
+                              promotion_id, promotion_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
       [sale_number, customer_id, customer_name, user_id, session_id, price_list_id || null, subtotal, tax_amount, total_discount, 
-       total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes]
+       total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes,
+       resolved_promotion_id, promo_name]
     );
     
     const sale = saleResult.rows[0];
@@ -351,76 +361,114 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
 // Process refund
 router.post("/sales/:id/refund", requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { items } = req.body; // Array of {product_id, quantity}
+  const { items, refund_method, reason } = req.body; // items: [{product_id, quantity}]
   const user_id = req.user.id;
-  
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ error: "No items selected for refund" });
+  }
+
   const client = await pool.connect();
-  
+
   try {
     await client.query("BEGIN");
-    
-    // Get sale details
+
+    // Get original sale
     const saleResult = await client.query(
-      "SELECT * FROM pos_sales WHERE id = $1 AND voided = false",
+      "SELECT * FROM pos_sales WHERE id = $1 AND voided = false AND sale_type != 'refund'",
       [id]
     );
-    
-    if (!saleResult.rows[0]) {
-      throw new Error("Sale not found or voided");
-    }
-    
+    if (!saleResult.rows[0]) throw new Error("Sale not found or already refunded");
     const sale = saleResult.rows[0];
-    
-    // Process refund items
-    let refund_amount = 0;
-    
+
+    let refund_subtotal = 0;
+    let refund_tax = 0;
+    const refundLineItems = [];
+
     for (const refundItem of items) {
       const itemResult = await client.query(
         "SELECT * FROM pos_sale_items WHERE sale_id = $1 AND product_id = $2",
         [id, refundItem.product_id]
       );
-      
-      if (!itemResult.rows[0]) {
-        throw new Error(`Item not found in sale`);
-      }
-      
+      if (!itemResult.rows[0]) throw new Error(`Item not found in sale`);
       const item = itemResult.rows[0];
-      
-      if (refundItem.quantity > item.quantity) {
-        throw new Error(`Refund quantity exceeds sold quantity`);
-      }
-      
-      // Calculate refund amount
-      const item_refund = Math.round((item.subtotal / item.quantity) * refundItem.quantity);
-      refund_amount += item_refund;
-      
+      if (refundItem.quantity > item.quantity) throw new Error(`Refund quantity exceeds sold quantity for ${item.product_name}`);
+
+      const ratio = refundItem.quantity / item.quantity;
+      const line_subtotal = Math.round(item.subtotal * ratio);
+      const line_tax     = Math.round((item.tax_amount || 0) * ratio);
+      refund_subtotal += line_subtotal;
+      refund_tax      += line_tax;
+
+      refundLineItems.push({
+        product_id:   item.product_id,
+        product_name: item.product_name,
+        quantity:     refundItem.quantity,
+        unit_price:   item.unit_price,
+        subtotal:     line_subtotal,
+        tax_amount:   line_tax,
+        discount_amount: 0,
+      });
+
       // Restore inventory
       await client.query(
         "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
         [refundItem.quantity, refundItem.product_id]
       );
-      
-      // Record stock movement
+      // Reduce original sale item quantity (net remaining after return)
+      await client.query(
+        `UPDATE pos_sale_items SET quantity = quantity - $1
+         WHERE sale_id = $2 AND product_id = $3`,
+        [refundItem.quantity, id, refundItem.product_id]
+      );
+      // Stock movement
       await client.query(
         `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
-         VALUES ($1, 'return', $2, 'refund', $3, $4, 'Refund')`,
-        [refundItem.product_id, refundItem.quantity, id, user_id]
+         VALUES ($1, 'return', $2, 'refund', $3, $4, $5)`,
+        [refundItem.product_id, refundItem.quantity, id, user_id, reason || 'Customer return']
       );
     }
-    
-    // Create refund sale (negative sale)
-    const refund_number = `REF-${sale.sale_number}`;
-    await client.query(
-      `INSERT INTO pos_sales (sale_number, customer_id, user_id, session_id, subtotal, tax_amount, 
-                              discount_amount, total_amount, payment_type_id, payment_status, sale_type, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'refunded', 'refund', $10)`,
-      [refund_number, sale.customer_id, user_id, sale.session_id, -refund_amount, 0, 0, 
-       -refund_amount, sale.payment_type_id, `Refund for ${sale.sale_number}`]
+
+    const refund_total = refund_subtotal + refund_tax;
+    const refund_number = `REF-${Date.now().toString().slice(-6)}-${sale.sale_number}`;
+
+    // Create refund sale record (negative amounts)
+    const refundSaleResult = await client.query(
+      `INSERT INTO pos_sales
+        (sale_number, customer_id, customer_name, user_id, session_id,
+         subtotal, tax_amount, discount_amount, total_amount,
+         payment_type_id, payment_status, sale_type, notes,
+         original_sale_id, refund_method, refund_reason)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'refunded','refund',$11,$12,$13,$14)
+       RETURNING *`,
+      [
+        refund_number, sale.customer_id, sale.customer_name, user_id, sale.session_id,
+        -refund_subtotal, -refund_tax, 0, -refund_total,
+        sale.payment_type_id,
+        reason || 'Customer return',
+        parseInt(id),
+        refund_method || sale.payment_type_id,
+        reason || null,
+      ]
     );
-    
+    const refundSaleId = refundSaleResult.rows[0].id;
+
+    // Insert refund line items (negative quantities)
+    for (const li of refundLineItems) {
+      await client.query(
+        `INSERT INTO pos_sale_items (sale_id, product_id, product_name, quantity, unit_price, subtotal, tax_amount, discount_amount)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [refundSaleId, li.product_id, li.product_name, -li.quantity, li.unit_price, -li.subtotal, -li.tax_amount, 0]
+      );
+    }
+
     await client.query("COMMIT");
-    
-    res.json({ message: "Refund processed successfully", refund_amount });
+
+    res.json({
+      message: "Refund processed successfully",
+      refund_amount: refund_total,
+      refund_number,
+    });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, RefreshCw, User, Printer, Mail, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, RefreshCw, Printer, Trash2, RotateCcw, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -12,19 +12,44 @@ export default function SalesHistory() {
   const [saleItems, setSaleItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
-  const [filterCustomer, setFilterCustomer] = useState("");
-  const [filterUser, setFilterUser] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [companyData, setCompanyData] = useState<any>(null);
+
+  // Refund modal state
+  const [showRefundModal, setShowRefundModal]   = useState(false);
+  const [refundItems, setRefundItems]           = useState<Record<number, { checked: boolean; qty: number }>>({});
+  const [refundMethod, setRefundMethod]         = useState("cash");
+  const [refundReason, setRefundReason]         = useState("");
+  const [refundProcessing, setRefundProcessing] = useState(false);
+  const [refundResult, setRefundResult]         = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     loadData();
     loadCompanyData();
   }, []);
+
+  // Re-sync refund item state whenever saleItems reloads (e.g. after a refund)
+  useEffect(() => {
+    if (!showRefundModal || !saleItems.length) return;
+    setRefundItems(prev => {
+      const next: Record<number, { checked: boolean; qty: number }> = {};
+      saleItems.forEach(item => {
+        if (item.quantity <= 0) return; // fully returned — exclude
+        const existing = prev[item.product_id];
+        next[item.product_id] = {
+          checked: existing?.checked ?? false,
+          qty: Math.min(existing?.qty ?? item.quantity, item.quantity),
+        };
+      });
+      return next;
+    });
+  }, [saleItems]);
 
   const loadCompanyData = async () => {
     try {
@@ -79,24 +104,47 @@ export default function SalesHistory() {
     setShowReceiptModal(true);
   };
 
-  const handleRefund = async () => {
-    if (!selectedSale) {
-      alert("Please select a sale to refund");
-      return;
-    }
-    if (selectedSale.voided) {
-      alert("This sale has already been refunded");
-      return;
-    }
-    if (!confirm(`Are you sure you want to refund sale ${selectedSale.sale_number}?`)) return;
-    
+  const openRefundModal = () => {
+    if (!selectedSale) return;
+    if (selectedSale.sale_type === 'refund') { alert("This record is already a refund."); return; }
+    if (selectedSale.voided)                 { alert("This sale has been voided."); return; }
+    // Initialise each item as unchecked, qty = original quantity
+    const init: Record<number, { checked: boolean; qty: number }> = {};
+    saleItems.forEach(item => {
+      init[item.product_id] = { checked: false, qty: item.quantity };
+    });
+    setRefundItems(init);
+    setRefundMethod("cash");
+    setRefundReason("");
+    setRefundResult(null);
+    setShowRefundModal(true);
+  };
+
+  const calcRefundTotal = () => {
+    if (!saleItems.length) return 0;
+    return saleItems.reduce((sum, item) => {
+      const ri = refundItems[item.product_id];
+      if (!ri?.checked) return sum;
+      const ratio = ri.qty / item.quantity;
+      return sum + Math.round(item.subtotal * ratio);
+    }, 0);
+  };
+
+  const submitRefund = async () => {
+    const selected = saleItems
+      .filter(item => refundItems[item.product_id]?.checked)
+      .map(item => ({ product_id: item.product_id, quantity: refundItems[item.product_id].qty }));
+    if (selected.length === 0) { alert("Select at least one item to refund."); return; }
+    setRefundProcessing(true);
     try {
-      await api.pos.voidSale(selectedSale.id);
-      alert("Sale refunded successfully");
+      const res = await api.pos.refundSale(selectedSale.id, selected, refundMethod, refundReason);
+      setRefundResult({ ok: true, text: `Refund ${res.refund_number} processed — ${formatCurrencySync(res.refund_amount, baseCurrency?.symbol || 'UGX', false)} refunded via ${refundMethod}.` });
       loadData();
-      setSelectedSale(null);
+      await loadSaleDetails(selectedSale.id);
     } catch (err: any) {
-      alert(err.message || "Failed to refund sale");
+      setRefundResult({ ok: false, text: err.message || "Refund failed." });
+    } finally {
+      setRefundProcessing(false);
     }
   };
 
@@ -118,10 +166,16 @@ export default function SalesHistory() {
   };
 
   const filteredSales = sales.filter(sale => {
-    if (startDate && new Date(sale.created_at) < new Date(startDate)) return false;
-    if (endDate && new Date(sale.created_at) > new Date(endDate)) return false;
-    if (filterCustomer && !sale.customer_id) return false;
-    if (filterUser && filterUser !== "all") return false;
+    const saleDate = new Date(sale.created_at).toISOString().slice(0, 10);
+    if (startDate && saleDate < startDate) return false;
+    if (endDate && saleDate > endDate) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchesNum = sale.sale_number?.toLowerCase().includes(q);
+      const matchesCust = (sale.customer_name || "").toLowerCase().includes(q);
+      const matchesUser = (sale.user_email || "").toLowerCase().includes(q);
+      if (!matchesNum && !matchesCust && !matchesUser) return false;
+    }
     return true;
   });
 
@@ -144,72 +198,53 @@ export default function SalesHistory() {
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
-          <select className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm">
-            <option>POS</option>
-          </select>
+          <span className="text-admin-text-secondary text-sm">From</span>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
           />
-          <span className="text-admin-text-secondary">-</span>
+          <span className="text-admin-text-secondary text-sm">To</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
           />
+          <input
+            type="text"
+            placeholder="Search sale #, customer, cashier…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm w-56 placeholder:text-admin-text-secondary"
+          />
           <button
             onClick={handleRefresh}
             className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
           >
-            <RefreshCw size={14} />
-            Refresh
+            <RefreshCw size={14} /> Refresh
           </button>
-          <button 
-            onClick={() => setFilterUser(filterUser === "all" ? "" : "all")}
-            className={`px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface ${
-              filterUser === "all" ? "bg-admin-text text-admin-bg" : ""
-            }`}
-          >
-            Show all users
-          </button>
-          <button 
-            onClick={() => setFilterCustomer(filterCustomer ? "" : "customer")}
-            className={`px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 ${
-              filterCustomer ? "bg-admin-text text-admin-bg" : ""
-            }`}
-          >
-            <User size={14} />
-            Customer
-          </button>
-          <button 
+          <button
             onClick={handlePrint}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+            disabled={!selectedSale}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
           >
-            <Printer size={14} />
-            Print
+            <Printer size={14} /> Print
           </button>
-          <button 
-            onClick={() => window.print()}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+          <button
+            onClick={openRefundModal}
+            disabled={!selectedSale}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
           >
-            <Mail size={14} />
-            Send email
+            <RotateCcw size={14} /> Refund / Return
           </button>
-          <button 
-            onClick={handleRefund}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
-          >
-            Refund
-          </button>
-          <button 
+          <button
             onClick={handleDelete}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-danger text-sm hover:bg-admin-surface flex items-center gap-2"
+            disabled={!selectedSale}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-danger text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
           >
-            <Trash2 size={14} />
-            Delete
+            <Trash2 size={14} /> Delete
           </button>
         </div>
       </div>
@@ -226,21 +261,18 @@ export default function SalesHistory() {
             <div className="p-8 text-center text-admin-text-secondary">No sales found</div>
           ) : (
             <div className="overflow-x-auto">
+              <div className="max-h-[380px] overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-admin-bg border-b border-admin-border">
+                <thead className="bg-admin-bg border-b border-admin-border sticky top-0 z-10">
                   <tr>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">ID</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Document type</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">User</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Number</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">External...</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">#</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Type</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Sale #</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Cashier</th>
                     <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Customer</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Date</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Created</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">POS</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Ord...</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Payment...</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Discount</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Date &amp; Time</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Payment</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Discount</th>
                     <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Total</th>
                   </tr>
                 </thead>
@@ -251,25 +283,32 @@ export default function SalesHistory() {
                       onClick={() => loadSaleDetails(sale.id)}
                       className={`border-b border-admin-border cursor-pointer hover:bg-admin-bg ${
                         selectedSale?.id === sale.id ? 'bg-admin-bg' : ''
-                      } ${sale.voided ? 'text-admin-danger' : 'text-admin-text'}`}
+                      } ${sale.voided ? 'opacity-50 line-through' : ''}`}
                     >
-                      <td className="px-3 py-2 text-xs">{index + 1}</td>
-                      <td className="px-3 py-2 text-xs">{sale.voided ? 'Refund' : 'Sales'}</td>
-                      <td className="px-3 py-2 text-xs">levi</td>
-                      <td className="px-3 py-2 text-xs">{sale.sale_number}</td>
-                      <td className="px-3 py-2 text-xs">{sale.sale_number}</td>
-                      <td className="px-3 py-2 text-xs">Walk-in customer</td>
-                      <td className="px-3 py-2 text-xs">{new Date(sale.created_at).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-xs">{new Date(sale.created_at).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-xs">N/A</td>
-                      <td className="px-3 py-2 text-xs">{index + 1}</td>
-                      <td className="px-3 py-2 text-xs">{getPaymentTypeName(sale.payment_type_id)}</td>
-                      <td className="px-3 py-2 text-xs">{sale.discount_amount > 0 ? `${((sale.discount_amount / sale.subtotal) * 100).toFixed(0)}%` : '0%'}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono">{(sale.total_amount / 100).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-xs text-admin-text">{index + 1}</td>
+                      <td className="px-3 py-2 text-xs">
+                        <span className={`px-1.5 py-0.5 text-[10px] font-medium ${
+                          sale.voided ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+                        }`}>{sale.voided ? 'Refund' : 'Sale'}</span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-admin-text font-mono">{sale.sale_number}</td>
+                      <td className="px-3 py-2 text-xs text-admin-text">{sale.user_email || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-admin-text">{sale.customer_name || 'Walk-in'}</td>
+                      <td className="px-3 py-2 text-xs text-admin-text">{new Date(sale.created_at).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-admin-text">{getPaymentTypeName(sale.payment_type_id)}</td>
+                      <td className="px-3 py-2 text-xs text-right text-admin-text">
+                        {sale.discount_amount > 0
+                          ? formatCurrencySync(sale.discount_amount, baseCurrency?.symbol || 'UGX', false)
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-right font-mono text-admin-text">
+                        {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
@@ -323,6 +362,144 @@ export default function SalesHistory() {
           )}
         </div>
       </div>
+
+      {/* Refund / Return Modal */}
+      {showRefundModal && selectedSale && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-admin-surface border border-admin-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-admin-border">
+              <div>
+                <h2 className="text-admin-text font-bold text-base flex items-center gap-2">
+                  <RotateCcw size={16} /> Refund / Return
+                </h2>
+                <p className="text-admin-text-secondary text-xs mt-0.5">
+                  Original sale: <span className="font-mono">{selectedSale.sale_number}</span>
+                  {selectedSale.customer_name && ` · ${selectedSale.customer_name}`}
+                </p>
+              </div>
+              <button onClick={() => setShowRefundModal(false)} className="text-admin-text-secondary hover:text-admin-text text-xl leading-none">×</button>
+            </div>
+
+            <div className="px-5 py-4 space-y-5">
+              {/* Result banner */}
+              {refundResult && (
+                <div className={`px-4 py-3 text-sm border flex items-start gap-3 ${
+                  refundResult.ok
+                    ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400"
+                    : "bg-red-500/10 border-red-500/40 text-red-400"
+                }`}>
+                  {refundResult.ok && <CheckCircle size={16} className="mt-0.5 shrink-0" />}
+                  <span>{refundResult.text}</span>
+                </div>
+              )}
+
+              {/* Item selection */}
+              <div>
+                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Select items to return</p>
+                <div className="border border-admin-border divide-y divide-admin-border">
+                  {saleItems.map(item => {
+                    const ri = refundItems[item.product_id] || { checked: false, qty: item.quantity };
+                    return (
+                      <div key={item.product_id} className={`flex items-center gap-3 px-3 py-2.5 ${ri.checked ? "bg-admin-bg" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={ri.checked}
+                          onChange={e => setRefundItems(prev => ({ ...prev, [item.product_id]: { ...ri, checked: e.target.checked } }))}
+                          className="w-4 h-4 accent-emerald-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-admin-text text-xs font-medium truncate">{item.product_name}</p>
+                          <p className="text-admin-text-secondary text-[10px]">
+                            Sold qty: {item.quantity} · Unit: {formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-admin-text-secondary text-xs">Qty:</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={item.quantity}
+                            value={ri.qty}
+                            disabled={!ri.checked}
+                            onChange={e => {
+                              const v = Math.min(item.quantity, Math.max(1, Number(e.target.value)));
+                              setRefundItems(prev => ({ ...prev, [item.product_id]: { ...ri, qty: v } }));
+                            }}
+                            className="w-14 px-2 py-1 bg-admin-bg border border-admin-border text-admin-text text-xs text-center disabled:opacity-40"
+                          />
+                        </div>
+                        <div className="text-xs font-mono text-admin-text w-24 text-right shrink-0">
+                          {ri.checked
+                            ? formatCurrencySync(Math.round(item.subtotal * (ri.qty / item.quantity)), baseCurrency?.symbol || 'UGX', false)
+                            : "—"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Refund method */}
+              <div>
+                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Refund method</p>
+                <div className="flex flex-wrap gap-2">
+                  {["cash", "original_payment", "store_credit", "bank_transfer"].map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setRefundMethod(m)}
+                      className={`px-3 py-1.5 text-xs border ${
+                        refundMethod === m
+                          ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400"
+                          : "bg-admin-bg border-admin-border text-admin-text-secondary hover:text-admin-text"
+                      }`}
+                    >
+                      {m === "cash" ? "Cash" : m === "original_payment" ? "Original Payment" : m === "store_credit" ? "Store Credit" : "Bank Transfer"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Reason for return</p>
+                <textarea
+                  value={refundReason}
+                  onChange={e => setRefundReason(e.target.value)}
+                  placeholder="e.g. Defective product, wrong item, customer changed mind…"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-xs placeholder:text-admin-text-secondary resize-none"
+                />
+              </div>
+
+              {/* Total */}
+              <div className="flex items-center justify-between border-t border-admin-border pt-4">
+                <span className="text-admin-text text-sm font-semibold">Refund Total</span>
+                <span className="text-emerald-400 font-mono font-bold text-lg">
+                  {formatCurrencySync(calcRefundTotal(), baseCurrency?.symbol || 'UGX', false)}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={submitRefund}
+                  disabled={refundProcessing || !!refundResult?.ok}
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {refundProcessing ? "Processing…" : <><RotateCcw size={14} /> Process Refund</>}
+                </button>
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  className="flex-1 py-2.5 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+                >
+                  {refundResult?.ok ? "Close" : "Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Receipt Modal */}
       {showReceiptModal && receiptData && (

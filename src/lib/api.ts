@@ -915,11 +915,14 @@ export const api = {
   pos: {
     createSale: (data: {
       customer_id?: number;
+      customer_name?: string;
       items: Array<{ product_id: number; quantity: number; unit_price?: number; discount_amount?: number }>;
       payment_type_id: number;
       discount_amount?: number;
       sale_type?: string;
       notes?: string;
+      price_list_id?: number;
+      promotion_id?: number;
     }) => request<POSSale>("/api/pos/sales", { method: "POST", body: JSON.stringify(data) }),
     getSales: (params?: {
       start_date?: string;
@@ -934,10 +937,10 @@ export const api = {
     getSale: (id: number) => request<POSSale>(`/api/pos/sales/${id}`),
     voidSale: (id: number) =>
       request<{ message: string }>(`/api/pos/sales/${id}/void`, { method: "POST" }),
-    refundSale: (id: number, items: Array<{ product_id: number; quantity: number }>) =>
-      request<{ message: string; refund_amount: number }>(`/api/pos/sales/${id}/refund`, {
+    refundSale: (id: number, items: Array<{ product_id: number; quantity: number }>, refund_method?: string, reason?: string) =>
+      request<{ message: string; refund_amount: number; refund_number: string }>(`/api/pos/sales/${id}/refund`, {
         method: "POST",
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, refund_method, reason }),
       }),
   },
   cashDrawer: {

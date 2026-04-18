@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X } from "lucide-react";
-import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem } from "@/lib/api";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode } from "lucide-react";
+import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -43,6 +43,9 @@ export default function POSMain() {
   const [selectedSchemeId, setSelectedSchemeId] = useState<number | null>(null);
   const [schemeItemMap, setSchemeItemMap] = useState<Map<number, number>>(new Map());
   const selectedScheme = (schemes as any[]).find(s => s.id === selectedSchemeId) ?? null;
+  const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
+  const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
+  const [showPromoModal, setShowPromoModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -50,6 +53,7 @@ export default function POSMain() {
     loadCompanyData();
     loadSecondaryCurrency();
     loadSchemes();
+    loadPromotions();
   }, []);
 
   useEffect(() => {
@@ -89,6 +93,37 @@ export default function POSMain() {
     } catch (err) {
       console.error("Failed to load schemes:", err);
     }
+  };
+
+  const loadPromotions = async () => {
+    try {
+      const data = await api.promotions.active();
+      setActivePromotions(data);
+    } catch (err) {
+      console.error("Failed to load promotions:", err);
+    }
+  };
+
+  const applyPromotion = (promo: Promotion | null) => {
+    setAppliedPromotion(promo);
+    if (!promo) {
+      setCartDiscount(0);
+      setDiscountType("percentage");
+      setDiscountValue(0);
+      setShowPromoModal(false);
+      return;
+    }
+    const { subtotal } = calculateTotalsRaw();
+    if (promo.discount_type === "percentage") {
+      setDiscountType("percentage");
+      setDiscountValue(promo.discount_value);
+      setCartDiscount(Math.round(subtotal * (promo.discount_value / 100)));
+    } else {
+      setDiscountType("amount");
+      setDiscountValue(promo.discount_value);
+      setCartDiscount(promo.discount_value);
+    }
+    setShowPromoModal(false);
   };
 
   const getEffectivePrice = (product: ApiProduct): number => {
@@ -225,6 +260,13 @@ export default function POSMain() {
     setCart(cart.filter(item => item.product.id !== productId));
   };
 
+  const calculateTotalsRaw = () => {
+    const subtotal = cart.reduce((sum, item) => {
+      return sum + (item.unit_price * item.quantity) - item.discount;
+    }, 0);
+    return { subtotal };
+  };
+
   const calculateTotals = () => {
     const subtotal = cart.reduce((sum, item) => {
       return sum + (item.unit_price * item.quantity) - item.discount;
@@ -247,7 +289,8 @@ export default function POSMain() {
   };
 
   const applyDiscount = () => {
-    const { subtotal } = calculateTotals();
+    setAppliedPromotion(null);
+    const { subtotal } = calculateTotalsRaw();
     if (discountType === "percentage") {
       setCartDiscount(Math.round(subtotal * (discountValue / 100)));
     } else {
@@ -406,6 +449,7 @@ export default function POSMain() {
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
         price_list_id: selectedSchemeId || undefined,
+        promotion_id: appliedPromotion?.id || undefined,
         items: cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -413,7 +457,7 @@ export default function POSMain() {
           discount_amount: item.discount,
         })),
         payment_type_id: selectedPaymentType,
-        discount_amount: cartDiscount,
+        discount_amount: discountAmount,
         sale_type: "regular",
         status: "completed",
       };
@@ -427,6 +471,8 @@ export default function POSMain() {
         subtotal,
         taxAmount,
         total,
+        discountAmount,
+        promotionName: appliedPromotion?.name || null,
         paymentTypeName: paymentTypes.find(pt => pt.id === selectedPaymentType)?.name || 'Cash',
         customerName: customerName || 'Walk-in Customer',
       });
@@ -434,6 +480,8 @@ export default function POSMain() {
       // Clear cart
       setCart([]);
       setCartDiscount(0);
+      setAppliedPromotion(null);
+      setDiscountValue(0);
       setShowPaymentModal(false);
       
       // Show receipt
@@ -472,7 +520,17 @@ export default function POSMain() {
             onClick={() => setShowDiscountModal(true)}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
           >
-            Discount {cartDiscount > 0 ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', false)})` : ''}
+            Discount {cartDiscount > 0 && !appliedPromotion ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', false)})` : ''}
+          </button>
+          <button
+            onClick={() => setShowPromoModal(true)}
+            className={`px-4 py-2 text-sm border transition-colors ${
+              appliedPromotion
+                ? 'bg-emerald-600 border-emerald-600 text-white'
+                : 'bg-admin-bg border-admin-border text-admin-text hover:bg-admin-surface'
+            }`}
+          >
+            {appliedPromotion ? `🏷 ${appliedPromotion.name}` : 'Promo'}
           </button>
           <button 
             onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
@@ -573,7 +631,9 @@ export default function POSMain() {
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-admin-text-secondary">Discount</span>
+                <span className="text-admin-text-secondary">
+                  {appliedPromotion ? `Promo: ${appliedPromotion.name}` : 'Discount'}
+                </span>
                 <div className="text-right">
                   <div className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</div>
                   {secondaryCurrency && exchangeRate && (
@@ -643,9 +703,10 @@ export default function POSMain() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products by name or barcode"
-                className="w-full pl-10 pr-4 py-2 bg-admin-surface border border-admin-border text-admin-text placeholder-admin-text-secondary focus:outline-none focus:border-admin-text"
+                placeholder="Search by name or barcode…"
+                className="w-full pl-10 pr-10 py-2 bg-admin-surface border border-admin-border text-admin-text placeholder-admin-text-secondary focus:outline-none focus:border-admin-text"
               />
+              <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-text-secondary" size={18} />
             </div>
           </div>
 
@@ -836,7 +897,9 @@ export default function POSMain() {
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-admin-text-secondary">Discount</span>
+                  <span className="text-admin-text-secondary">
+                    {appliedPromotion ? `🏷 ${appliedPromotion.name}` : 'Discount'}
+                  </span>
                   <span className="text-red-400 font-mono">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
                 </div>
               )}
@@ -986,6 +1049,12 @@ export default function POSMain() {
                 <span>Subtotal:</span>
                 <span>{formatCurrencySync(completedSale.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
               </div>
+              {completedSale.discountAmount > 0 && (
+                <div className="flex justify-between text-xs text-black mb-1">
+                  <span>Discount{completedSale.promotionName ? ` (${completedSale.promotionName})` : ''}:</span>
+                  <span>-{formatCurrencySync(completedSale.discountAmount, baseCurrency?.symbol || 'UGX', false)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Tax ({defaultTax?.rate}%):</span>
                 <span>{formatCurrencySync(completedSale.taxAmount, baseCurrency?.symbol || 'UGX', false)}</span>
@@ -1054,6 +1123,63 @@ export default function POSMain() {
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promotion Picker Modal */}
+      {showPromoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-6 w-[460px] max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-admin-text">Apply Promotion</h2>
+              <button onClick={() => setShowPromoModal(false)}><X size={18} className="text-admin-text-secondary" /></button>
+            </div>
+            {activePromotions.length === 0 ? (
+              <p className="text-admin-text-secondary text-sm py-4 text-center">No active promotions available.</p>
+            ) : (
+              <div className="overflow-y-auto space-y-2 flex-1">
+                {activePromotions.map(promo => (
+                  <button
+                    key={promo.id}
+                    onClick={() => applyPromotion(appliedPromotion?.id === promo.id ? null : promo)}
+                    className={`w-full text-left p-4 border transition-colors ${
+                      appliedPromotion?.id === promo.id
+                        ? 'bg-emerald-600/20 border-emerald-500 text-admin-text'
+                        : 'bg-admin-bg border-admin-border text-admin-text hover:bg-admin-surface'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-sm">{promo.name}</div>
+                        {promo.description && (
+                          <div className="text-xs text-admin-text-secondary mt-0.5">{promo.description}</div>
+                        )}
+                        <div className="text-xs text-admin-text-secondary mt-1">
+                          {promo.end_date ? `Valid until ${new Date(promo.end_date).toLocaleDateString('en-GB')}` : 'No expiry'}
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <div className="text-lg font-bold font-mono text-emerald-400">
+                          {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `UGX ${Number(promo.discount_value).toLocaleString()} OFF`}
+                        </div>
+                        {appliedPromotion?.id === promo.id && (
+                          <div className="text-xs text-emerald-400 mt-1">✓ Applied</div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {appliedPromotion && (
+              <button
+                onClick={() => applyPromotion(null)}
+                className="mt-4 w-full px-4 py-2 bg-admin-bg border border-admin-border text-admin-text-secondary text-sm hover:text-admin-text hover:bg-admin-surface"
+              >
+                Remove Promotion
+              </button>
+            )}
           </div>
         </div>
       )}

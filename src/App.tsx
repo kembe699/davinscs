@@ -42,6 +42,7 @@ import TaxRates from "./pages/admin/TaxRates.tsx";
 import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
 import PriceLists from "./pages/admin/PriceLists.tsx";
 import Invoices from "./pages/admin/Invoices.tsx";
+import Promotions from "./pages/admin/Promotions.tsx";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
             <Route path="/admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />
             <Route path="/admin/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
+            <Route path="/admin/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
             <Route path="/admin/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />

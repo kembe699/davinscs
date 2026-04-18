@@ -280,13 +280,41 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
        WHERE DATE(created_at) = $1 AND voided = true${sessionFilter}`,
       params
     );
+
+    // Refund breakdown
+    const refundBreakdown = await pool.query(
+      `SELECT COUNT(*) as count,
+              COALESCE(SUM(ABS(total_amount)), 0) as total_refunded,
+              COALESCE(SUM(ABS(subtotal)), 0) as subtotal_refunded
+       FROM pos_sales
+       WHERE DATE(created_at) = $1 AND sale_type = 'refund'${sessionFilter}`,
+      params
+    );
+
+    // Cashier / user breakdown
+    const cashierBreakdown = await pool.query(
+      `SELECT u.id as user_id,
+              u.email as cashier_name,
+              u.email,
+              COUNT(s.id) as total_transactions,
+              COALESCE(SUM(s.total_amount), 0) as total_sales,
+              COALESCE(SUM(s.discount_amount), 0) as total_discounts
+       FROM pos_sales s
+       JOIN users u ON s.user_id = u.id
+       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       GROUP BY u.id, u.email
+       ORDER BY total_sales DESC`,
+      params
+    );
     
     res.json({
       date: targetDate,
       sales_summary: salesSummary.rows[0],
       payment_breakdown: paymentBreakdown.rows,
       top_products: topProducts.rows,
-      voided_sales: voidedSales.rows[0]
+      voided_sales: voidedSales.rows[0],
+      refund_summary: refundBreakdown.rows[0],
+      cashier_breakdown: cashierBreakdown.rows
     });
   } catch (err) {
     console.error(err);

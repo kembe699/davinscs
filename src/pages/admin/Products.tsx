@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
@@ -18,6 +19,9 @@ export default function Products() {
   const [category, setCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     setLoading(true);
@@ -61,6 +65,70 @@ export default function Products() {
     navigate('/admin/products/new');
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: "buffer" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      let created = 0, skipped = 0;
+      for (const row of rows) {
+        const name     = String(row["name"] ?? row["Name"] ?? "").trim();
+        const brand    = String(row["brand"] ?? row["Brand"] ?? "").trim();
+        const category = String(row["category"] ?? row["Category"] ?? "").trim().toLowerCase();
+        const rawPrice = row["price"] ?? row["Price"] ?? "";
+        const price    = Number(String(rawPrice).replace(/,/g, "").trim());
+
+        if (!name || !brand || !category || !price) { skipped++; continue; }
+
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+        const cost_price = Number(String(row["cost_price"] ?? row["Cost Price"] ?? 0).replace(/,/g, ""));
+        const barcode    = String(row["barcode"] ?? row["Barcode"] ?? "").trim();
+        const description = String(row["description"] ?? row["Description"] ?? "").trim();
+        const quantity_on_hand = Number(row["quantity"] ?? row["quantity_on_hand"] ?? row["Quantity"] ?? 0);
+        const reorder_level   = Number(row["reorder_level"] ?? row["Reorder Level"] ?? 0);
+        const in_stock = quantity_on_hand > 0 || String(row["in_stock"] ?? row["In Stock"] ?? "true").toLowerCase() !== "false";
+
+        try {
+          await api.products.create({
+            slug, name, brand, category,
+            price: Math.round(price * 100),
+            cost_price: Math.round(cost_price * 100),
+            barcode, description,
+            quantity_on_hand, reorder_level,
+            in_stock,
+            tag: "", specs: [], image_url: "", is_featured: false,
+          } as any);
+          created++;
+        } catch {
+          skipped++;
+        }
+      }
+      load();
+      setImportMsg({ type: "ok", text: `Imported ${created} product(s)${skipped ? `, ${skipped} skipped (missing required fields or duplicate slug)` : ""}.` });
+    } catch (err: any) {
+      setImportMsg({ type: "err", text: err?.message || "Import failed — check file format." });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExportTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["name","brand","category","price","cost_price","barcode","description","quantity","reorder_level","in_stock"],
+      ["Example Product","Example Brand","cameras","100000","80000","123456789","A great product","10","2","true"],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Products");
+    XLSX.writeFile(wb, "products_import_template.xlsx");
+  };
+
   return (
     <AdminLayout>
       <div className="p-8">
@@ -85,14 +153,39 @@ export default function Products() {
             <button disabled={!selectedProduct} onClick={() => selectedProduct && setConfirmId(selectedProduct.id)} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50">
               <Trash2 size={14} /> Delete
             </button>
-            <button onClick={() => { const csv = 'Name,Category,Brand,Price\n' + filtered.map(p => `${p.name},${p.category},${p.brand},${p.price/100}`).join('\n'); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); link.download = 'products.csv'; link.click(); }} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
+            <button
+              onClick={() => { const csv = 'name,brand,category,price,cost_price,barcode,description,quantity,reorder_level\n' + filtered.map(p => `"${p.name}","${p.brand}",${p.category},${p.price/100},${(p.cost_price||0)/100},${(p as any).barcode||''},,${(p as any).quantity_on_hand||0},${(p as any).reorder_level||0}`).join('\n'); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); link.download = 'products.csv'; link.click(); }}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+            >
               <Download size={14} /> Export
             </button>
-            <button className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg">
-              <Upload size={14} /> Import
+            <button
+              onClick={() => importRef.current?.click()}
+              disabled={importing}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg disabled:opacity-50"
+            >
+              <Upload size={14} /> {importing ? "Importing…" : "Import"}
             </button>
+            <button
+              onClick={handleExportTemplate}
+              className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              title="Download blank import template"
+            >
+              <Download size={14} /> Template
+            </button>
+            <input ref={importRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
           </div>
 
+          {importMsg && (
+            <div className={`mb-3 px-4 py-2 text-xs border ${
+              importMsg.type === "ok"
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                : "bg-red-500/10 border-red-500/30 text-red-400"
+            } flex items-center justify-between`}>
+              <span>{importMsg.text}</span>
+              <button onClick={() => setImportMsg(null)} className="ml-4 opacity-60 hover:opacity-100">×</button>
+            </div>
+          )}
           <div className="mb-6">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
