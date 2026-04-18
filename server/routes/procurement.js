@@ -122,7 +122,10 @@ router.get("/purchase-orders/:id", requireAuth, async (req, res) => {
 
 router.post("/purchase-orders", requireAuth, async (req, res) => {
   const { supplier_id, order_date, items, notes } = req.body;
-  
+  const currency_id     = req.body.currency_id     || null;
+  const currency_code   = req.body.currency_code   || 'UGX';
+  const currency_symbol = req.body.currency_symbol || 'UGX';
+
   if (!supplier_id || !order_date || !items || items.length === 0) {
     return res.status(400).json({ error: "Supplier, date, and items required" });
   }
@@ -136,9 +139,9 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     
     const poResult = await client.query(
       `INSERT INTO purchase_orders 
-       (po_number, supplier_id, order_date, total_amount, notes, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [poNumber, supplier_id, order_date, totalAmount, notes, req.user.id]
+       (po_number, supplier_id, order_date, total_amount, notes, created_by, currency_id, currency_code, currency_symbol) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [poNumber, supplier_id, order_date, totalAmount, notes, req.user.id, currency_id, currency_code, currency_symbol]
     );
     
     const poId = poResult.rows[0].id;

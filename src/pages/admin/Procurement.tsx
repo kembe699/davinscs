@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment } from "@/lib/api";
+import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download } from "lucide-react";
 
@@ -13,6 +13,7 @@ export default function ProcurementEnhanced() {
   const [bills, setBills] = useState<ApiSupplierBill[]>([]);
   const [payments, setPayments] = useState<ApiSupplierPayment[]>([]);
   const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [currencies, setCurrencies] = useState<ApiCurrency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -28,6 +29,9 @@ export default function ProcurementEnhanced() {
     supplier_id: 0,
     order_date: new Date().toISOString().split('T')[0],
     notes: "",
+    currency_id: 0 as number | 0,
+    currency_code: "UGX",
+    currency_symbol: "UGX",
     items: [] as { product_id?: number; item_name?: string; quantity: number; unit_price: number }[]
   });
   
@@ -122,7 +126,16 @@ export default function ProcurementEnhanced() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await Promise.all([loadSuppliers(), loadPOs(), loadGRNs(), loadBills(), loadPayments(), loadProducts()]);
+      const [,, currencyList] = await Promise.all([
+        loadSuppliers(), loadPOs(), api.currencies.list().catch(() => [] as ApiCurrency[]),
+        loadGRNs(), loadBills(), loadPayments(), loadProducts()
+      ]);
+      setCurrencies(currencyList as ApiCurrency[]);
+      // set default currency to base
+      const base = (currencyList as ApiCurrency[]).find(c => c.is_base) || (currencyList as ApiCurrency[])[0];
+      if (base) {
+        setPoForm(prev => ({ ...prev, currency_id: base.id, currency_code: base.code, currency_symbol: base.symbol }));
+      }
       setLoading(false);
     };
     load();
@@ -525,7 +538,7 @@ export default function ProcurementEnhanced() {
             {creatingPO && (
               <div className="border border-border-subtle p-4 mb-4 bg-chassis">
                 <h3 className="text-sm font-bold mb-4">New Purchase Order</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
                   <select
                     value={poForm.supplier_id}
                     onChange={(e) => setPoForm({ ...poForm, supplier_id: parseInt(e.target.value) })}
@@ -540,6 +553,17 @@ export default function ProcurementEnhanced() {
                     onChange={(e) => setPoForm({ ...poForm, order_date: e.target.value })}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   />
+                  <select
+                    value={poForm.currency_id}
+                    onChange={(e) => {
+                      const cur = currencies.find(c => c.id === parseInt(e.target.value));
+                      if (cur) setPoForm({ ...poForm, currency_id: cur.id, currency_code: cur.code, currency_symbol: cur.symbol });
+                    }}
+                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
+                  >
+                    <option value={0}>Select Currency *</option>
+                    {currencies.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name} ({c.symbol})</option>)}
+                  </select>
                 </div>
                 <textarea
                   placeholder="Notes"
@@ -571,7 +595,7 @@ export default function ProcurementEnhanced() {
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Product / Item</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Custom Name</th>
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Qty</th>
-                            <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Price (cents)</th>
+                            <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Cost ({poForm.currency_code})</th>
                             <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Subtotal</th>
                             <th></th>
                           </tr>
@@ -646,7 +670,7 @@ export default function ProcurementEnhanced() {
                                 />
                               </td>
                               <td className="px-3 py-2 text-right font-mono-tech text-foreground">
-                                ${((item.quantity * item.unit_price) / 100).toFixed(2)}
+                                {poForm.currency_symbol}{((item.quantity * item.unit_price) / 100).toLocaleString()}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <button
@@ -662,9 +686,9 @@ export default function ProcurementEnhanced() {
                         </tbody>
                         <tfoot>
                           <tr className="border-t border-border-subtle bg-chassis">
-                            <td colSpan={4} className="px-3 py-2 text-right text-xs text-muted-foreground font-medium">Order Total:</td>
+                            <td colSpan={4} className="px-3 py-2 text-right text-xs text-muted-foreground font-medium">Order Total ({poForm.currency_code}):</td>
                             <td className="px-3 py-2 text-right font-mono-tech text-sm text-foreground font-bold">
-                              ${(poForm.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) / 100).toFixed(2)}
+                              {poForm.currency_symbol}{(poForm.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) / 100).toLocaleString()}
                             </td>
                             <td></td>
                           </tr>

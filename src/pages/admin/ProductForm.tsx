@@ -8,7 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 type Spec = { label: string; value: string };
 
 const empty = {
-  slug: "", name: "", brand: "", price: 0, tag: "", description: "",
+  slug: "", name: "", brand: "", price: 0, cost_price: 0, tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "cameras",
   barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: 0, reorder_level: 0,
 };
@@ -20,6 +20,7 @@ export default function ProductForm() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState(empty);
+  const [margin, setMargin] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState("");
@@ -40,8 +41,10 @@ export default function ProductForm() {
           ? new Date((p as any).expiry_date).toISOString().split('T')[0]
           : "";
         
+        const cp = p.cost_price ?? 0;
+        const sp = p.price ?? 0;
         setForm({
-          slug: p.slug, name: p.name, brand: p.brand, price: p.price,
+          slug: p.slug, name: p.name, brand: p.brand, price: sp, cost_price: cp,
           tag: p.tag, description: p.description,
           specs: Array.isArray(p.specs) ? p.specs : [],
           image_url: p.image_url, in_stock: p.in_stock, is_featured: p.is_featured, category: p.category,
@@ -50,6 +53,7 @@ export default function ProductForm() {
           product_type: (p as any).product_type || "product",
           quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
         });
+        if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
       .catch(() => navigate("/admin/products"))
       .finally(() => setFetching(false));
@@ -226,13 +230,52 @@ export default function ProductForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="field-label">Price ({baseCurrency?.code || 'UGX'}) *</label>
+                    <label className="field-label">Unit Cost ({baseCurrency?.code || 'UGX'})</label>
                     <input
-                      required type="number" min={0} value={form.price}
-                      onChange={(e) => set("price", Number(e.target.value))}
-                      placeholder="795000"
+                      type="number" min={0} value={form.cost_price || ""}
+                      onChange={(e) => {
+                        const cp = Number(e.target.value) || 0;
+                        set("cost_price", cp);
+                        if (cp > 0 && margin !== "") {
+                          set("price", Math.round(cp * (1 + Number(margin) / 100)));
+                        }
+                      }}
+                      placeholder="e.g. 500000"
                       className="field-input"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Purchase / landed cost</p>
+                  </div>
+                  <div>
+                    <label className="field-label">Margin (%)</label>
+                    <input
+                      type="number" min={0} value={margin}
+                      onChange={(e) => {
+                        const m = e.target.value === "" ? "" : Number(e.target.value);
+                        setMargin(m);
+                        if (m !== "" && form.cost_price > 0) {
+                          set("price", Math.round(form.cost_price * (1 + Number(m) / 100)));
+                        }
+                      }}
+                      placeholder="e.g. 30  →  30% markup"
+                      className="field-input"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Auto-calculates selling price</p>
+                  </div>
+                  <div>
+                    <label className="field-label">Selling Price ({baseCurrency?.code || 'UGX'}) *</label>
+                    <input
+                      required type="number" min={0} value={form.price || ""}
+                      onChange={(e) => {
+                        const sp = Number(e.target.value) || 0;
+                        set("price", sp);
+                        if (form.cost_price > 0 && sp > 0) {
+                          setMargin(Math.round((sp - form.cost_price) / form.cost_price * 100));
+                        }
+                      }}
+                      placeholder="auto-filled from cost + margin"
+                      className="field-input"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Final price charged to customer</p>
                   </div>
                   <div>
                     <label className="field-label">Product Type *</label>

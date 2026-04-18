@@ -72,19 +72,25 @@ export async function autoSeed() {
     );
   }
 
-  // Seed suppliers
-  const suppliers = [
-    { name: "Sony Professional", contact_person: "John Smith", email: "sales@sonypro.com", phone: "+1-800-686-7669" },
-    { name: "Canon Imaging", contact_person: "Sarah Johnson", email: "b2b@canon.com", phone: "+1-800-652-2666" },
-    { name: "Blackmagic Design", contact_person: "Mike Chen", email: "sales@blackmagicdesign.com", phone: "+61-3-9682-8888" },
-    { name: "Audio-Technica Corp", contact_person: "Lisa Wang", email: "pro@audio-technica.com", phone: "+1-330-686-2600" },
-    { name: "Aputure Imaging", contact_person: "David Lee", email: "wholesale@aputure.com", phone: "+86-755-8621-9300" },
-  ];
-
-  for (const s of suppliers) {
+  // Seed suppliers — only Nile Hive Concept Co. Ltd
+  // Remove legacy demo suppliers (set their FK refs to NULL first to avoid constraint errors)
+  const demoNames = ["Sony Professional", "Canon Imaging", "Blackmagic Design", "Audio-Technica Corp", "Aputure Imaging"];
+  for (const name of demoNames) {
+    const { rows: [demo] } = await pool.query(`SELECT id FROM suppliers WHERE name = $1`, [name]);
+    if (demo) {
+      await pool.query(`UPDATE purchase_orders       SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
+      await pool.query(`UPDATE goods_received_notes  SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
+      await pool.query(`UPDATE supplier_bills        SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
+      await pool.query(`UPDATE supplier_payments     SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
+      await pool.query(`DELETE FROM suppliers WHERE id = $1`, [demo.id]);
+    }
+  }
+  // Ensure Nile Hive exists
+  const { rows: existing } = await pool.query(`SELECT id FROM suppliers WHERE name = $1`, ["Nile Hive Concept Co. Ltd"]);
+  if (existing.length === 0) {
     await pool.query(
-      `INSERT INTO suppliers (name, contact_person, email, phone) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-      [s.name, s.contact_person, s.email, s.phone]
+      `INSERT INTO suppliers (name, contact_person, email, phone, address) VALUES ($1, $2, $3, $4, $5)`,
+      ["Nile Hive Concept Co. Ltd", "", "", "", ""]
     );
   }
 

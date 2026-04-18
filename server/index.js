@@ -728,6 +728,9 @@ async function migrate() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);
     ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS item_name VARCHAR(255);
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_id INTEGER REFERENCES currencies(id);
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_code VARCHAR(10) DEFAULT 'UGX';
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT 'UGX';
   `);
   console.log("\u2705 Migrations applied");
 }
