@@ -224,23 +224,22 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
 
     let accountingTotal = 0;
     let cashDrawerTotal = 0;
+    let procurementTotal = 0;
 
-    // Try to get accounting expenses
+    // Accounting expenses (journal entries)
     try {
       const accountingExpenses = await pool.query(
         `SELECT COALESCE(SUM(ABS(amount)), 0) as total
          FROM transactions t
          JOIN accounts a ON t.account_id = a.id
-         WHERE a.type = 'expense' 
+         WHERE a.type = 'expense'
            AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      accountingTotal = parseInt(accountingExpenses.rows[0].total);
-    } catch (err) {
-      console.log("Accounting expenses table not available");
-    }
+      accountingTotal = parseInt(accountingExpenses.rows[0].total) || 0;
+    } catch (err) { /* table not available */ }
 
-    // Try to get cash drawer expenses
+    // Cash drawer cash-out
     try {
       const cashDrawerExpenses = await pool.query(
         `SELECT COALESCE(SUM(amount), 0) as total
@@ -249,15 +248,25 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
            AND DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      cashDrawerTotal = parseInt(cashDrawerExpenses.rows[0].total);
-    } catch (err) {
-      console.log("Cash drawer transactions table not available");
-    }
+      cashDrawerTotal = parseInt(cashDrawerExpenses.rows[0].total) || 0;
+    } catch (err) { /* table not available */ }
+
+    // Procurement supplier payments
+    try {
+      const procurementExpenses = await pool.query(
+        `SELECT COALESCE(SUM(amount), 0) as total
+         FROM supplier_payments
+         WHERE DATE(payment_date) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      procurementTotal = parseInt(procurementExpenses.rows[0].total) || 0;
+    } catch (err) { /* table not available */ }
 
     res.json({
       accounting_expenses: accountingTotal,
       cash_drawer_expenses: cashDrawerTotal,
-      total_expenses: accountingTotal + cashDrawerTotal
+      procurement_payments: procurementTotal,
+      total_expenses: accountingTotal + cashDrawerTotal + procurementTotal
     });
   } catch (err) {
     console.error("Error in expenses summary:", err);
@@ -272,13 +281,16 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
     const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
+    const rows = [];
+
+    // Accounting chart-of-accounts expense categories
     try {
-      const { rows } = await pool.query(
-        `SELECT 
+      const { rows: accRows } = await pool.query(
+        `SELECT
           a.code,
           a.name as category_name,
-          COUNT(t.id) as transaction_count,
-          COALESCE(SUM(ABS(t.amount)), 0) as total_amount
+          COUNT(t.id)::int as transaction_count,
+          COALESCE(SUM(ABS(t.amount)), 0)::bigint as total_amount
          FROM accounts a
          LEFT JOIN transactions t ON a.id = t.account_id
            AND DATE(t.transaction_date) BETWEEN $1 AND $2
@@ -288,11 +300,46 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
          ORDER BY total_amount DESC`,
         [startDate, endDate]
       );
-      res.json(rows);
-    } catch (err) {
-      console.log("Accounts/transactions tables not available");
-      res.json([]);
-    }
+      rows.push(...accRows);
+    } catch (err) { /* table not available */ }
+
+    // Procurement supplier payments grouped by supplier
+    try {
+      const { rows: procRows } = await pool.query(
+        `SELECT
+          'PROC' as code,
+          COALESCE(s.name, 'Unknown Supplier') as category_name,
+          COUNT(sp.id)::int as transaction_count,
+          COALESCE(SUM(sp.amount), 0)::bigint as total_amount
+         FROM supplier_payments sp
+         LEFT JOIN suppliers s ON sp.supplier_id = s.id
+         WHERE DATE(sp.payment_date) BETWEEN $1 AND $2
+         GROUP BY s.id, s.name
+         ORDER BY total_amount DESC`,
+        [startDate, endDate]
+      );
+      rows.push(...procRows);
+    } catch (err) { /* table not available */ }
+
+    // Cash drawer cash-out
+    try {
+      const { rows: cdRows } = await pool.query(
+        `SELECT
+          'CASH-OUT' as code,
+          COALESCE(reason, 'Cash Expense') as category_name,
+          COUNT(id)::int as transaction_count,
+          COALESCE(SUM(amount), 0)::bigint as total_amount
+         FROM cash_drawer_transactions
+         WHERE type = 'cash_out'
+           AND DATE(created_at) BETWEEN $1 AND $2
+         GROUP BY reason
+         ORDER BY total_amount DESC`,
+        [startDate, endDate]
+      );
+      rows.push(...cdRows);
+    } catch (err) { /* table not available */ }
+
+    res.json(rows);
   } catch (err) {
     console.error("Error in expenses by category:", err);
     res.status(500).json({ error: "Server error" });
@@ -809,6 +856,102 @@ router.get("/invoices/collections", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ============ INCOME STATEMENT ============
+
+router.get("/income-statement", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    // ── REVENUE ──────────────────────────────────────────────────────────
+    let posRevenue = 0, invoiceRevenue = 0, webRevenue = 0;
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(total_amount),0)::bigint as total FROM pos_sales
+         WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false`,
+        [startDate, endDate]
+      );
+      posRevenue = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM invoice_payments
+         WHERE DATE(created_at) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      invoiceRevenue = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(total),0)::bigint as total FROM customer_orders
+         WHERE DATE(created_at) BETWEEN $1 AND $2 AND status != 'cancelled'`,
+        [startDate, endDate]
+      );
+      webRevenue = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    // ── EXPENSES ─────────────────────────────────────────────────────────
+    let procurementExpenses = 0, cashDrawerExpenses = 0, accountingExpenses = 0;
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM supplier_payments
+         WHERE DATE(payment_date) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      procurementExpenses = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM cash_drawer_transactions
+         WHERE type = 'cash_out' AND DATE(created_at) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      cashDrawerExpenses = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(ABS(t.amount)),0)::bigint as total
+         FROM transactions t JOIN accounts a ON t.account_id = a.id
+         WHERE a.type = 'expense' AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
+        [startDate, endDate]
+      );
+      accountingExpenses = parseInt(rows[0].total) || 0;
+    } catch (e) {}
+
+    const totalRevenue  = posRevenue + invoiceRevenue + webRevenue;
+    const totalExpenses = procurementExpenses + cashDrawerExpenses + accountingExpenses;
+    const netIncome     = totalRevenue - totalExpenses;
+
+    res.json({
+      start_date: startDate,
+      end_date:   endDate,
+      revenue: [
+        { label: 'POS Sales',            amount: posRevenue },
+        { label: 'Invoice Collections',  amount: invoiceRevenue },
+        { label: 'Website Orders',       amount: webRevenue },
+      ].filter(r => r.amount > 0),
+      total_revenue: totalRevenue,
+      expenses: [
+        { label: 'Procurement Payments', amount: procurementExpenses },
+        { label: 'Cash Drawer Expenses', amount: cashDrawerExpenses },
+        { label: 'Accounting Expenses',  amount: accountingExpenses },
+      ].filter(e => e.amount > 0),
+      total_expenses: totalExpenses,
+      net_income: netIncome,
+    });
+  } catch (err) {
+    console.error("Error in income statement:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

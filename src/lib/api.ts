@@ -430,7 +430,18 @@ export type SalesComparisonReport = {
 export type ExpensesSummaryReport = {
   accounting_expenses: number;
   cash_drawer_expenses: number;
+  procurement_payments: number;
   total_expenses: number;
+};
+
+export type IncomeStatementReport = {
+  start_date: string;
+  end_date: string;
+  revenue: { label: string; amount: number }[];
+  total_revenue: number;
+  expenses: { label: string; amount: number }[];
+  total_expenses: number;
+  net_income: number;
 };
 
 export type ExpensesByCategoryReport = {
@@ -1087,6 +1098,8 @@ export const api = {
         return request<any[]>(`/api/reports/sales/by-scheme?${params}`);
       },
     },
+    incomeStatement: (startDate: string, endDate: string) =>
+      request<IncomeStatementReport>(`/api/reports/income-statement?start_date=${startDate}&end_date=${endDate}`),
     expenses: {
       summary: (startDate?: string, endDate?: string) => {
         const params = new URLSearchParams();

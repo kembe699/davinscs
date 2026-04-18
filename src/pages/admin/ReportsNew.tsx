@@ -10,7 +10,7 @@ import ReportTable from "@/components/ReportTable";
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics" | "invoices";
 type ReportType = 
   | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-comparison" | "sales-by-scheme"
-  | "expenses-summary" | "expenses-by-category" | "cash-drawer-expenses"
+  | "income-statement" | "expenses-summary" | "expenses-by-category" | "cash-drawer-expenses"
   | "stock-movement" | "expiring-products" | "expired-products" | "low-stock" | "out-of-stock"
   | "trending-products" | "pos-vs-web"
   | "invoices-overview" | "invoices-all" | "invoices-overdue" | "invoices-partial" | "invoices-collections";
@@ -147,7 +147,10 @@ export default function ReportsNew() {
           data = await api.reports.sales.byScheme(startDate, endDate, filterSchemeId);
           break;
         
-        // Expenses Reports
+        // Expenses / P&L Reports
+        case "income-statement":
+          data = await api.reports.incomeStatement(startDate, endDate);
+          break;
         case "expenses-summary":
           data = await api.reports.expenses.summary(startDate, endDate);
           break;
@@ -245,6 +248,10 @@ export default function ReportsNew() {
         { header: "Orders", dataKey: "orders" },
         { header: "Revenue", dataKey: "revenue" },
         { header: "Avg Order", dataKey: "avg_order" }
+      ],
+      "income-statement": [
+        { header: "Line Item", dataKey: "label" },
+        { header: "Amount", dataKey: "amount" }
       ],
       "expenses-summary": [
         { header: "Category", dataKey: "category" },
@@ -383,9 +390,25 @@ export default function ReportsNew() {
       ];
     }
 
+    // Handle income statement
+    if (selectedReport === "income-statement" && reportData && !Array.isArray(reportData)) {
+      const rows: any[] = [];
+      rows.push({ label: '── REVENUE ──', amount: '' });
+      (reportData.revenue || []).forEach((r: any) => rows.push({ label: r.label, amount: r.amount }));
+      rows.push({ label: 'Total Revenue', amount: reportData.total_revenue });
+      rows.push({ label: '', amount: '' });
+      rows.push({ label: '── EXPENSES ──', amount: '' });
+      (reportData.expenses || []).forEach((e: any) => rows.push({ label: e.label, amount: e.amount }));
+      rows.push({ label: 'Total Expenses', amount: reportData.total_expenses });
+      rows.push({ label: '', amount: '' });
+      rows.push({ label: 'NET INCOME', amount: reportData.net_income });
+      return rows;
+    }
+
     // Handle expenses summary
     if (selectedReport === "expenses-summary" && !Array.isArray(reportData)) {
       return [
+        { category: "Procurement Payments", amount: reportData.procurement_payments },
         { category: "Accounting Expenses", amount: reportData.accounting_expenses },
         { category: "Cash Drawer Expenses", amount: reportData.cash_drawer_expenses },
         { category: "Total Expenses", amount: reportData.total_expenses }
@@ -476,9 +499,10 @@ export default function ReportsNew() {
       id: "expenses" as ReportCategory,
       name: "Expenses",
       reports: [
-        { id: "expenses-summary", name: "Expenses summary" },
-        { id: "expenses-by-category", name: "Expenses by category" },
-        { id: "cash-drawer-expenses", name: "Cash drawer expenses" },
+        { id: "income-statement",    name: "Income Statement (P&L)" },
+        { id: "expenses-summary",    name: "Expenses summary" },
+        { id: "expenses-by-category",name: "Expenses by category" },
+        { id: "cash-drawer-expenses",name: "Cash drawer expenses" },
       ]
     },
     {
@@ -875,26 +899,81 @@ export default function ReportsNew() {
                   </div>
                 )}
 
+                {/* Income Statement (P&L) */}
+                {selectedReport === "income-statement" && reportData && !Array.isArray(reportData) && (
+                  <div className="max-w-2xl mx-auto">
+                    {/* Revenue */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-gray-800 pb-1 mb-3">Revenue</h3>
+                      {(reportData.revenue || []).map((r: any, i: number) => (
+                        <div key={i} className="flex justify-between py-1.5 text-sm border-b border-gray-100">
+                          <span className="text-gray-700">{r.label}</span>
+                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(r.amount, baseCurrency?.symbol || 'UGX', false)}</span>
+                        </div>
+                      ))}
+                      {(reportData.revenue || []).length === 0 && (
+                        <p className="text-sm text-gray-400 italic py-2">No revenue recorded in this period</p>
+                      )}
+                      <div className="flex justify-between py-2 border-t-2 border-gray-800 mt-1 font-bold">
+                        <span className="text-gray-900">Total Revenue</span>
+                        <span className="font-mono text-green-700">{formatCurrencySync(reportData.total_revenue, baseCurrency?.symbol || 'UGX', false)}</span>
+                      </div>
+                    </div>
+
+                    {/* Expenses */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-gray-800 pb-1 mb-3">Expenses</h3>
+                      {(reportData.expenses || []).map((e: any, i: number) => (
+                        <div key={i} className="flex justify-between py-1.5 text-sm border-b border-gray-100">
+                          <span className="text-gray-700">{e.label}</span>
+                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(e.amount, baseCurrency?.symbol || 'UGX', false)}</span>
+                        </div>
+                      ))}
+                      {(reportData.expenses || []).length === 0 && (
+                        <p className="text-sm text-gray-400 italic py-2">No expenses recorded in this period</p>
+                      )}
+                      <div className="flex justify-between py-2 border-t-2 border-gray-800 mt-1 font-bold">
+                        <span className="text-gray-900">Total Expenses</span>
+                        <span className="font-mono text-red-600">{formatCurrencySync(reportData.total_expenses, baseCurrency?.symbol || 'UGX', false)}</span>
+                      </div>
+                    </div>
+
+                    {/* Net Income */}
+                    <div className={`flex justify-between py-4 px-4 border-2 text-lg font-bold ${
+                      reportData.net_income >= 0 ? 'border-green-600 bg-green-50 text-green-800' : 'border-red-500 bg-red-50 text-red-800'
+                    }`}>
+                      <span>{reportData.net_income >= 0 ? 'Net Income (Profit)' : 'Net Loss'}</span>
+                      <span className="font-mono">{formatCurrencySync(Math.abs(reportData.net_income), baseCurrency?.symbol || 'UGX', false)}</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Expenses Summary */}
                 {selectedReport === "expenses-summary" && reportData && !Array.isArray(reportData) && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="border border-admin-border p-4">
+                        <p className="text-xs text-admin-text-secondary mb-2">Procurement Payments</p>
+                        <p className="text-xl font-bold font-mono text-admin-text">
+                          {formatCurrencySync(parseInt(reportData.procurement_payments) || 0, baseCurrency?.symbol || 'UGX', false)}
+                        </p>
+                      </div>
                       <div className="border border-admin-border p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Accounting Expenses</p>
-                        <p className="text-2xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.accounting_expenses), baseCurrency?.symbol || 'UGX', false)}
+                        <p className="text-xl font-bold font-mono text-admin-text">
+                          {formatCurrencySync(parseInt(reportData.accounting_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
                         </p>
                       </div>
                       <div className="border border-admin-border p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Cash Drawer Expenses</p>
-                        <p className="text-2xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.cash_drawer_expenses), baseCurrency?.symbol || 'UGX', false)}
+                        <p className="text-xl font-bold font-mono text-admin-text">
+                          {formatCurrencySync(parseInt(reportData.cash_drawer_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
                         </p>
                       </div>
                       <div className="border border-admin-text bg-admin-text/5 p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Total Expenses</p>
-                        <p className="text-2xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.total_expenses), baseCurrency?.symbol || 'UGX', false)}
+                        <p className="text-xl font-bold font-mono text-admin-text">
+                          {formatCurrencySync(parseInt(reportData.total_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
                         </p>
                       </div>
                     </div>
