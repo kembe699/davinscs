@@ -643,12 +643,14 @@ export const api = {
   },
   users: {
     list: () => request<ApiUser[]>("/api/users"),
-    create: (email: string, password: string) =>
-      request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password }) }),
+    create: (email: string, password: string, role_id?: number | null) =>
+      request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password, role_id }) }),
     update: (id: number, email: string, password?: string) =>
       request<ApiUser>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify({ email, password: password || undefined }) }),
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/users/${id}`, { method: "DELETE" }),
+    assignRole: (id: number, role_id: number | null) =>
+      request<ApiUser>(`/api/users/${id}/role`, { method: "PUT", body: JSON.stringify({ role_id }) }),
   },
   auth: {
     login: (email: string, password: string) =>
@@ -1159,6 +1161,18 @@ export const api = {
         return request<any[]>(`/api/reports/invoices/collections?${p}`);
       },
     },
+  },
+  roles: {
+    list: () => request<any[]>('/api/roles'),
+    get: (id: number) => request<any>(`/api/roles/${id}`),
+    create: (data: { name: string; description?: string }) =>
+      request<any>('/api/roles', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: { name: string; description?: string }) =>
+      request<any>(`/api/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    setPermissions: (id: number, permission_ids: number[]) =>
+      request<any>(`/api/roles/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permission_ids }) }),
+    delete: (id: number) => request<any>(`/api/roles/${id}`, { method: 'DELETE' }),
+    listPermissions: () => request<any[]>('/api/roles/permissions'),
   },
   invoices: {
     list: (params?: { status?: string; search?: string; start_date?: string; end_date?: string }) => {

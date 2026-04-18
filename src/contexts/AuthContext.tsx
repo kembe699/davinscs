@@ -1,20 +1,24 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
-type User = { id: number; email: string; role: string };
+export type User = { id: number; email: string; role: string; role_id?: number | null; role_name?: string | null; permissions?: string[] };
 type AuthCtx = {
   user: User | null;
   token: string | null;
+  permissions: string[];
   login: (token: string, user: User) => void;
   logout: () => void;
   isAdmin: boolean;
+  hasPermission: (key: string) => boolean;
 };
 
 const AuthContext = createContext<AuthCtx>({
   user: null,
   token: null,
+  permissions: [],
   login: () => {},
   logout: () => {},
   isAdmin: false,
+  hasPermission: () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -23,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const u = localStorage.getItem("cms_user");
     return u ? JSON.parse(u) : null;
   });
+
+  const permissions: string[] = user?.permissions ?? [];
 
   const login = (t: string, u: User) => {
     localStorage.setItem("cms_token", t);
@@ -38,8 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const isAdmin = user?.role === "admin";
+  // Legacy admins (no role_id) or users with all permissions are full admins
+  const hasPermission = (key: string) =>
+    isAdmin && !user?.role_id ? true : permissions.includes(key);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAdmin: user?.role === "admin" }}>
+    <AuthContext.Provider value={{ user, token, permissions, login, logout, isAdmin, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

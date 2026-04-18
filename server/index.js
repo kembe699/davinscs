@@ -35,6 +35,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import exchangeRatesRoutes from "./routes/exchangeRates.js";
 import reportsRoutes from "./routes/reports.js";
 import invoicesRoutes from "./routes/invoices.js";
+import rolesRoutes from "./routes/roles.js";
 
 dotenv.config();
 
@@ -94,6 +95,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/exchange-rates", exchangeRatesRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/invoices", invoicesRoutes);
+app.use("/api/roles", rolesRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -700,6 +702,31 @@ async function migrate() {
       recorded_by INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- Roles & Permissions
+    CREATE TABLE IF NOT EXISTS roles (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) UNIQUE NOT NULL,
+      description TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS permissions (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) UNIQUE NOT NULL,
+      name VARCHAR(200) NOT NULL,
+      description TEXT,
+      group_name VARCHAR(100) DEFAULT 'General',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+      permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
+      PRIMARY KEY (role_id, permission_id)
+    );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);
   `);
   console.log("\u2705 Migrations applied");
 }

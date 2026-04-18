@@ -1,30 +1,30 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt, Shield } from "lucide-react";
 
-const navItems = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "POS", href: "/pos", icon: Monitor },
-  { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
-  { label: "Products", href: "/admin/products", icon: Package },
-  { label: "Categories", href: "/admin/categories", icon: Layers },
-  { label: "Inventory", href: "/admin/inventory", icon: PackageCheck },
-  { label: "Procurement", href: "/admin/procurement", icon: ShoppingCart },
-  { label: "Accounting", href: "/admin/accounting", icon: DollarSign },
-  { label: "Currencies", href: "/admin/currencies", icon: Globe },
-  { label: "Invoices", href: "/admin/invoices", icon: Receipt },
-  { label: "Reports", href: "/admin/reports", icon: FileText },
-  { label: "Payment Types", href: "/admin/payment-types", icon: CreditCard },
-  { label: "Tax Rates", href: "/admin/tax-rates", icon: Percent },
-  { label: "Price Lists", href: "/admin/price-lists", icon: Tag },
-  { label: "Promotions", href: "/admin/promotions", icon: Tag },
-  { label: "My Company", href: "/admin/company", icon: Building },
-  { label: "Users", href: "/admin/users", icon: Users },
+const allNavItems = [
+  { label: "Dashboard",    href: "/admin",                icon: LayoutDashboard, permission: "dashboard.view" },
+  { label: "POS",          href: "/pos",                  icon: Monitor,         permission: "pos.access" },
+  { label: "Orders",       href: "/admin/orders",         icon: ShoppingBag,     permission: "orders.view" },
+  { label: "Products",     href: "/admin/products",       icon: Package,         permission: "products.view" },
+  { label: "Categories",   href: "/admin/categories",     icon: Layers,          permission: "categories.view" },
+  { label: "Inventory",    href: "/admin/inventory",      icon: PackageCheck,    permission: "inventory.view" },
+  { label: "Procurement",  href: "/admin/procurement",    icon: ShoppingCart,    permission: "procurement.view" },
+  { label: "Accounting",   href: "/admin/accounting",     icon: DollarSign,      permission: "accounting.view" },
+  { label: "Currencies",   href: "/admin/currencies",     icon: Globe,           permission: "currencies.view" },
+  { label: "Invoices",     href: "/admin/invoices",       icon: Receipt,         permission: "invoices.view" },
+  { label: "Reports",      href: "/admin/reports",        icon: FileText,        permission: "reports.view" },
+  { label: "Payment Types",href: "/admin/payment-types",  icon: CreditCard,      permission: "payment_types.view" },
+  { label: "Tax Rates",    href: "/admin/tax-rates",      icon: Percent,         permission: "tax_rates.view" },
+  { label: "Price Lists",  href: "/admin/price-lists",    icon: Tag,             permission: "price_lists.view" },
+  { label: "Promotions",   href: "/admin/promotions",     icon: Tag,             permission: "promotions.view" },
+  { label: "My Company",   href: "/admin/company",        icon: Building,        permission: "company.view" },
+  { label: "Users",        href: "/admin/users",          icon: Users,           permission: "users.view" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,6 +32,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     logout();
     navigate("/admin/login");
   };
+
+  const navItems = allNavItems.filter(item => hasPermission(item.permission));
 
   return (
     <div className="min-h-screen bg-admin-bg flex">
@@ -41,7 +43,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Link to="/">
             <img src="/logo.jpeg" alt="Davin's" className="h-10 object-contain" />
           </Link>
-          <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase mt-2">ADMIN PANEL</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">ADMIN PANEL</p>
+            {user?.role_name && (
+              <span className="flex items-center gap-1 text-[8px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
+                <Shield size={8} />{user.role_name}
+              </span>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">

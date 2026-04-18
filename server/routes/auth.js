@@ -20,12 +20,35 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
+    // Load permissions for this user's role
+    let permissions = [];
+    let roleName = null;
+    if (user.role_id) {
+      const { rows: permRows } = await pool.query(
+        `SELECT p.key FROM permissions p
+         JOIN role_permissions rp ON rp.permission_id = p.id
+         WHERE rp.role_id = $1`,
+        [user.role_id]
+      );
+      permissions = permRows.map(r => r.key);
+      const { rows: roleRow } = await pool.query("SELECT name FROM roles WHERE id = $1", [user.role_id]);
+      roleName = roleRow[0]?.name || null;
+    } else if (user.role === "admin") {
+      // Legacy admin users without role_id get all permissions
+      const { rows: allPerms } = await pool.query("SELECT key FROM permissions");
+      permissions = allPerms.map(r => r.key);
+      roleName = "Admin";
+    }
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, role_id: user.role_id, permissions },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
