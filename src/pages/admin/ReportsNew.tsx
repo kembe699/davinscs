@@ -7,12 +7,13 @@ import { formatCurrencySync } from "@/utils/currency";
 import { exportToExcel, exportToPDF, printReport, CompanyInfo } from "@/utils/reportExports";
 import ReportTable from "@/components/ReportTable";
 
-type ReportCategory = "sales" | "expenses" | "inventory" | "analytics";
+type ReportCategory = "sales" | "expenses" | "inventory" | "analytics" | "invoices";
 type ReportType = 
   | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-comparison" | "sales-by-scheme"
   | "expenses-summary" | "expenses-by-category" | "cash-drawer-expenses"
   | "stock-movement" | "expiring-products" | "expired-products" | "low-stock" | "out-of-stock"
-  | "trending-products" | "pos-vs-web";
+  | "trending-products" | "pos-vs-web"
+  | "invoices-overview" | "invoices-all" | "invoices-overdue" | "invoices-partial" | "invoices-collections";
 
 type DatePreset = "today" | "yesterday" | "this-week" | "last-week" | "this-month" | "last-month" | "this-year" | "custom";
 
@@ -181,6 +182,23 @@ export default function ReportsNew() {
         case "pos-vs-web":
           data = await api.reports.trending.posVsWeb(startDate, endDate);
           break;
+
+        // Invoice Reports
+        case "invoices-overview":
+          data = await api.reports.invoiceReports.overview(startDate, endDate);
+          break;
+        case "invoices-all":
+          data = await api.reports.invoiceReports.all(startDate, endDate);
+          break;
+        case "invoices-overdue":
+          data = await api.reports.invoiceReports.overdue();
+          break;
+        case "invoices-partial":
+          data = await api.reports.invoiceReports.partial(startDate, endDate);
+          break;
+        case "invoices-collections":
+          data = await api.reports.invoiceReports.collections(startDate, endDate);
+          break;
       }
 
       setReportData(data);
@@ -302,6 +320,51 @@ export default function ReportsNew() {
         { header: "Tax", dataKey: "total_tax" },
         { header: "Discounts", dataKey: "total_discounts" },
         { header: "Avg Sale", dataKey: "average_sale" }
+      ],
+      "invoices-overview": [
+        { header: "Status", dataKey: "status" },
+        { header: "Count", dataKey: "invoice_count" },
+        { header: "Total Billed", dataKey: "total_billed" },
+        { header: "Total Paid", dataKey: "total_paid" },
+        { header: "Outstanding", dataKey: "total_outstanding" }
+      ],
+      "invoices-all": [
+        { header: "Invoice #", dataKey: "invoice_number" },
+        { header: "Customer", dataKey: "customer_name" },
+        { header: "Phone", dataKey: "customer_phone" },
+        { header: "Date", dataKey: "date" },
+        { header: "Due Date", dataKey: "due_date" },
+        { header: "Total", dataKey: "total_amount" },
+        { header: "Paid", dataKey: "paid_amount" },
+        { header: "Balance", dataKey: "balance_due" },
+        { header: "Status", dataKey: "status" }
+      ],
+      "invoices-overdue": [
+        { header: "Invoice #", dataKey: "invoice_number" },
+        { header: "Customer", dataKey: "customer_name" },
+        { header: "Phone", dataKey: "customer_phone" },
+        { header: "Due Date", dataKey: "due_date" },
+        { header: "Days Overdue", dataKey: "days_overdue" },
+        { header: "Total", dataKey: "total_amount" },
+        { header: "Balance", dataKey: "balance_due" },
+        { header: "Status", dataKey: "status" }
+      ],
+      "invoices-partial": [
+        { header: "Invoice #", dataKey: "invoice_number" },
+        { header: "Customer", dataKey: "customer_name" },
+        { header: "Date", dataKey: "date" },
+        { header: "Total", dataKey: "total_amount" },
+        { header: "Paid", dataKey: "paid_amount" },
+        { header: "Balance", dataKey: "balance_due" },
+        { header: "% Paid", dataKey: "payment_pct" }
+      ],
+      "invoices-collections": [
+        { header: "Date", dataKey: "payment_date" },
+        { header: "Invoice #", dataKey: "invoice_number" },
+        { header: "Customer", dataKey: "customer_name" },
+        { header: "Method", dataKey: "payment_method" },
+        { header: "Amount", dataKey: "amount" },
+        { header: "Notes", dataKey: "notes" }
       ]
     };
 
@@ -435,6 +498,17 @@ export default function ReportsNew() {
       reports: [
         { id: "trending-products", name: "Trending products" },
         { id: "pos-vs-web", name: "POS vs Website comparison" },
+      ]
+    },
+    {
+      id: "invoices" as ReportCategory,
+      name: "Invoices",
+      reports: [
+        { id: "invoices-overview",     name: "Invoices overview" },
+        { id: "invoices-all",          name: "All invoices" },
+        { id: "invoices-overdue",      name: "Overdue invoices" },
+        { id: "invoices-partial",      name: "Partially paid" },
+        { id: "invoices-collections",  name: "Payment collections" },
       ]
     }
   ];
@@ -960,6 +1034,129 @@ export default function ReportsNew() {
                     ]}
                     data={reportData.map((row: any) => ({ ...row, total_revenue: parseInt(row.pos_revenue) + parseInt(row.web_revenue) }))}
                     totalsExclude={['date']}
+                  />
+                )}
+
+                {/* ===== INVOICE REPORTS ===== */}
+
+                {/* Invoice Overview */}
+                {selectedReport === "invoices-overview" && reportData && !Array.isArray(reportData) && (
+                  <div className="space-y-6">
+                    {/* KPI cards */}
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                      {[
+                        { label: "Total Invoices", value: reportData.totals?.total_invoices ?? 0, mono: false },
+                        { label: "Total Billed", value: formatCurrencySync(parseInt(reportData.totals?.total_billed || 0), baseCurrency?.symbol || 'UGX', false), mono: true },
+                        { label: "Total Collected", value: formatCurrencySync(parseInt(reportData.totals?.total_collected || 0), baseCurrency?.symbol || 'UGX', false), mono: true, green: true },
+                        { label: "Outstanding", value: formatCurrencySync(parseInt(reportData.totals?.total_outstanding || 0), baseCurrency?.symbol || 'UGX', false), mono: true, red: true },
+                      ].map(k => (
+                        <div key={k.label} className={`border p-4 ${k.green ? 'border-green-400 bg-green-50' : k.red ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                          <p className="text-xs text-gray-500 mb-1">{k.label}</p>
+                          <p className={`text-xl font-bold ${k.mono ? 'font-mono' : ''} ${k.green ? 'text-green-700' : k.red ? 'text-red-700' : 'text-gray-900'}`}>{k.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Status counts */}
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { label: "Paid", val: reportData.totals?.paid_count, color: 'text-green-700', bg: 'bg-green-50 border-green-300' },
+                        { label: "Unpaid", val: reportData.totals?.unpaid_count, color: 'text-red-700', bg: 'bg-red-50 border-red-300' },
+                        { label: "Partial", val: reportData.totals?.partial_count, color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-300' },
+                        { label: "Overdue", val: reportData.totals?.actually_overdue, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-300' },
+                      ].map(s => (
+                        <div key={s.label} className={`border p-3 ${s.bg}`}>
+                          <p className="text-xs text-gray-500">{s.label}</p>
+                          <p className={`text-2xl font-bold ${s.color}`}>{s.val ?? 0}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* By-status breakdown table */}
+                    {Array.isArray(reportData.byStatus) && reportData.byStatus.length > 0 && (
+                      <ReportTable
+                        columns={[
+                          { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
+                          { header: 'Count', accessor: 'invoice_count', align: 'right' },
+                          { header: 'Total Billed', accessor: 'total_billed', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                          { header: 'Total Paid', accessor: 'total_paid', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                          { header: 'Outstanding', accessor: 'total_outstanding', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                        ]}
+                        data={reportData.byStatus}
+                        totalsExclude={['status']}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* All Invoices */}
+                {selectedReport === "invoices-all" && Array.isArray(reportData) && (
+                  <ReportTable
+                    columns={[
+                      { header: 'Invoice #', accessor: 'invoice_number' },
+                      { header: 'Customer', accessor: 'customer_name' },
+                      { header: 'Phone', accessor: 'customer_phone' },
+                      { header: 'Date', accessor: 'date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
+                    ]}
+                    data={reportData}
+                    totalsExclude={['invoice_number','customer_name','customer_phone','date','due_date','status']}
+                  />
+                )}
+
+                {/* Overdue Invoices */}
+                {selectedReport === "invoices-overdue" && Array.isArray(reportData) && (
+                  <ReportTable
+                    columns={[
+                      { header: 'Invoice #', accessor: 'invoice_number' },
+                      { header: 'Customer', accessor: 'customer_name' },
+                      { header: 'Phone', accessor: 'customer_phone' },
+                      { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Days Overdue', accessor: 'days_overdue', align: 'right', format: (v) => `${v} days` },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Balance Due', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
+                    ]}
+                    data={reportData}
+                    totalsExclude={['invoice_number','customer_name','customer_phone','due_date','days_overdue','status']}
+                  />
+                )}
+
+                {/* Partially Paid */}
+                {selectedReport === "invoices-partial" && Array.isArray(reportData) && (
+                  <ReportTable
+                    columns={[
+                      { header: 'Invoice #', accessor: 'invoice_number' },
+                      { header: 'Customer', accessor: 'customer_name' },
+                      { header: 'Phone', accessor: 'customer_phone' },
+                      { header: 'Date', accessor: 'date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: '% Paid', accessor: 'payment_pct', align: 'right', format: (v) => `${v}%` },
+                    ]}
+                    data={reportData}
+                    totalsExclude={['invoice_number','customer_name','customer_phone','date','due_date','payment_pct']}
+                  />
+                )}
+
+                {/* Payment Collections */}
+                {selectedReport === "invoices-collections" && Array.isArray(reportData) && (
+                  <ReportTable
+                    columns={[
+                      { header: 'Date', accessor: 'payment_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+                      { header: 'Invoice #', accessor: 'invoice_number' },
+                      { header: 'Customer', accessor: 'customer_name' },
+                      { header: 'Method', accessor: 'payment_method' },
+                      { header: 'Amount', accessor: 'amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Notes', accessor: 'notes' },
+                    ]}
+                    data={reportData}
+                    totalsExclude={['payment_date','invoice_number','customer_name','payment_method','notes']}
                   />
                 )}
 

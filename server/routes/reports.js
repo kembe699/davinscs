@@ -649,4 +649,168 @@ router.get("/trending/pos-vs-web", requireAuth, async (req, res) => {
   }
 });
 
+// ============ INVOICE REPORTS ============
+
+// Invoice Overview — status-grouped summary
+router.get("/invoices/overview", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || '2000-01-01';
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    const { rows: byStatus } = await pool.query(
+      `SELECT
+         status,
+         COUNT(*)::int                              AS invoice_count,
+         COALESCE(SUM(total_amount), 0)::bigint     AS total_billed,
+         COALESCE(SUM(paid_amount), 0)::bigint      AS total_paid,
+         COALESCE(SUM(total_amount - paid_amount), 0)::bigint AS total_outstanding
+       FROM invoices
+       WHERE DATE(created_at) BETWEEN $1 AND $2
+       GROUP BY status
+       ORDER BY status`,
+      [startDate, endDate]
+    );
+
+    const { rows: totals } = await pool.query(
+      `SELECT
+         COUNT(*)::int                              AS total_invoices,
+         COALESCE(SUM(total_amount), 0)::bigint     AS total_billed,
+         COALESCE(SUM(paid_amount), 0)::bigint      AS total_collected,
+         COALESCE(SUM(total_amount - paid_amount), 0)::bigint AS total_outstanding,
+         COUNT(*) FILTER (WHERE status = 'paid')::int    AS paid_count,
+         COUNT(*) FILTER (WHERE status = 'unpaid')::int  AS unpaid_count,
+         COUNT(*) FILTER (WHERE status = 'partial')::int AS partial_count,
+         COUNT(*) FILTER (WHERE status = 'overdue')::int AS overdue_count,
+         COUNT(*) FILTER (WHERE status IN ('unpaid','partial') AND due_date < CURRENT_DATE)::int AS actually_overdue
+       FROM invoices
+       WHERE DATE(created_at) BETWEEN $1 AND $2`,
+      [startDate, endDate]
+    );
+
+    res.json({ byStatus: byStatus, totals: totals[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// All invoices list (date-filtered)
+router.get("/invoices/all", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || '2000-01-01';
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    const { rows } = await pool.query(
+      `SELECT
+         invoice_number,
+         customer_name,
+         COALESCE(customer_phone, '') AS customer_phone,
+         DATE(created_at)             AS date,
+         due_date,
+         total_amount,
+         paid_amount,
+         (total_amount - paid_amount) AS balance_due,
+         status
+       FROM invoices
+       WHERE DATE(created_at) BETWEEN $1 AND $2
+       ORDER BY created_at DESC`,
+      [startDate, endDate]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Overdue invoices (past due date, not fully paid)
+router.get("/invoices/overdue", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         invoice_number,
+         customer_name,
+         COALESCE(customer_phone, '') AS customer_phone,
+         DATE(created_at)             AS date,
+         due_date,
+         total_amount,
+         paid_amount,
+         (total_amount - paid_amount) AS balance_due,
+         EXTRACT(DAY FROM NOW() - due_date)::int AS days_overdue,
+         status
+       FROM invoices
+       WHERE status IN ('unpaid','partial')
+         AND due_date IS NOT NULL
+         AND due_date < CURRENT_DATE
+       ORDER BY due_date ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Partially paid invoices
+router.get("/invoices/partial", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || '2000-01-01';
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    const { rows } = await pool.query(
+      `SELECT
+         invoice_number,
+         customer_name,
+         COALESCE(customer_phone, '') AS customer_phone,
+         DATE(created_at)             AS date,
+         due_date,
+         total_amount,
+         paid_amount,
+         (total_amount - paid_amount) AS balance_due,
+         ROUND(paid_amount::numeric / NULLIF(total_amount,0) * 100, 1) AS payment_pct,
+         status
+       FROM invoices
+       WHERE status = 'partial'
+         AND DATE(created_at) BETWEEN $1 AND $2
+       ORDER BY created_at DESC`,
+      [startDate, endDate]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Invoice payment collections
+router.get("/invoices/collections", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || '2000-01-01';
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    const { rows } = await pool.query(
+      `SELECT
+         DATE(ip.created_at)  AS payment_date,
+         i.invoice_number,
+         i.customer_name,
+         ip.payment_method,
+         ip.amount,
+         COALESCE(ip.notes,'') AS notes
+       FROM invoice_payments ip
+       JOIN invoices i ON ip.invoice_id = i.id
+       WHERE DATE(ip.created_at) BETWEEN $1 AND $2
+       ORDER BY ip.created_at DESC`,
+      [startDate, endDate]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

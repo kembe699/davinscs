@@ -1132,6 +1132,33 @@ export const api = {
         return request<POSvsWebReport[]>(`/api/reports/trending/pos-vs-web?${params}`);
       },
     },
+    invoiceReports: {
+      overview: (startDate?: string, endDate?: string) => {
+        const p = new URLSearchParams();
+        if (startDate) p.append('start_date', startDate);
+        if (endDate) p.append('end_date', endDate);
+        return request<any>(`/api/reports/invoices/overview?${p}`);
+      },
+      all: (startDate?: string, endDate?: string) => {
+        const p = new URLSearchParams();
+        if (startDate) p.append('start_date', startDate);
+        if (endDate) p.append('end_date', endDate);
+        return request<any[]>(`/api/reports/invoices/all?${p}`);
+      },
+      overdue: () => request<any[]>('/api/reports/invoices/overdue'),
+      partial: (startDate?: string, endDate?: string) => {
+        const p = new URLSearchParams();
+        if (startDate) p.append('start_date', startDate);
+        if (endDate) p.append('end_date', endDate);
+        return request<any[]>(`/api/reports/invoices/partial?${p}`);
+      },
+      collections: (startDate?: string, endDate?: string) => {
+        const p = new URLSearchParams();
+        if (startDate) p.append('start_date', startDate);
+        if (endDate) p.append('end_date', endDate);
+        return request<any[]>(`/api/reports/invoices/collections?${p}`);
+      },
+    },
   },
   invoices: {
     list: (params?: { status?: string; search?: string; start_date?: string; end_date?: string }) => {
