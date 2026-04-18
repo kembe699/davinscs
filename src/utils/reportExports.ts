@@ -1,6 +1,4 @@
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export interface CompanyInfo {
   name: string;
@@ -97,232 +95,147 @@ export const exportToExcel = (options: ReportExportOptions) => {
   XLSX.writeFile(wb, filename);
 };
 
-// Export to PDF
+// Export to PDF — uses browser-native print-to-PDF so page size is always true A4
 export const exportToPDF = (options: ReportExportOptions) => {
-  const { reportTitle, dateRange, companyInfo, data, columns, currency = 'UGX' } = options;
+  const { reportTitle, dateRange, companyInfo, data, columns } = options;
 
-  // Create PDF document — explicit A4 portrait (210 × 297 mm)
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [210, 297],
-  });
+  const pdfWindow = window.open('', '_blank');
+  if (!pdfWindow) {
+    alert('Please allow pop-ups to export PDF reports');
+    return;
+  }
 
-  // Set PDF metadata
-  doc.setProperties({
-    title: reportTitle,
-    subject: `${reportTitle} - ${dateRange}`,
-    author: companyInfo.name,
-    keywords: 'report, sales, business',
-    creator: companyInfo.name
-  });
+  const tableRows = data.length > 0 ? `
+    <table>
+      <thead>
+        <tr>${columns.map(col => `<th>${col.header}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${data.map((row, ri) => `
+          <tr class="${ri % 2 === 0 ? '' : 'alt'}">
+            ${columns.map((col, ci) => {
+              const val = row[col.dataKey];
+              const isNum = ci > 0 && (
+                typeof val === 'number' ||
+                (typeof val === 'string' && /^[\d,.\s]+$/.test(val.trim()))
+              );
+              return `<td class="${isNum ? 'num' : ''}">${val ?? ''}</td>`;
+            }).join('')}
+          </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr>
+          ${columns.map((col, idx) => {
+            if (idx === 0) return '<td>TOTAL</td>';
+            const vals = data.map(r => parseFloat(String(r[col.dataKey]).replace(/[^0-9.-]/g, ''))).filter(v => !isNaN(v));
+            if (vals.length && !col.dataKey.includes('average') && !col.dataKey.includes('avg')) {
+              const sum = vals.reduce((a, b) => a + b, 0);
+              return `<td class="num">${sum.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`;
+            }
+            return '<td></td>';
+          }).join('')}
+        </tr>
+      </tfoot>
+    </table>` : '<p class="no-data">No data available for the selected date range</p>';
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  let yPosition = 15;
-  const leftMargin = 15;
-  const rightMargin = pageWidth - 15;
-
-  // Add company logo on the left if available
-  if (companyInfo.logo) {
-    try {
-      doc.addImage(companyInfo.logo, 'JPEG', leftMargin, yPosition, 25, 25);
-    } catch (err) {
-      console.log('Could not add logo to PDF');
+  pdfWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${reportTitle}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 1.2cm 1.5cm;
     }
-  }
-
-  // Add company header on the right with professional styling
-  const textStartX = pageWidth - leftMargin;
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(41, 128, 185); // Professional blue color
-  doc.text(companyInfo.name, textStartX, yPosition + 5, { align: 'right' });
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 80); // Dark gray for contact info
-  yPosition += 12;
-  doc.text(companyInfo.address, textStartX, yPosition, { align: 'right' });
-  yPosition += 4;
-
-  doc.text(`Phone: ${companyInfo.phone}`, textStartX, yPosition, { align: 'right' });
-  yPosition += 4;
-  
-  doc.text(`Email: ${companyInfo.email}`, textStartX, yPosition, { align: 'right' });
-  yPosition += 4;
-
-  if (companyInfo.website) {
-    doc.text(`Website: ${companyInfo.website}`, textStartX, yPosition, { align: 'right' });
-    yPosition += 4;
-  }
-
-  if (companyInfo.tax_id) {
-    doc.text(`Tax ID: ${companyInfo.tax_id}`, textStartX, yPosition, { align: 'right' });
-    yPosition += 4;
-  }
-
-  // Add professional separator line
-  yPosition = Math.max(yPosition, 45); // Ensure we're below the logo
-  doc.setDrawColor(41, 128, 185); // Blue line
-  doc.setLineWidth(0.5);
-  doc.line(leftMargin, yPosition, pageWidth - leftMargin, yPosition);
-  yPosition += 10;
-
-  // Add report title with professional styling
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(44, 62, 80); // Dark blue-gray
-  doc.text(reportTitle.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 8;
-
-  // Add date range with subtle styling
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(127, 140, 141); // Medium gray
-  doc.text(`Period: ${dateRange}`, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
-
-  // Prepare table data
-  const tableData = data.map(row => 
-    columns.map(col => {
-      const value = row[col.dataKey];
-      
-      // Format currency values
-      if (typeof value === 'number' && value > 1000 && 
-          (col.dataKey.includes('revenue') || col.dataKey.includes('amount') || 
-           col.dataKey.includes('spent') || col.dataKey.includes('price') || 
-           col.dataKey.includes('total') || col.dataKey.includes('sale'))) {
-        return formatCurrency(value, currency);
-      }
-      
-      // Format dates
-      if (col.dataKey.includes('date') && value) {
-        return new Date(value).toLocaleDateString();
-      }
-      
-      return value?.toString() || '';
-    })
-  );
-
-  // Calculate totals row
-  const totalsRow = columns.map((col, idx) => {
-    if (idx === 0) return 'TOTAL';
-    
-    const isNumeric = data.some(row => typeof row[col.dataKey] === 'number');
-    if (isNumeric && !col.dataKey.includes('average') && !col.dataKey.includes('avg')) {
-      const sum = data.reduce((acc, row) => {
-        const val = parseFloat(row[col.dataKey]) || 0;
-        return acc + val;
-      }, 0);
-      
-      if (sum > 1000 && (col.dataKey.includes('revenue') || col.dataKey.includes('amount') || 
-          col.dataKey.includes('spent') || col.dataKey.includes('price') || 
-          col.dataKey.includes('total') || col.dataKey.includes('sale'))) {
-        return formatCurrency(sum, currency);
-      }
-      return sum.toString();
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      color: #222;
+      background: #fff;
     }
-    return '';
-  });
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 2px solid #2980b9;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+    .logo { width: 80px; height: 80px; object-fit: contain; }
+    .logo-placeholder {
+      width: 80px; height: 80px;
+      border: 1px solid #ccc;
+      display: flex; align-items: center; justify-content: center;
+      color: #aaa; font-size: 10px; text-align: center;
+    }
+    .company-info { text-align: right; }
+    .company-name { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 6px; }
+    .company-detail { font-size: 10px; color: #666; line-height: 1.6; }
+    .report-title { font-size: 16px; font-weight: bold; text-align: center; color: #2c3e50; margin: 10px 0 4px; }
+    .date-range { font-size: 10px; text-align: center; color: #888; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th {
+      background: #2980b9; color: #fff;
+      padding: 7px 6px; font-size: 10px; font-weight: bold;
+      text-align: left; border: 1px solid #2471a3;
+    }
+    td {
+      padding: 6px; font-size: 10px; color: #222;
+      border: 1px solid #ddd; vertical-align: top;
+    }
+    tr.alt td { background: #f7f9fb; }
+    tfoot td { background: #e8edf1; font-weight: bold; border-top: 2px solid #999; }
+    .num { text-align: right; font-family: monospace; }
+    .no-data { text-align: center; padding: 30px; color: #888; font-style: italic; }
+    .footer {
+      margin-top: 20px; padding-top: 10px;
+      border-top: 1px solid #ddd;
+      font-size: 9px; color: #888; text-align: center;
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      ${companyInfo.logo
+        ? `<img class="logo" src="${companyInfo.logo}" alt="${companyInfo.name}">`
+        : `<div class="logo-placeholder">No Logo</div>`}
+    </div>
+    <div class="company-info">
+      <div class="company-name">${companyInfo.name}</div>
+      <div class="company-detail">
+        ${companyInfo.address}<br>
+        Phone: ${companyInfo.phone} | Email: ${companyInfo.email}
+        ${companyInfo.website ? `<br>Website: ${companyInfo.website}` : ''}
+        ${companyInfo.tax_id ? `<br>Tax ID: ${companyInfo.tax_id}` : ''}
+      </div>
+    </div>
+  </div>
 
-  // Add table with professional styling
-  autoTable(doc, {
-    startY: yPosition,
-    head: [columns.map(col => col.header)],
-    body: [...tableData, totalsRow],
-    theme: 'grid',
-    styles: {
-      fontSize: 10,
-      cellPadding: 5,
-      lineColor: [189, 195, 199],
-      lineWidth: 0.5,
-      textColor: [44, 62, 80],
-      font: 'helvetica',
-    },
-    headStyles: {
-      fillColor: [41, 128, 185],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 11,
-      halign: 'center',
-      cellPadding: 6,
-    },
-    alternateRowStyles: {
-      fillColor: [250, 250, 250],
-    },
-    footStyles: {
-      fillColor: [236, 240, 241],
-      fontStyle: 'bold',
-      textColor: [44, 62, 80],
-      fontSize: 10,
-    },
-    margin: { left: 15, right: 15 },
-    didParseCell: (data) => {
-      // Style the last row (totals) as footer
-      if (data.row.index === tableData.length) {
-        data.cell.styles.fillColor = [236, 240, 241];
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fontSize = 10;
-        data.cell.styles.textColor = [44, 62, 80];
-      }
-      
-      // Right-align numeric columns
-      if (data.section === 'body' && data.column.index > 0) {
-        const cellValue = data.cell.raw;
-        if (typeof cellValue === 'string' && (cellValue.match(/^\d/) || cellValue.includes(currency))) {
-          data.cell.styles.halign = 'right';
-        }
-      }
-    },
-    didDrawPage: (data) => {
-      // Add professional footer
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      
-      // Footer background
-      doc.setFillColor(250, 250, 250);
-      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      
-      // Footer line
-      doc.setDrawColor(189, 195, 199);
-      doc.setLineWidth(0.3);
-      doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
-      
-      // Page number
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(127, 140, 141);
-      doc.text(
-        `Page ${data.pageNumber} of ${pageCount}`,
-        pageWidth / 2,
-        pageHeight - 8,
-        { align: 'center' }
-      );
-      
-      // Generation timestamp
-      doc.setFontSize(7);
-      doc.text(
-        `Generated: ${new Date().toLocaleString()}`,
-        pageWidth - 15,
-        pageHeight - 8,
-        { align: 'right' }
-      );
-      
-      // Company name in footer
-      doc.text(
-        companyInfo.name,
-        15,
-        pageHeight - 8,
-        { align: 'left' }
-      );
-    },
-  });
+  <div class="report-title">${reportTitle.toUpperCase()}</div>
+  <div class="date-range">Period: ${dateRange}</div>
 
-  // Generate filename
-  const filename = `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+  ${tableRows}
 
-  // Save PDF
-  doc.save(filename);
+  <div class="footer">
+    Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp;
+    This is a computer-generated document. No signature is required.
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 300);
+    };
+  <\/script>
+</body>
+</html>`);
+
+  pdfWindow.document.close();
 };
 
 // Print functionality
