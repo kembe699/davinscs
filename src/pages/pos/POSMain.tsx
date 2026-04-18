@@ -36,6 +36,7 @@ export default function POSMain() {
   const [schemes, setSchemes] = useState<PriceList[]>([]);
   const [selectedSchemeId, setSelectedSchemeId] = useState<number | null>(null);
   const [schemeItemMap, setSchemeItemMap] = useState<Map<number, number>>(new Map());
+  const selectedScheme = (schemes as any[]).find(s => s.id === selectedSchemeId) ?? null;
 
   useEffect(() => {
     loadData();
@@ -54,8 +55,20 @@ export default function POSMain() {
       const m = new Map<number, number>();
       items.forEach((it: PriceListItem) => m.set(it.product_id, it.price));
       setSchemeItemMap(m);
-    }).catch(() => setSchemeItemMap(new Map()));
+    }).catch(err => {
+      console.error("Failed to load scheme prices:", err);
+      setSchemeItemMap(new Map());
+    });
   }, [selectedSchemeId]);
+
+  // Reprice existing cart items whenever the scheme map changes
+  useEffect(() => {
+    if (cart.length === 0) return;
+    setCart(prev => prev.map(item => ({
+      ...item,
+      unit_price: schemeItemMap.get(item.product.id) ?? item.product.price,
+    })));
+  }, [schemeItemMap]);
 
   useEffect(() => {
     // Extract unique categories from products
@@ -74,6 +87,11 @@ export default function POSMain() {
 
   const getEffectivePrice = (product: ApiProduct): number => {
     return schemeItemMap.get(product.id) ?? product.price;
+  };
+
+  const schemeCurrencySymbol = (): string => {
+    if (selectedScheme?.currency_symbol) return selectedScheme.currency_symbol;
+    return baseCurrency?.symbol || 'UGX';
   };
 
   const loadSecondaryCurrency = async () => {
@@ -476,7 +494,7 @@ export default function POSMain() {
                     </div>
                     <div className="text-right">
                       <div className="text-admin-text font-mono">
-                        {formatCurrencySync(item.unit_price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}
+                        {formatCurrencySync(item.unit_price * item.quantity - item.discount, schemeCurrencySymbol(), false)}
                       </div>
                       {secondaryCurrency && exchangeRate && (
                         <div className="text-xs text-admin-text-secondary font-mono">
@@ -500,7 +518,7 @@ export default function POSMain() {
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Subtotal</span>
               <div className="text-right">
-                <div className="text-admin-text font-mono">{formatCurrencySync(subtotal, baseCurrency?.symbol || 'UGX', false)}</div>
+                <div className="text-admin-text font-mono">{formatCurrencySync(subtotal, schemeCurrencySymbol(), false)}</div>
                 {secondaryCurrency && exchangeRate && (
                   <div className="text-xs text-admin-text-secondary font-mono">
                     {formatCurrencySync(Math.round(subtotal * exchangeRate), secondaryCurrency.symbol, false)}
@@ -512,7 +530,7 @@ export default function POSMain() {
               <div className="flex justify-between text-sm">
                 <span className="text-admin-text-secondary">Discount</span>
                 <div className="text-right">
-                  <div className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, baseCurrency?.symbol || 'UGX', false)}</div>
+                  <div className="text-admin-danger font-mono">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</div>
                   {secondaryCurrency && exchangeRate && (
                     <div className="text-xs text-admin-text-secondary font-mono">
                       -{formatCurrencySync(Math.round(discountAmount * exchangeRate), secondaryCurrency.symbol, false)}
@@ -524,7 +542,7 @@ export default function POSMain() {
             <div className="flex justify-between text-sm">
               <span className="text-admin-text-secondary">Tax ({defaultTax?.rate}%)</span>
               <div className="text-right">
-                <div className="text-admin-text font-mono">{formatCurrencySync(taxAmount, baseCurrency?.symbol || 'UGX', false)}</div>
+                <div className="text-admin-text font-mono">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), false)}</div>
                 {secondaryCurrency && exchangeRate && (
                   <div className="text-xs text-admin-text-secondary font-mono">
                     {formatCurrencySync(Math.round(taxAmount * exchangeRate), secondaryCurrency.symbol, false)}
@@ -535,7 +553,7 @@ export default function POSMain() {
             <div className="flex justify-between text-lg font-bold border-t border-admin-border pt-2">
               <span className="text-admin-text">Total</span>
               <div className="text-right">
-                <div className="text-admin-text font-mono">{formatCurrencySync(total, baseCurrency?.symbol || 'UGX', false)}</div>
+                <div className="text-admin-text font-mono">{formatCurrencySync(total, schemeCurrencySymbol(), false)}</div>
                 {secondaryCurrency && exchangeRate && (
                   <div className="text-sm text-admin-text-secondary font-mono">
                     {formatCurrencySync(Math.round(total * exchangeRate), secondaryCurrency.symbol, false)}
@@ -672,7 +690,7 @@ export default function POSMain() {
                           </div>
                           <div className="flex justify-between items-center mb-1">
                             <div className="text-admin-text font-mono text-lg font-bold">
-                              {formatCurrencySync(getEffectivePrice(product), baseCurrency?.symbol || 'UGX', false)}
+                              {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
                               {selectedSchemeId !== null && schemeItemMap.has(product.id) && (
                                 <span className="text-xs text-admin-text-secondary line-through ml-1">
                                   {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}

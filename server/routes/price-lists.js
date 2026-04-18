@@ -37,8 +37,8 @@ router.get("/active", async (req, res) => {
   }
 });
 
-// Get items for a price list
-router.get("/:id/items", requireAuth, async (req, res) => {
+// Get items for a price list (no auth required – needed by POS)
+router.get("/:id/items", async (req, res) => {
   const { id } = req.params;
 
   try {
