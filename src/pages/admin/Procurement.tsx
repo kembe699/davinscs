@@ -742,7 +742,7 @@ export default function ProcurementEnhanced() {
                           {po.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">${(po.total_amount / 100).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{po.currency_symbol || po.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{(po.total_amount / 100).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handlePrintPO(po.id)}
@@ -835,7 +835,7 @@ export default function ProcurementEnhanced() {
                               <td className="px-3 py-2">{poItem.product_name || poItem.item_name}</td>
                               <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity}</td>
                               <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity - poItem.received_quantity}</td>
-                              <td className="px-3 py-2 text-right font-mono-tech">${(poItem.unit_price / 100).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-mono-tech">{selectedPOForGRN.currency_symbol || selectedPOForGRN.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{(poItem.unit_price / 100).toLocaleString()}</td>
                               <td className="px-3 py-2">
                                 <input
                                   type="number"
@@ -1030,8 +1030,8 @@ export default function ProcurementEnhanced() {
                       <td className="px-4 py-3 font-mono-tech text-foreground">{bill.bill_number}</td>
                       <td className="px-4 py-3 text-foreground">{bill.supplier_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(bill.bill_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">${(bill.total_amount / 100).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">${(bill.paid_amount / 100).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{(bill.total_amount / 100).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{(bill.paid_amount / 100).toLocaleString()}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border ${
                           bill.status === 'paid' ? 'border-green-500/30 text-green-500 bg-green-500/5' :

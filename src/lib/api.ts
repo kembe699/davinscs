@@ -117,6 +117,9 @@ export type ApiPurchaseOrder = {
   total_amount: number;
   notes?: string;
   item_count?: number;
+  currency_id?: number;
+  currency_code?: string;
+  currency_symbol?: string;
   created_at: string;
   updated_at: string;
 };
