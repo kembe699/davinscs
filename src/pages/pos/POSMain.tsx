@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X } from "lucide-react";
-import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency } from "@/lib/api";
+import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -11,7 +11,7 @@ export default function POSMain() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [cart, setCart] = useState<Array<{ product: ApiProduct; quantity: number; discount: number }>>([]);
+  const [cart, setCart] = useState<Array<{ product: ApiProduct; quantity: number; discount: number; unit_price: number }>>([]);
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [defaultTax, setDefaultTax] = useState<TaxRate | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<number | null>(null);
@@ -33,19 +33,48 @@ export default function POSMain() {
   const [categories, setCategories] = useState<string[]>([]);
   const [secondaryCurrency, setSecondaryCurrency] = useState<ApiCurrency | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [schemes, setSchemes] = useState<PriceList[]>([]);
+  const [selectedSchemeId, setSelectedSchemeId] = useState<number | null>(null);
+  const [schemeItemMap, setSchemeItemMap] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     loadData();
     checkCashDrawer();
     loadCompanyData();
     loadSecondaryCurrency();
+    loadSchemes();
   }, []);
+
+  useEffect(() => {
+    if (selectedSchemeId === null) {
+      setSchemeItemMap(new Map());
+      return;
+    }
+    api.priceLists.items(selectedSchemeId).then(items => {
+      const m = new Map<number, number>();
+      items.forEach((it: PriceListItem) => m.set(it.product_id, it.price));
+      setSchemeItemMap(m);
+    }).catch(() => setSchemeItemMap(new Map()));
+  }, [selectedSchemeId]);
 
   useEffect(() => {
     // Extract unique categories from products
     const uniqueCategories = [...new Set(products.map(p => p.category))].filter(Boolean);
     setCategories(uniqueCategories);
   }, [products]);
+
+  const loadSchemes = async () => {
+    try {
+      const data = await api.priceLists.active();
+      setSchemes(data);
+    } catch (err) {
+      console.error("Failed to load schemes:", err);
+    }
+  };
+
+  const getEffectivePrice = (product: ApiProduct): number => {
+    return schemeItemMap.get(product.id) ?? product.price;
+  };
 
   const loadSecondaryCurrency = async () => {
     try {
@@ -129,21 +158,22 @@ export default function POSMain() {
   const addToCart = (product: ApiProduct) => {
     const existing = cart.find(item => item.product.id === product.id);
     const currentQtyInCart = existing ? existing.quantity : 0;
-    const availableStock = product.quantity_on_hand - product.quantity_reserved;
+    const availableStock = (product.quantity_on_hand ?? 0) - (product.quantity_reserved ?? 0);
     
     if (currentQtyInCart >= availableStock) {
       alert(`Cannot add more! Only ${availableStock} units available in stock.`);
       return;
     }
     
+    const effectivePrice = getEffectivePrice(product);
     if (existing) {
       setCart(cart.map(item =>
         item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + 1, unit_price: effectivePrice }
           : item
       ));
     } else {
-      setCart([...cart, { product, quantity: 1, discount: 0 }]);
+      setCart([...cart, { product, quantity: 1, discount: 0, unit_price: effectivePrice }]);
     }
   };
 
@@ -155,7 +185,7 @@ export default function POSMain() {
     
     const cartItem = cart.find(item => item.product.id === productId);
     if (cartItem) {
-      const availableStock = cartItem.product.quantity_on_hand - cartItem.product.quantity_reserved;
+      const availableStock = (cartItem.product.quantity_on_hand ?? 0) - (cartItem.product.quantity_reserved ?? 0);
       if (quantity > availableStock) {
         alert(`Cannot set quantity to ${quantity}! Only ${availableStock} units available in stock.`);
         return;
@@ -173,7 +203,7 @@ export default function POSMain() {
 
   const calculateTotals = () => {
     const subtotal = cart.reduce((sum, item) => {
-      return sum + (item.product.price * item.quantity) - item.discount;
+      return sum + (item.unit_price * item.quantity) - item.discount;
     }, 0);
     
     // Apply cart-level discount
@@ -213,10 +243,11 @@ export default function POSMain() {
       
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
+        price_list_id: selectedSchemeId || undefined,
         items: cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
-          unit_price: item.product.price,
+          unit_price: item.unit_price,
           discount_amount: item.discount,
         })),
         payment_type_id: selectedPaymentType || 1,
@@ -311,10 +342,11 @@ export default function POSMain() {
       
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
+        price_list_id: selectedSchemeId || undefined,
         items: cart.map(item => ({
           product_id: item.product.id,
           quantity: item.quantity,
-          unit_price: item.product.price,
+          unit_price: item.unit_price,
           discount_amount: item.discount,
         })),
         payment_type_id: selectedPaymentType,
@@ -355,6 +387,17 @@ export default function POSMain() {
       {/* Top Toolbar */}
       <div className="bg-admin-surface border-b border-admin-border p-3 flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1">
+          <select
+            value={selectedSchemeId ?? ""}
+            onChange={e => setSelectedSchemeId(e.target.value === "" ? null : Number(e.target.value))}
+            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+            title="Pricing Scheme"
+          >
+            <option value="">Cash (Standard)</option>
+            {schemes.map(s => (
+              <option key={s.id} value={s.id}>{s.name}{s.currency_code ? ` (${s.currency_code})` : ""}</option>
+            ))}
+          </select>
           <button 
             onClick={() => setShowCustomerModal(true)}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
@@ -433,11 +476,16 @@ export default function POSMain() {
                     </div>
                     <div className="text-right">
                       <div className="text-admin-text font-mono">
-                        {formatCurrencySync(item.product.price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}
+                        {formatCurrencySync(item.unit_price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}
                       </div>
                       {secondaryCurrency && exchangeRate && (
                         <div className="text-xs text-admin-text-secondary font-mono">
-                          {formatCurrencySync(Math.round((item.product.price * item.quantity - item.discount) * exchangeRate), secondaryCurrency.symbol, false)}
+                          {formatCurrencySync(Math.round((item.unit_price * item.quantity - item.discount) * exchangeRate), secondaryCurrency.symbol, false)}
+                        </div>
+                      )}
+                      {selectedSchemeId !== null && schemeItemMap.has(item.product.id) && (
+                        <div className="text-xs text-admin-text-secondary line-through">
+                          {formatCurrencySync(item.product.price, baseCurrency?.symbol || 'UGX', false)}
                         </div>
                       )}
                     </div>
@@ -624,7 +672,12 @@ export default function POSMain() {
                           </div>
                           <div className="flex justify-between items-center mb-1">
                             <div className="text-admin-text font-mono text-lg font-bold">
-                              {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}
+                              {formatCurrencySync(getEffectivePrice(product), baseCurrency?.symbol || 'UGX', false)}
+                              {selectedSchemeId !== null && schemeItemMap.has(product.id) && (
+                                <span className="text-xs text-admin-text-secondary line-through ml-1">
+                                  {formatCurrencySync(product.price, baseCurrency?.symbol || 'UGX', false)}
+                                </span>
+                              )}
                             </div>
                             <div className={`text-xs font-bold ${
                               remainingStock <= 0 ? 'text-admin-danger' : 
@@ -783,8 +836,8 @@ export default function POSMain() {
                   <div className="flex justify-between text-xs text-black">
                     <span></span>
                     <span>{item.quantity}</span>
-                    <span>{formatCurrencySync(item.product.price, baseCurrency?.symbol || 'UGX', false)}</span>
-                    <span>{formatCurrencySync(item.product.price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}</span>
+                    <span>{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
+                    <span>{formatCurrencySync(item.unit_price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}</span>
                   </div>
                 </div>
               ))}

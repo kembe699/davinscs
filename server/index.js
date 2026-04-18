@@ -592,6 +592,12 @@ async function migrate() {
       END IF;
     END $$;
 
+    -- Ensure new columns exist on pre-existing tables before adding FK constraints
+    ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS currency_id INTEGER;
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS price_list_id INTEGER REFERENCES price_lists(id);
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS sale_currency_id INTEGER;
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS exchange_rate_used DECIMAL(15,6);
+
     -- Add FK constraints that depend on currencies (table is created above)
     DO $$
     BEGIN
