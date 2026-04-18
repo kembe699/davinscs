@@ -186,7 +186,7 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
        FROM pos_sales s
        LEFT JOIN price_lists pl ON s.price_list_id = pl.id
        LEFT JOIN currencies c ON pl.currency_id = c.id
-       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
+       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND COALESCE(s.voided, false) = false
        GROUP BY pl.id, pl.name, c.code
        ORDER BY total_revenue DESC`,
       [startDate, endDate]

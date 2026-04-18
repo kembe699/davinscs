@@ -597,6 +597,8 @@ async function migrate() {
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS price_list_id INTEGER REFERENCES price_lists(id);
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS sale_currency_id INTEGER;
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS exchange_rate_used DECIMAL(15,6);
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS voided BOOLEAN DEFAULT FALSE;
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS voided_by INTEGER REFERENCES users(id);
 
     -- Add FK constraints that depend on currencies (table is created above)
     DO $$
