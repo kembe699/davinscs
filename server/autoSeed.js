@@ -73,17 +73,16 @@ export async function autoSeed() {
   }
 
   // Seed suppliers — only Nile Hive Concept Co. Ltd
-  // Remove legacy demo suppliers (set their FK refs to NULL first to avoid constraint errors)
-  const demoNames = ["Sony Professional", "Canon Imaging", "Blackmagic Design", "Audio-Technica Corp", "Aputure Imaging"];
-  for (const name of demoNames) {
-    const { rows: [demo] } = await pool.query(`SELECT id FROM suppliers WHERE name = $1`, [name]);
-    if (demo) {
-      await pool.query(`UPDATE purchase_orders       SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
-      await pool.query(`UPDATE goods_received_notes  SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
-      await pool.query(`UPDATE supplier_bills        SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
-      await pool.query(`UPDATE supplier_payments     SET supplier_id = NULL WHERE supplier_id = $1`, [demo.id]);
-      await pool.query(`DELETE FROM suppliers WHERE id = $1`, [demo.id]);
-    }
+  // NULL out FK refs on any supplier that is NOT Nile Hive, then delete them
+  const { rows: otherSuppliers } = await pool.query(
+    `SELECT id FROM suppliers WHERE name != 'Nile Hive Concept Co. Ltd'`
+  );
+  for (const s of otherSuppliers) {
+    await pool.query(`UPDATE purchase_orders      SET supplier_id = NULL WHERE supplier_id = $1`, [s.id]);
+    await pool.query(`UPDATE goods_received_notes SET supplier_id = NULL WHERE supplier_id = $1`, [s.id]);
+    await pool.query(`UPDATE supplier_bills       SET supplier_id = NULL WHERE supplier_id = $1`, [s.id]);
+    await pool.query(`UPDATE supplier_payments    SET supplier_id = NULL WHERE supplier_id = $1`, [s.id]);
+    await pool.query(`DELETE FROM suppliers WHERE id = $1`, [s.id]);
   }
   // Ensure Nile Hive exists
   const { rows: existing } = await pool.query(`SELECT id FROM suppliers WHERE name = $1`, ["Nile Hive Concept Co. Ltd"]);
