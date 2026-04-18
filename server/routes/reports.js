@@ -167,6 +167,38 @@ router.get("/sales/comparison", requireAuth, async (req, res) => {
   }
 });
 
+// Sales by scheme / price list
+router.get("/sales/by-scheme", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
+    const endDate = end_date || new Date().toISOString().split('T')[0];
+
+    const { rows } = await pool.query(
+      `SELECT 
+        COALESCE(pl.name, 'Cash (Standard)') as scheme_name,
+        COALESCE(c.code, '') as currency_code,
+        COUNT(s.id) as total_sales,
+        COALESCE(SUM(s.total_amount), 0) as total_revenue,
+        COALESCE(SUM(s.tax_amount), 0) as total_tax,
+        COALESCE(SUM(s.discount_amount), 0) as total_discounts,
+        COALESCE(AVG(s.total_amount), 0) as average_sale
+       FROM pos_sales s
+       LEFT JOIN price_lists pl ON s.price_list_id = pl.id
+       LEFT JOIN currencies c ON pl.currency_id = c.id
+       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
+       GROUP BY pl.id, pl.name, c.code
+       ORDER BY total_revenue DESC`,
+      [startDate, endDate]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error in sales by scheme report:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ============ EXPENSES REPORTS ============
 
 // Expenses summary

@@ -9,7 +9,7 @@ import ReportTable from "@/components/ReportTable";
 
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics";
 type ReportType = 
-  | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-comparison"
+  | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-comparison" | "sales-by-scheme"
   | "expenses-summary" | "expenses-by-category" | "cash-drawer-expenses"
   | "stock-movement" | "expiring-products" | "expired-products" | "low-stock" | "out-of-stock"
   | "trending-products" | "pos-vs-web";
@@ -136,6 +136,9 @@ export default function ReportsNew() {
           break;
         case "sales-comparison":
           data = await api.reports.sales.comparison(startDate, endDate);
+          break;
+        case "sales-by-scheme":
+          data = await api.reports.sales.byScheme(startDate, endDate);
           break;
         
         // Expenses Reports
@@ -285,6 +288,15 @@ export default function ReportsNew() {
         { header: "POS Revenue", dataKey: "pos_revenue" },
         { header: "Web Orders", dataKey: "web_orders" },
         { header: "Web Revenue", dataKey: "web_revenue" }
+      ],
+      "sales-by-scheme": [
+        { header: "Scheme", dataKey: "scheme_name" },
+        { header: "Currency", dataKey: "currency_code" },
+        { header: "Sales Count", dataKey: "total_sales" },
+        { header: "Revenue", dataKey: "total_revenue" },
+        { header: "Tax", dataKey: "total_tax" },
+        { header: "Discounts", dataKey: "total_discounts" },
+        { header: "Avg Sale", dataKey: "average_sale" }
       ]
     };
 
@@ -372,6 +384,7 @@ export default function ReportsNew() {
         { id: "sales-by-customer", name: "Sales by customers" },
         { id: "sales-by-product", name: "Sales by products" },
         { id: "sales-comparison", name: "POS vs Website" },
+        { id: "sales-by-scheme", name: "Sales by scheme" },
       ]
     },
     {

@@ -1076,6 +1076,12 @@ export const api = {
         if (endDate) params.append('end_date', endDate);
         return request<SalesComparisonReport>(`/api/reports/sales/comparison?${params}`);
       },
+      byScheme: (startDate?: string, endDate?: string) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return request<any[]>(`/api/reports/sales/by-scheme?${params}`);
+      },
     },
     expenses: {
       summary: (startDate?: string, endDate?: string) => {
