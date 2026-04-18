@@ -28,6 +28,7 @@ export type ApiProduct = {
   name: string;
   brand: string;
   price: number;
+  barcode?: string;
   tag: string;
   description: string;
   specs: { label: string; value: string }[];
@@ -35,6 +36,11 @@ export type ApiProduct = {
   in_stock: boolean;
   is_featured: boolean;
   category: string;
+  quantity_on_hand?: number;
+  quantity_reserved?: number;
+  reorder_level?: number;
+  quick_sale?: boolean;
+  tax_rate_id?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -293,8 +299,21 @@ export type PriceList = {
   name: string;
   description: string;
   discount_percent: number;
+  currency_id?: number | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
   is_active: boolean;
   created_at: string;
+};
+
+export type PriceListItem = {
+  id: number;
+  price_list_id: number;
+  product_id: number;
+  product_name?: string;
+  price: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type ApiCurrency = {
@@ -828,6 +847,15 @@ export const api = {
       request<PriceList>(`/api/price-lists/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) =>
       request<{ message: string }>(`/api/price-lists/${id}`, { method: "DELETE" }),
+
+    items: (id: number) => request<PriceListItem[]>(`/api/price-lists/${id}/items`),
+    upsertItem: (id: number, productId: number, price: number) =>
+      request<PriceListItem>(`/api/price-lists/${id}/items/${productId}`, {
+        method: "PUT",
+        body: JSON.stringify({ price }),
+      }),
+    deleteItem: (id: number, productId: number) =>
+      request<{ message: string }>(`/api/price-lists/${id}/items/${productId}`, { method: "DELETE" }),
   },
   promotions: {
     list: () => request<Promotion[]>("/api/promotions"),

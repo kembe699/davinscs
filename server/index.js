@@ -378,8 +378,19 @@ async function migrate() {
       name VARCHAR(100) NOT NULL,
       description TEXT,
       discount_percent DECIMAL(5,2) DEFAULT 0,
+      currency_id INTEGER,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS price_list_items (
+      id SERIAL PRIMARY KEY,
+      price_list_id INTEGER REFERENCES price_lists(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+      price INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(price_list_id, product_id)
     );
     
     CREATE TABLE IF NOT EXISTS promotions (
@@ -489,10 +500,13 @@ async function migrate() {
       customer_name VARCHAR(255),
       user_id INTEGER REFERENCES users(id),
       session_id INTEGER REFERENCES cash_drawer_sessions(id),
+      price_list_id INTEGER REFERENCES price_lists(id),
       subtotal INTEGER NOT NULL,
       tax_amount INTEGER NOT NULL,
       discount_amount INTEGER DEFAULT 0,
       total_amount INTEGER NOT NULL,
+      sale_currency_id INTEGER,
+      exchange_rate_used DECIMAL(15,6),
       payment_type_id INTEGER REFERENCES payment_types(id),
       payment_status VARCHAR(20) DEFAULT 'paid',
       sale_type VARCHAR(20) DEFAULT 'regular',
@@ -576,6 +590,26 @@ async function migrate() {
       ) THEN
         CREATE UNIQUE INDEX idx_currencies_single_base ON currencies(is_base) WHERE is_base = TRUE;
       END IF;
+    END $$;
+
+    -- Add FK constraints that depend on currencies (table is created above)
+    DO $$
+    BEGIN
+      BEGIN
+        ALTER TABLE price_lists
+        ADD CONSTRAINT fk_price_lists_currency
+        FOREIGN KEY (currency_id) REFERENCES currencies(id);
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END;
+
+      BEGIN
+        ALTER TABLE pos_sales
+        ADD CONSTRAINT fk_pos_sales_sale_currency
+        FOREIGN KEY (sale_currency_id) REFERENCES currencies(id);
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END;
     END $$;
     
     -- Exchange rates table

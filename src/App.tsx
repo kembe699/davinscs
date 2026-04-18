@@ -40,6 +40,7 @@ import EndOfDay from "./pages/pos/EndOfDay.tsx";
 import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
 import TaxRates from "./pages/admin/TaxRates.tsx";
 import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
+import PriceLists from "./pages/admin/PriceLists.tsx";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
             <Route path="/admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
             <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
             <Route path="/admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />
+            <Route path="/admin/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
