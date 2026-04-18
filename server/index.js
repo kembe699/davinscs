@@ -637,6 +637,23 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_exchange_rates_to_currency ON exchange_rates(to_currency_id);
     CREATE INDEX IF NOT EXISTS idx_exchange_rates_active ON exchange_rates(is_active) WHERE is_active = TRUE;
     CREATE INDEX IF NOT EXISTS idx_exchange_rates_dates ON exchange_rates(effective_date, expiry_date);
+
+    -- Migration tracking table
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name VARCHAR(200) PRIMARY KEY,
+      applied_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- One-time fix: price_list_items.price was being stored as plain user input (e.g. 65)
+    -- but the rest of the system stores monetary values ×100 (cents). Multiply all
+    -- existing rows by 100 so formatCurrencySync shows the correct amount.
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM _migrations WHERE name = 'price_list_items_multiply_100') THEN
+        UPDATE price_list_items SET price = price * 100;
+        INSERT INTO _migrations (name) VALUES ('price_list_items_multiply_100');
+      END IF;
+    END $$;
   `);
   console.log("\u2705 Migrations applied");
 }

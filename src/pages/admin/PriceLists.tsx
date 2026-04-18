@@ -177,7 +177,7 @@ export default function PriceLists() {
       }
       const price = Number(trimmed);
       if (Number.isNaN(price) || price < 0) { setError("Enter a valid positive number"); return; }
-      const saved = await api.priceLists.upsertItem(selectedSchemeId, productId, price);
+      const saved = await api.priceLists.upsertItem(selectedSchemeId, productId, Math.round(price * 100));
       setItems((prev) => {
         const without = prev.filter((x) => x.product_id !== productId);
         const product = products.find((p) => p.id === productId);
@@ -209,7 +209,7 @@ export default function PriceLists() {
         const rawPrice = row["scheme_price"] ?? row["Scheme Price"] ?? row["price"] ?? "";
         const price = Number(String(rawPrice).replace(/,/g, "").trim());
         if (!pid || !price || price <= 0) continue;
-        await api.priceLists.upsertItem(selectedSchemeId, pid, price);
+        await api.priceLists.upsertItem(selectedSchemeId, pid, Math.round(price * 100));
         count++;
       }
       await loadItems(selectedSchemeId);
@@ -228,8 +228,8 @@ export default function PriceLists() {
     const rows = products.map((p) => ({
       "product_id": p.id,
       "product_name": p.name,
-      [`base_price_${baseCurrency?.code || "UGX"}`]: p.price,
-      [`scheme_price_${currCode}`]: itemMap.has(p.id) ? itemMap.get(p.id)!.price : "",
+      [`base_price_${baseCurrency?.code || "UGX"}`]: Math.round(p.price / 100),
+      [`scheme_price_${currCode}`]: itemMap.has(p.id) ? Math.round(itemMap.get(p.id)!.price / 100) : "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [{ wch: 12 }, { wch: 36 }, { wch: 20 }, { wch: 20 }];
@@ -243,7 +243,7 @@ export default function PriceLists() {
     const rows = products.map((p) => ({
       "product_id": p.id,
       "product_name": p.name,
-      [`base_price_${baseCurrency?.code || "UGX"}`]: p.price,
+      [`base_price_${baseCurrency?.code || "UGX"}`]: Math.round(p.price / 100),
       "scheme_price": "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -640,7 +640,7 @@ export default function PriceLists() {
                             <td className="px-4 py-2 text-right">
                               <input
                                 key={`${selectedSchemeId}-${p.id}-${it?.price ?? "x"}`}
-                                defaultValue={it ? String(it.price) : ""}
+                                defaultValue={it ? String(it.price / 100) : ""}
                                 placeholder="leave blank = base price"
                                 className="w-48 text-right px-2 py-1 bg-admin-bg border border-admin-border text-admin-text font-mono text-sm focus:outline-none focus:border-admin-text"
                                 onBlur={(e) => saveOverride(p.id, e.target.value)}
