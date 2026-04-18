@@ -347,11 +347,14 @@ export const printReport = (options: ReportExportOptions) => {
       <style>
         @media print {
           @page {
+            size: A4 portrait;
             margin: 1cm;
           }
           body {
             margin: 0;
             padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
         }
         
