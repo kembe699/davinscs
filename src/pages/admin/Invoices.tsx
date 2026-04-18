@@ -38,6 +38,7 @@ export default function Invoices() {
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
 
+  const [companyData, setCompanyData] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -61,6 +62,10 @@ export default function Invoices() {
     customer_name: "", customer_email: "", customer_phone: "",
     total_amount: "", due_date: "", notes: ""
   });
+
+  useEffect(() => {
+    api.company.get().then(setCompanyData).catch(() => {});
+  }, []);
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -154,6 +159,7 @@ export default function Invoices() {
 
   const downloadPDF = (inv: any) => {
     const d = inv;
+    const co = companyData || {};
     const items: any[] = d.items || [];
     const payments: any[] = d.payments || [];
     const balance = d.total_amount - d.paid_amount;
@@ -189,9 +195,12 @@ export default function Invoices() {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; background: #fff; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2980b9; padding-bottom: 14px; margin-bottom: 14px; }
+    .header-left { display: flex; align-items: flex-start; gap: 14px; }
+    .logo { width: 70px; height: 70px; object-fit: contain; }
+    .logo-placeholder { width: 70px; height: 70px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 9px; text-align: center; }
     .company-name { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
-    .company-detail { font-size: 10px; color: #666; line-height: 1.6; }
-    .inv-meta { text-align: right; }
+    .company-detail { font-size: 10px; color: #666; line-height: 1.7; }
+    .inv-meta { text-align: right; flex-shrink: 0; }
     .inv-title { font-size: 22px; font-weight: bold; color: #2980b9; letter-spacing: 2px; }
     .inv-number { font-size: 13px; color: #2c3e50; font-weight: bold; margin-top: 4px; }
     .inv-date { font-size: 10px; color: #666; margin-top: 2px; }
@@ -199,7 +208,7 @@ export default function Invoices() {
     .customer-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
     .customer-name { font-size: 13px; font-weight: bold; color: #2c3e50; }
     .customer-contact { font-size: 10px; color: #666; margin-top: 2px; }
-    .due-status { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: bold; margin-top: 4px; }
+    .due-status { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: bold; margin-top: 6px; }
     .status-unpaid  { background: #fee2e2; color: #dc2626; }
     .status-partial { background: #fef3c7; color: #d97706; }
     .status-paid    { background: #d1fae5; color: #059669; }
@@ -224,7 +233,23 @@ export default function Invoices() {
 </head>
 <body>
   <div class="header">
-    <div class="inv-meta" style="text-align:left">
+    <div class="header-left">
+      ${co.logo
+        ? `<img class="logo" src="${co.logo}" alt="${co.name || ''}">`
+        : `<div class="logo-placeholder">No<br>Logo</div>`}
+      <div>
+        <div class="company-name">${co.name || 'Company Name'}</div>
+        <div class="company-detail">
+          ${co.address ? `${co.address}<br>` : ''}
+          ${co.city ? `${co.city}${co.country ? ', ' + co.country : ''}<br>` : ''}
+          ${co.phone ? `Tel: ${co.phone}<br>` : ''}
+          ${co.email ? `Email: ${co.email}<br>` : ''}
+          ${co.website ? `Web: ${co.website}<br>` : ''}
+          ${co.tax_id ? `Tax ID: ${co.tax_id}` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="inv-meta">
       <div class="inv-title">INVOICE</div>
       <div class="inv-number">${d.invoice_number}</div>
       <div class="inv-date">Date: ${new Date(d.created_at).toLocaleDateString()}</div>
