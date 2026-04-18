@@ -51,11 +51,7 @@ router.get("/active/:fromId/:toId", requireAuth, async (req, res) => {
       LIMIT 1
     `, [fromId, toId]);
     
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "No active rate found for this currency pair" });
-    }
-    
-    res.json(rows[0]);
+    res.json(rows[0] || null);
   } catch (err) {
     console.error("Error fetching active rate:", err);
     res.status(500).json({ error: "Failed to fetch active rate" });
