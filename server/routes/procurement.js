@@ -105,7 +105,7 @@ router.get("/purchase-orders/:id", requireAuth, async (req, res) => {
     const itemsResult = await pool.query(
       `SELECT poi.*, p.name as product_name, p.slug as product_slug
        FROM purchase_order_items poi
-       JOIN products p ON poi.product_id = p.id
+       LEFT JOIN products p ON poi.product_id = p.id
        WHERE poi.po_id = $1`,
       [req.params.id]
     );
