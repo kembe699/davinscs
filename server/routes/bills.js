@@ -88,8 +88,11 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // POST create bill
 router.post("/", requireAuth, async (req, res) => {
-  const { supplier_id, grn_id, po_id, bill_date, due_date, total_amount, notes } = req.body;
-  
+  const { supplier_id, bill_date, total_amount, notes } = req.body;
+  const grn_id   = req.body.grn_id   || null;
+  const po_id    = req.body.po_id    || null;
+  const due_date = req.body.due_date || null;
+
   if (!supplier_id || !bill_date || !total_amount) {
     return res.status(400).json({ error: "Supplier, date, and amount required" });
   }
