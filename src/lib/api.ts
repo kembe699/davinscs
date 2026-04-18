@@ -1135,7 +1135,10 @@ export const api = {
   },
   invoices: {
     list: (params?: { status?: string; search?: string; start_date?: string; end_date?: string }) => {
-      const qs = new URLSearchParams(params as any).toString();
+      const clean = Object.fromEntries(
+        Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')
+      );
+      const qs = new URLSearchParams(clean as any).toString();
       return request<any[]>(`/api/invoices${qs ? `?${qs}` : ''}`);
     },
     get: (id: number) => request<any>(`/api/invoices/${id}`),
