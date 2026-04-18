@@ -17,6 +17,7 @@ export default function ProcurementEnhanced() {
   const [error, setError] = useState("");
   
   // Supplier form
+  const [addingSupplier, setAddingSupplier] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
   const [supplierForm, setSupplierForm] = useState({ name: "", contact_person: "", email: "", phone: "", address: "" });
   const [saving, setSaving] = useState(false);
@@ -139,6 +140,7 @@ export default function ProcurementEnhanced() {
       }
       await loadSuppliers();
       setEditingSupplierId(null);
+      setAddingSupplier(false);
       setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -178,6 +180,42 @@ export default function ProcurementEnhanced() {
       setError(err instanceof Error ? err.message : "Failed to create PO");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGRNSelectedForBill = async (grnId: number) => {
+    if (!grnId) {
+      setBillForm(prev => ({ ...prev, grn_id: undefined, supplier_id: 0, po_id: undefined, total_amount: 0 }));
+      return;
+    }
+    try {
+      const grn = await api.procurement.grn.get(grnId);
+      const total = grn.items.reduce((sum, item) => sum + item.ordered_quantity * item.unit_price, 0);
+      setBillForm(prev => ({
+        ...prev,
+        grn_id: grnId,
+        supplier_id: grn.supplier_id,
+        po_id: grn.po_id || undefined,
+        total_amount: total,
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load GRN");
+    }
+  };
+
+  const handleBillSelectedForPayment = (billId: number) => {
+    if (!billId) {
+      setPaymentForm(prev => ({ ...prev, bill_id: undefined, supplier_id: 0, amount: 0 }));
+      return;
+    }
+    const bill = bills.find(b => b.id === billId);
+    if (bill) {
+      setPaymentForm(prev => ({
+        ...prev,
+        bill_id: billId,
+        supplier_id: bill.supplier_id,
+        amount: bill.total_amount - bill.paid_amount,
+      }));
     }
   };
 
@@ -351,6 +389,7 @@ export default function ProcurementEnhanced() {
               <button
                 onClick={() => {
                   setEditingSupplierId(null);
+                  setAddingSupplier(true);
                   setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "" });
                 }}
                 className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 flex items-center gap-2"
@@ -359,7 +398,7 @@ export default function ProcurementEnhanced() {
               </button>
             </div>
 
-            {(editingSupplierId !== null || supplierForm.name) && (
+            {(addingSupplier || editingSupplierId !== null) && (
               <div className="border border-border-subtle p-4 mb-4 bg-chassis">
                 <h3 className="text-sm font-bold mb-4">{editingSupplierId ? "Edit" : "New"} Supplier</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -410,6 +449,7 @@ export default function ProcurementEnhanced() {
                   <button
                     onClick={() => {
                       setEditingSupplierId(null);
+                      setAddingSupplier(false);
                       setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "" });
                     }}
                     className="px-4 py-2 border border-border-subtle text-xs text-muted-foreground hover:text-foreground"
@@ -442,6 +482,7 @@ export default function ProcurementEnhanced() {
                         <button
                           onClick={() => {
                             setEditingSupplierId(supplier.id);
+                            setAddingSupplier(true);
                             setSupplierForm({
                               name: supplier.name,
                               contact_person: supplier.contact_person || "",
@@ -649,9 +690,39 @@ export default function ProcurementEnhanced() {
         {/* GRN Tab */}
         {tab === "grn" && (
           <div>
-            {creatingGRN && selectedPOForGRN && (
+            {!creatingGRN && (
+              <div className="mb-4">
+                <button
+                  onClick={() => { setCreatingGRN(true); setSelectedPOForGRN(null); setGRNForm({ po_id: 0, received_date: new Date().toISOString().split('T')[0], notes: "", items: [] }); }}
+                  className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 flex items-center gap-2"
+                >
+                  <Plus size={16} /> New GRN
+                </button>
+              </div>
+            )}
+
+            {creatingGRN && (
               <div className="border border-border-subtle p-4 mb-4 bg-chassis">
-                <h3 className="text-sm font-bold mb-4">Create GRN for PO: {selectedPOForGRN.po_number}</h3>
+                <h3 className="text-sm font-bold mb-4">{selectedPOForGRN ? `Create GRN for PO: ${selectedPOForGRN.po_number}` : "Create GRN"}</h3>
+
+                {/* PO selector */}
+                <div className="mb-4">
+                  <label className="block text-xs text-muted-foreground mb-1">Purchase Order *</label>
+                  <select
+                    value={grnForm.po_id || ""}
+                    onChange={async (e) => {
+                      const id = parseInt(e.target.value);
+                      if (id) await startGRNFromPO(id);
+                      else { setSelectedPOForGRN(null); setGRNForm(prev => ({ ...prev, po_id: 0, items: [] })); }
+                    }}
+                    className="w-full px-3 py-2 bg-background border border-border-subtle text-xs"
+                  >
+                    <option value="">Select Purchase Order</option>
+                    {pos.filter(p => p.status !== 'completed').map(p => (
+                      <option key={p.id} value={p.id}>{p.po_number} — {p.supplier_name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="mb-4">
                   <label className="block text-xs mb-1">Received Date</label>
                   <input
@@ -661,37 +732,63 @@ export default function ProcurementEnhanced() {
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   />
                 </div>
-                <div className="mb-4">
-                  <h4 className="text-xs font-bold mb-2">Items</h4>
-                  {selectedPOForGRN.items.map((poItem, idx) => (
-                    <div key={poItem.id} className="grid grid-cols-5 gap-2 mb-2 items-center">
-                      <div className="col-span-2 text-xs">{poItem.product_name || poItem.item_name}</div>
-                      <div className="text-xs text-muted-foreground">Ordered: {poItem.quantity}</div>
-                      <input
-                        type="number"
-                        placeholder="Received Qty"
-                        value={grnForm.items[idx]?.received_quantity || 0}
-                        onChange={(e) => {
-                          const newItems = [...grnForm.items];
-                          newItems[idx].received_quantity = parseInt(e.target.value) || 0;
-                          setGRNForm({ ...grnForm, items: newItems });
-                        }}
-                        className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Notes"
-                        value={grnForm.items[idx]?.notes || ""}
-                        onChange={(e) => {
-                          const newItems = [...grnForm.items];
-                          newItems[idx].notes = e.target.value;
-                          setGRNForm({ ...grnForm, items: newItems });
-                        }}
-                        className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                      />
+                {selectedPOForGRN && (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-bold mb-2">Items from PO</h4>
+                    <div className="border border-border-subtle overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-chassis border-b border-border-subtle">
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Item</th>
+                            <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Ordered</th>
+                            <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Remaining</th>
+                            <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Price</th>
+                            <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Receive Qty</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-subtle">
+                          {selectedPOForGRN.items.map((poItem, idx) => (
+                            <tr key={poItem.id}>
+                              <td className="px-3 py-2">{poItem.product_name || poItem.item_name}</td>
+                              <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity}</td>
+                              <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity - poItem.received_quantity}</td>
+                              <td className="px-3 py-2 text-right font-mono-tech">${(poItem.unit_price / 100).toFixed(2)}</td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={poItem.quantity - poItem.received_quantity}
+                                  value={grnForm.items[idx]?.received_quantity ?? 0}
+                                  onChange={(e) => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].received_quantity = parseInt(e.target.value) || 0;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  className="w-20 px-2 py-1 bg-background border border-border-subtle text-xs text-center"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  placeholder="Notes"
+                                  value={grnForm.items[idx]?.notes || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].notes = e.target.value;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  className="w-full px-2 py-1 bg-background border border-border-subtle text-xs"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
                 <textarea
                   placeholder="GRN Notes"
                   value={grnForm.notes}
@@ -702,16 +799,13 @@ export default function ProcurementEnhanced() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateGRN}
-                    disabled={saving}
+                    disabled={saving || !selectedPOForGRN}
                     className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50"
                   >
                     {saving ? "Creating..." : "Create GRN"}
                   </button>
                   <button
-                    onClick={() => {
-                      setCreatingGRN(false);
-                      setSelectedPOForGRN(null);
-                    }}
+                    onClick={() => { setCreatingGRN(false); setSelectedPOForGRN(null); }}
                     className="px-4 py-2 border border-border-subtle text-xs text-muted-foreground hover:text-foreground"
                   >
                     Cancel
@@ -783,11 +877,11 @@ export default function ProcurementEnhanced() {
                   </select>
                   <select
                     value={billForm.grn_id || ""}
-                    onChange={(e) => setBillForm({ ...billForm, grn_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    onChange={(e) => handleGRNSelectedForBill(e.target.value ? parseInt(e.target.value) : 0)}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   >
-                    <option value="">Link to GRN (Optional)</option>
-                    {grns.map(g => <option key={g.id} value={g.id}>{g.grn_number}</option>)}
+                    <option value="">Select GRN (auto-fills supplier &amp; amount)</option>
+                    {grns.map(g => <option key={g.id} value={g.id}>{g.grn_number} — {g.supplier_name}</option>)}
                   </select>
                   <input
                     type="date"
@@ -899,22 +993,22 @@ export default function ProcurementEnhanced() {
                 <h3 className="text-sm font-bold mb-4">Record Payment</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <select
+                    value={paymentForm.bill_id || ""}
+                    onChange={(e) => handleBillSelectedForPayment(e.target.value ? parseInt(e.target.value) : 0)}
+                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
+                  >
+                    <option value="">Select Bill (auto-fills supplier &amp; amount)</option>
+                    {bills.filter(b => b.status !== 'paid').map(b => (
+                      <option key={b.id} value={b.id}>{b.bill_number} — {b.supplier_name} — Balance: ${((b.total_amount - b.paid_amount) / 100).toFixed(2)}</option>
+                    ))}
+                  </select>
+                  <select
                     value={paymentForm.supplier_id}
                     onChange={(e) => setPaymentForm({ ...paymentForm, supplier_id: parseInt(e.target.value) })}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   >
-                    <option value={0}>Select Supplier *</option>
+                    <option value={0}>Supplier (auto-filled from bill)</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                  <select
-                    value={paymentForm.bill_id || ""}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, bill_id: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  >
-                    <option value="">Link to Bill (Optional)</option>
-                    {bills.filter(b => b.status !== 'paid').map(b => (
-                      <option key={b.id} value={b.id}>{b.bill_number} - Balance: ${((b.total_amount - b.paid_amount) / 100).toFixed(2)}</option>
-                    ))}
                   </select>
                   <input
                     type="date"
