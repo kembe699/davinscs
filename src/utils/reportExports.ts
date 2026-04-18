@@ -101,15 +101,13 @@ export const exportToExcel = (options: ReportExportOptions) => {
 export const exportToPDF = (options: ReportExportOptions) => {
   const { reportTitle, dateRange, companyInfo, data, columns, currency = 'UGX' } = options;
 
-  // Create PDF document with explicit A4 size (210mm x 297mm)
+  // Create PDF document — explicit A4 portrait (210 × 297 mm)
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4', // Use standard A4 format
-    compress: true,
-    putOnlyUsedFonts: true
+    format: [210, 297],
   });
-  
+
   // Set PDF metadata
   doc.setProperties({
     title: reportTitle,
@@ -118,9 +116,9 @@ export const exportToPDF = (options: ReportExportOptions) => {
     keywords: 'report, sales, business',
     creator: companyInfo.name
   });
-  
-  const pageWidth = 210; // A4 width in mm
-  const pageHeight = 297; // A4 height in mm
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   let yPosition = 15;
   const leftMargin = 15;
   const rightMargin = pageWidth - 15;

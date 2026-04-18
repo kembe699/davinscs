@@ -329,6 +329,23 @@ export default function ReportsNew() {
       ];
     }
 
+    // Pre-format sales-by-scheme so print/PDF/Excel show clean values
+    if (selectedReport === "sales-by-scheme" && Array.isArray(reportData)) {
+      return reportData.map((row: any) => {
+        const sym = row.currency_symbol || baseCurrency?.symbol || 'UGX';
+        const fmt = (v: any) => `${sym} ${Math.round(parseFloat(v) / 100).toLocaleString('en-US')}`;
+        return {
+          scheme_name: row.scheme_name,
+          currency_code: row.currency_code || baseCurrency?.code || 'UGX',
+          total_sales: row.total_sales,
+          total_revenue: fmt(row.total_revenue),
+          total_tax: fmt(row.total_tax),
+          total_discounts: fmt(row.total_discounts),
+          average_sale: fmt(row.average_sale),
+        };
+      });
+    }
+
     return Array.isArray(reportData) ? reportData : [];
   };
 
