@@ -36,6 +36,7 @@ export type ApiProduct = {
   in_stock: boolean;
   is_featured: boolean;
   category: string;
+  cost_price?: number;
   quantity_on_hand?: number;
   quantity_reserved?: number;
   reorder_level?: number;

@@ -549,71 +549,129 @@ export default function ProcurementEnhanced() {
                   rows={2}
                 />
                 <div className="mb-4">
-                  <h4 className="text-xs font-bold mb-2">Items</h4>
-                  {poForm.items.map((item, idx) => (
-                    <div key={idx} className="grid grid-cols-4 gap-2 mb-2">
-                      <select
-                        value={item.product_id || ""}
-                        onChange={(e) => {
-                          const newItems = [...poForm.items];
-                          newItems[idx].product_id = e.target.value ? parseInt(e.target.value) : undefined;
-                          newItems[idx].item_name = undefined;
-                          setPoForm({ ...poForm, items: newItems });
-                        }}
-                        className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                      >
-                        <option value="">Select Product or New Item</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                      {!item.product_id && (
-                        <input
-                          type="text"
-                          placeholder="New Item Name"
-                          value={item.item_name || ""}
-                          onChange={(e) => {
-                            const newItems = [...poForm.items];
-                            newItems[idx].item_name = e.target.value;
-                            setPoForm({ ...poForm, items: newItems });
-                          }}
-                          className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                        />
-                      )}
-                      <input
-                        type="number"
-                        placeholder="Qty"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const newItems = [...poForm.items];
-                          newItems[idx].quantity = parseInt(e.target.value) || 0;
-                          setPoForm({ ...poForm, items: newItems });
-                        }}
-                        className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Price"
-                        value={item.unit_price}
-                        onChange={(e) => {
-                          const newItems = [...poForm.items];
-                          newItems[idx].unit_price = parseInt(e.target.value) || 0;
-                          setPoForm({ ...poForm, items: newItems });
-                        }}
-                        className="px-2 py-1 bg-background border border-border-subtle text-xs"
-                      />
-                      <button
-                        onClick={() => setPoForm({ ...poForm, items: poForm.items.filter((_, i) => i !== idx) })}
-                        className="px-2 py-1 text-xs text-red-500"
-                      >
-                        Remove
-                      </button>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold">Order Items</h4>
+                    <button
+                      onClick={() => setPoForm({ ...poForm, items: [...poForm.items, { quantity: 1, unit_price: 0 }] })}
+                      className="px-3 py-1 border border-border-subtle text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      <Plus size={10} /> Add Item
+                    </button>
+                  </div>
+                  {poForm.items.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic py-3 text-center border border-dashed border-border-subtle">
+                      No items yet — click "Add Item" to start
+                    </p>
+                  )}
+                  {poForm.items.length > 0 && (
+                    <div className="border border-border-subtle overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-chassis border-b border-border-subtle">
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Product / Item</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Custom Name</th>
+                            <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Qty</th>
+                            <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Price (cents)</th>
+                            <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Subtotal</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-subtle">
+                          {poForm.items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="px-3 py-2">
+                                <select
+                                  value={item.product_id || ""}
+                                  onChange={(e) => {
+                                    const pid = e.target.value ? parseInt(e.target.value) : undefined;
+                                    const prod = pid ? products.find(p => p.id === pid) : undefined;
+                                    const newItems = [...poForm.items];
+                                    newItems[idx] = {
+                                      ...newItems[idx],
+                                      product_id: pid,
+                                      item_name: undefined,
+                                      unit_price: prod ? (prod.cost_price ?? prod.price) : newItems[idx].unit_price,
+                                    };
+                                    setPoForm({ ...poForm, items: newItems });
+                                  }}
+                                  className="w-full px-2 py-1 bg-background border border-border-subtle text-xs"
+                                >
+                                  <option value="">— select existing product —</option>
+                                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-3 py-2">
+                                {!item.product_id ? (
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Samsung 65' TV"
+                                    value={item.item_name || ""}
+                                    onChange={(e) => {
+                                      const newItems = [...poForm.items];
+                                      newItems[idx].item_name = e.target.value;
+                                      setPoForm({ ...poForm, items: newItems });
+                                    }}
+                                    className="w-full px-2 py-1 bg-background border border-border-subtle text-xs"
+                                  />
+                                ) : (
+                                  <span className="text-muted-foreground italic text-[10px]">using product name</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="number"
+                                  placeholder="1"
+                                  min={1}
+                                  value={item.quantity || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...poForm.items];
+                                    newItems[idx].quantity = parseInt(e.target.value) || 0;
+                                    setPoForm({ ...poForm, items: newItems });
+                                  }}
+                                  className="w-16 px-2 py-1 bg-background border border-border-subtle text-xs text-center"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="number"
+                                  placeholder="e.g. 5000 = $50.00"
+                                  min={0}
+                                  value={item.unit_price || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...poForm.items];
+                                    newItems[idx].unit_price = parseInt(e.target.value) || 0;
+                                    setPoForm({ ...poForm, items: newItems });
+                                  }}
+                                  className="w-full px-2 py-1 bg-background border border-border-subtle text-xs text-right"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono-tech text-foreground">
+                                ${((item.quantity * item.unit_price) / 100).toFixed(2)}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  onClick={() => setPoForm({ ...poForm, items: poForm.items.filter((_, i) => i !== idx) })}
+                                  className="p-1 text-red-400 hover:text-red-600"
+                                  title="Remove item"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-border-subtle bg-chassis">
+                            <td colSpan={4} className="px-3 py-2 text-right text-xs text-muted-foreground font-medium">Order Total:</td>
+                            <td className="px-3 py-2 text-right font-mono-tech text-sm text-foreground font-bold">
+                              ${(poForm.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) / 100).toFixed(2)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
-                  ))}
-                  <button
-                    onClick={() => setPoForm({ ...poForm, items: [...poForm.items, { quantity: 0, unit_price: 0 }] })}
-                    className="px-3 py-1 border border-border-subtle text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    + Add Item
-                  </button>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button
