@@ -562,6 +562,8 @@ export type CompanySettings = {
   email: string;
   tax_id: string;
   website: string;
+  whatsapp: string;
+  site_layout: string;
   description: string;
 };
 

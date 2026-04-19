@@ -472,6 +472,20 @@ async function migrate() {
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;
+
+      -- Add whatsapp column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN whatsapp VARCHAR(50);
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+
+      -- Add site_layout column if it doesn't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN site_layout VARCHAR(50) DEFAULT 'tech_grid';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
     END $$;
     
     CREATE TABLE IF NOT EXISTS cash_drawer_sessions (

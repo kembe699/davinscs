@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.tsx";
+import { LayoutProvider } from "./contexts/LayoutContext.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CamerasPage from "./pages/categories/Cameras.tsx";
@@ -57,6 +58,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
+        <LayoutProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -111,6 +113,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </LayoutProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

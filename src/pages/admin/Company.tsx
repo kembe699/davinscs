@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Upload, Save } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
+import LayoutPicker from "@/components/admin/LayoutPicker";
 
 export default function Company() {
   const [companyData, setCompanyData] = useState({
@@ -9,12 +10,14 @@ export default function Company() {
     logo: "",
     email: "",
     phone: "",
+    whatsapp: "",
     address: "",
     city: "",
     country: "",
     postal_code: "",
     tax_id: "",
     website: "",
+    site_layout: "tech_grid",
     description: "",
   });
   const [loading, setLoading] = useState(false);
@@ -33,6 +36,8 @@ export default function Company() {
           logo: data.logo || "",
           email: data.email || "",
           phone: data.phone || "",
+          whatsapp: data.whatsapp || "",
+          site_layout: data.site_layout || "tech_grid",
           address: data.address || "",
           city: data.city || "",
           country: data.country || "",
@@ -76,6 +81,8 @@ export default function Company() {
         logo: savedData.logo || "",
         email: savedData.email || "",
         phone: savedData.phone || "",
+        whatsapp: savedData.whatsapp || "",
+        site_layout: savedData.site_layout || "tech_grid",
         address: savedData.address || "",
         city: savedData.city || "",
         country: savedData.country || "",
@@ -183,6 +190,18 @@ export default function Company() {
                   </div>
 
                   <div>
+                    <label className="block text-sm text-foreground mb-2">WhatsApp Number</label>
+                    <input
+                      type="tel"
+                      value={companyData.whatsapp}
+                      onChange={(e) => setCompanyData({ ...companyData, whatsapp: e.target.value })}
+                      placeholder="e.g. 256792149296 (digits only, no + or spaces)"
+                      className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Used for the WhatsApp chat link on the website. Include country code, no + sign.</p>
+                  </div>
+
+                  <div>
                     <label className="block text-sm text-foreground mb-2">Tax ID / Registration Number</label>
                     <input
                       type="text"
@@ -256,6 +275,12 @@ export default function Company() {
                   />
                 </div>
               </div>
+
+              {/* Website Layout */}
+              <LayoutPicker
+                value={companyData.site_layout}
+                onChange={(key) => setCompanyData({ ...companyData, site_layout: key })}
+              />
 
               {/* Save Button */}
               <div className="flex justify-end">

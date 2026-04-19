@@ -1,22 +1,42 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { api, type CompanySettings } from "@/lib/api";
 
 const Footer = () => {
+  const [company, setCompany] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    api.company.get().then(setCompany).catch(() => {});
+  }, []);
+
+  const waNumber = company?.whatsapp || "256792149296";
+  const waUrl    = `https://wa.me/${waNumber}`;
+
   return (
     <footer className="border-t border-border-subtle">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center mb-4">
-              <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-12 w-auto object-contain" />
+              {company?.logo
+                ? <img src={company.logo} alt={company.name} className="h-12 w-auto object-contain" />
+                : <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-12 w-auto object-contain" />
+              }
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mb-4">
-              Professional media equipment for filmmakers, podcasters, and content creators.
+              {company?.description || "Professional media equipment for filmmakers, podcasters, and content creators."}
             </p>
             <div className="space-y-1 text-sm text-muted-foreground">
-              <p>📍 London Chambers GF Shop 16<br />Johnson Street, Kampala</p>
-              <a href="tel:+256757774682" className="block pt-1 hover:text-primary transition-colors">📞 0757-774682</a>
-              <a href="https://wa.me/256792149296" target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 WhatsApp Us</a>
-              <p>✉️ infor@davinsstore</p>
+              {(company?.address || company?.city) && (
+                <p>📍 {company?.address}{company?.address && company?.city ? ", " : ""}{company?.city}</p>
+              )}
+              {company?.phone && (
+                <a href={`tel:${company.phone}`} className="block pt-1 hover:text-primary transition-colors">📞 {company.phone}</a>
+              )}
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 WhatsApp Us</a>
+              {company?.email && (
+                <a href={`mailto:${company.email}`} className="block hover:text-primary transition-colors">✉️ {company.email}</a>
+              )}
             </div>
           </div>
           <div>
@@ -61,7 +81,7 @@ const Footer = () => {
             </div>
           </div>
           <div className="font-mono-tech text-[10px] text-muted-foreground">
-            © 2025 Davin's Camera Store. All rights reserved.
+            © {new Date().getFullYear()} {company?.name || "Davin's Camera Store"}. All rights reserved.
           </div>
         </div>
       </div>

@@ -4,19 +4,36 @@ import MarqueeBanner from "@/components/MarqueeBanner";
 import CategoryGrid from "@/components/CategoryGrid";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
+import LayoutMagazine from "@/pages/home/LayoutMagazine";
+import LayoutMinimal from "@/pages/home/LayoutMinimal";
+import LayoutShowcase from "@/pages/home/LayoutShowcase";
+import LayoutBold from "@/pages/home/LayoutBold";
+import LayoutBoutique from "@/pages/home/LayoutBoutique";
+import { useLayout } from "@/contexts/LayoutContext";
+
+const LayoutTechGrid = () => (
+  <div className="min-h-screen bg-background">
+    <Navbar />
+    <HeroSection />
+    <MarqueeBanner />
+    <CategoryGrid />
+    <AboutSection />
+    <MarqueeBanner />
+    <Footer />
+  </div>
+);
 
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <HeroSection />
-      <MarqueeBanner />
-      <CategoryGrid />
-      <AboutSection />
-      <MarqueeBanner />
-      <Footer />
-    </div>
-  );
+  const { layout, loading } = useLayout();
+  if (loading) return null;
+  switch (layout) {
+    case "magazine":   return <LayoutMagazine />;
+    case "minimal":    return <LayoutMinimal />;
+    case "showcase":   return <LayoutShowcase />;
+    case "bold":       return <LayoutBold />;
+    case "boutique":   return <LayoutBoutique />;
+    default:           return <LayoutTechGrid />;
+  }
 };
 
 export default Index;

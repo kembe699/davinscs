@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, MapPin, Clock, Phone } from "lucide-react";
+import { api, type CompanySettings } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [company, setCompany] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    api.company.get().then(setCompany).catch(() => {});
+  }, []);
+
+  const waNumber = company?.whatsapp || "256792149296";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const lines = [
-      "Hi Davin's Camera Store! 👋",
+      `Hi ${company?.name || "Davin's Camera Store"}! 👋`,
       "You have a new enquiry via your website:",
       "",
       `👤 Name: ${form.name}`,
@@ -19,7 +27,7 @@ const Contact = () => {
       "",
       `💬 Message:\n${form.message}`,
     ];
-    const waUrl = `https://wa.me/256792149296?text=${encodeURIComponent(lines.join("\n"))}`;
+    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(lines.join("\n"))}`;
     window.open(waUrl, "_blank");
     setSubmitted(true);
   };
@@ -35,12 +43,15 @@ const Contact = () => {
           <div className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-4">
             SUPPORT_CHANNEL
           </div>
+          {company?.logo && (
+            <img src={company.logo} alt={company.name} className="h-10 object-contain mb-4" />
+          )}
           <h1 className="text-4xl lg:text-6xl font-light tracking-tighter text-foreground mb-4">
             Contact{" "}
             <span className="font-bold text-primary">Us</span>
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed max-w-[50ch]">
-            Our team of working professionals is ready to help you find the right gear, troubleshoot your setup, or answer any pre-purchase questions.
+            {company?.description || "Our team of working professionals is ready to help you find the right gear, troubleshoot your setup, or answer any pre-purchase questions."}
           </p>
         </div>
       </section>
@@ -62,9 +73,8 @@ const Contact = () => {
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Address</p>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      London Chambers GF Shop 16<br />
-                      Johnson Street<br />
-                      Kampala, Uganda
+                      {company?.address || "—"}{company?.address && <br />}
+                      {[company?.city, company?.country].filter(Boolean).join(", ") || ""}
                     </p>
                   </div>
                 </div>
@@ -74,10 +84,12 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Phone</p>
-                    <a href="tel:+256757774682" className="text-muted-foreground text-sm hover:text-primary transition-colors">0757-774682</a>
-                    <a href="https://wa.me/256792149296" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 mt-1 text-sm text-[#25D366] hover:text-[#1ebe5d] transition-colors font-medium">
+                    {company?.phone && (
+                      <a href={`tel:${company.phone}`} className="text-muted-foreground text-sm hover:text-primary transition-colors">{company.phone}</a>
+                    )}
+                    <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 mt-1 text-sm text-[#25D366] hover:text-[#1ebe5d] transition-colors font-medium">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.852L.057 23.273a.75.75 0 0 0 .92.92l5.421-1.471A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.693 9.693 0 0 1-4.953-1.36l-.355-.212-3.676.997.977-3.567-.232-.368A9.693 9.693 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
-                      +256 792 149 296 (WhatsApp)
+                      +{waNumber} (WhatsApp)
                     </a>
                     <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Mon – Sat, 9AM – 6PM EAT</p>
                   </div>
@@ -88,7 +100,9 @@ const Contact = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1">Email</p>
-                    <p className="text-muted-foreground text-sm">infor@davinsstore</p>
+                    {company?.email ? (
+                      <a href={`mailto:${company.email}`} className="text-muted-foreground text-sm hover:text-primary transition-colors">{company.email}</a>
+                    ) : <p className="text-muted-foreground text-sm">—</p>}
                     <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Response within 24 hours</p>
                   </div>
                 </div>
@@ -118,7 +132,7 @@ const Contact = () => {
             <div className="border border-border-subtle p-6 bg-grip/30">
               <p className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-3">Expert on Call</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Every support rep at Davin's is a working filmmaker or creator. You get advice from someone who's actually used the gear in the field.
+                {company?.name || "Davin's Camera Store"} — every support rep is a working filmmaker or creator. You get advice from someone who's actually used the gear in the field.
               </p>
             </div>
           </div>

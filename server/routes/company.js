@@ -35,6 +35,8 @@ router.get("/", async (req, res) => {
         email: rows[0].email || "",
         tax_id: rows[0].tax_id || "",
         website: rows[0].website || "",
+        whatsapp: rows[0].whatsapp || "",
+        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer || ""
       };
       
@@ -52,7 +54,7 @@ router.get("/", async (req, res) => {
 
 // Create or update company settings
 router.post("/", requireAuth, async (req, res) => {
-  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, description } = req.body;
+  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, site_layout, description } = req.body;
   
   console.log('Received company data:', { 
     name, 
@@ -86,9 +88,9 @@ router.post("/", requireAuth, async (req, res) => {
          SET company_name = $1, address = $2, phone = $3, email = $4, 
              tax_id = $5, logo_url = $6, city = $7, country = $8, 
              postal_code = $9, website = $10, receipt_footer = $11,
-             updated_at = NOW()
-         WHERE id = $12 RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, existing.rows[0].id]
+             whatsapp = $12, site_layout = $13, updated_at = NOW()
+         WHERE id = $14 RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', existing.rows[0].id]
       );
       console.log('Updated successfully:', rows[0]);
       const response = {
@@ -102,6 +104,8 @@ router.post("/", requireAuth, async (req, res) => {
         email: rows[0].email,
         tax_id: rows[0].tax_id,
         website: rows[0].website,
+        whatsapp: rows[0].whatsapp || "",
+        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer
       };
       console.log('Sending response:', response);
@@ -110,9 +114,9 @@ router.post("/", requireAuth, async (req, res) => {
       // Create new
       console.log('Creating new company settings...');
       const { rows } = await pool.query(
-        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, currency) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, 'UGX']
+        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, site_layout, currency) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', 'UGX']
       );
       console.log('Created successfully:', rows[0]);
       const response = {
@@ -126,6 +130,8 @@ router.post("/", requireAuth, async (req, res) => {
         email: rows[0].email,
         tax_id: rows[0].tax_id,
         website: rows[0].website,
+        whatsapp: rows[0].whatsapp || "",
+        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer
       };
       console.log('Sending response:', response);
