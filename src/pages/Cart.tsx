@@ -100,7 +100,7 @@ export default function Cart() {
                           {item.name}
                         </Link>
                         <p className="text-sm text-muted-foreground mt-1">
-                          ${(item.price / 100).toFixed(2)} each
+                          {item.price.toLocaleString()} each
                         </p>
                         {item.available < item.quantity && (
                           <p className="text-xs text-red-500 mt-1">
@@ -127,7 +127,7 @@ export default function Cart() {
                           </button>
                         </div>
                         <p className="font-bold text-foreground">
-                          ${((item.price * item.quantity) / 100).toFixed(2)}
+                          {(item.price * item.quantity).toLocaleString()}
                         </p>
                         <button
                           onClick={() => removeItem(item.id)}
@@ -149,12 +149,12 @@ export default function Cart() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono-tech text-foreground">${(subtotal / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech text-foreground">{subtotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Shipping</span>
                       <span className="font-mono-tech text-foreground">
-                        {shipping === 0 ? "FREE" : `$${(shipping / 100).toFixed(2)}`}
+                        {shipping === 0 ? "FREE" : shipping.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -162,7 +162,7 @@ export default function Cart() {
                   <div className="border-t border-border-subtle pt-4 mb-6">
                     <div className="flex justify-between">
                       <span className="font-bold text-foreground">Total</span>
-                      <span className="font-bold text-primary text-xl">${(total / 100).toFixed(2)}</span>
+                      <span className="font-bold text-primary text-xl">{total.toLocaleString()}</span>
                     </div>
                   </div>
 

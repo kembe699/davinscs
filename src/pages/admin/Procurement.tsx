@@ -670,7 +670,7 @@ export default function ProcurementEnhanced() {
                                 />
                               </td>
                               <td className="px-3 py-2 text-right font-mono-tech text-foreground">
-                                {poForm.currency_symbol}{((item.quantity * item.unit_price) / 100).toLocaleString()}
+                                {poForm.currency_symbol}{(item.quantity * item.unit_price).toLocaleString()}
                               </td>
                               <td className="px-3 py-2 text-right">
                                 <button
@@ -688,7 +688,7 @@ export default function ProcurementEnhanced() {
                           <tr className="border-t border-border-subtle bg-chassis">
                             <td colSpan={4} className="px-3 py-2 text-right text-xs text-muted-foreground font-medium">Order Total ({poForm.currency_code}):</td>
                             <td className="px-3 py-2 text-right font-mono-tech text-sm text-foreground font-bold">
-                              {poForm.currency_symbol}{(poForm.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) / 100).toLocaleString()}
+                              {poForm.currency_symbol}{(poForm.items.reduce((s, i) => s + i.quantity * i.unit_price, 0)).toLocaleString()}
                             </td>
                             <td></td>
                           </tr>
@@ -742,7 +742,7 @@ export default function ProcurementEnhanced() {
                           {po.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{po.currency_symbol || po.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{(po.total_amount / 100).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{po.currency_symbol || po.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{Number(po.total_amount).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handlePrintPO(po.id)}
@@ -835,7 +835,7 @@ export default function ProcurementEnhanced() {
                               <td className="px-3 py-2">{poItem.product_name || poItem.item_name}</td>
                               <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity}</td>
                               <td className="px-3 py-2 text-center text-muted-foreground">{poItem.quantity - poItem.received_quantity}</td>
-                              <td className="px-3 py-2 text-right font-mono-tech">{selectedPOForGRN.currency_symbol || selectedPOForGRN.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{(poItem.unit_price / 100).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right font-mono-tech">{selectedPOForGRN.currency_symbol || selectedPOForGRN.currency_code || (currencies.find(c => c.is_base)?.symbol ?? 'UGX')}{Number(poItem.unit_price).toLocaleString()}</td>
                               <td className="px-3 py-2">
                                 <input
                                   type="number"
@@ -1030,8 +1030,8 @@ export default function ProcurementEnhanced() {
                       <td className="px-4 py-3 font-mono-tech text-foreground">{bill.bill_number}</td>
                       <td className="px-4 py-3 text-foreground">{bill.supplier_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(bill.bill_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{(bill.total_amount / 100).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{(bill.paid_amount / 100).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{Number(bill.total_amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{Number(bill.paid_amount).toLocaleString()}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border ${
                           bill.status === 'paid' ? 'border-green-500/30 text-green-500 bg-green-500/5' :
@@ -1081,7 +1081,7 @@ export default function ProcurementEnhanced() {
                   >
                     <option value="">Select Bill (auto-fills supplier &amp; amount)</option>
                     {bills.filter(b => b.status !== 'paid').map(b => (
-                      <option key={b.id} value={b.id}>{b.bill_number} — {b.supplier_name} — Balance: ${((b.total_amount - b.paid_amount) / 100).toFixed(2)}</option>
+                      <option key={b.id} value={b.id}>{b.bill_number} — {b.supplier_name} — Balance: {(b.total_amount - b.paid_amount).toLocaleString()}</option>
                     ))}
                   </select>
                   <select
@@ -1167,7 +1167,7 @@ export default function ProcurementEnhanced() {
                       <td className="px-4 py-3 text-foreground">{payment.supplier_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{payment.bill_number || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(payment.payment_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-green-500">${(payment.amount / 100).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-green-500">${Number(payment.amount).toLocaleString()}</td>
                       <td className="px-4 py-3 text-muted-foreground capitalize">{payment.payment_method.replace('_', ' ')}</td>
                     </tr>
                   ))}

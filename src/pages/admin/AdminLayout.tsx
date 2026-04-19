@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
-import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt, Shield } from "lucide-react";
+import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt, Shield, TrendingUp, Activity } from "lucide-react";
 
 const allNavItems = [
   { label: "Dashboard",    href: "/admin",                icon: LayoutDashboard, permission: "dashboard.view" },
@@ -16,6 +16,8 @@ const allNavItems = [
   { label: "Currencies",   href: "/admin/currencies",     icon: Globe,           permission: "currencies.view" },
   { label: "Invoices",     href: "/admin/invoices",       icon: Receipt,         permission: "invoices.view" },
   { label: "Reports",      href: "/admin/reports",        icon: FileText,        permission: "reports.view" },
+  { label: "Cashflow",     href: "/admin/cashflow",       icon: TrendingUp,      permission: "reports.view" },
+  { label: "Audit Trail",  href: "/admin/audit-trail",    icon: Activity,        permission: "reports.view" },
   { label: "Payment Types",href: "/admin/payment-types",  icon: CreditCard,      permission: "payment_types.view" },
   { label: "Tax Rates",    href: "/admin/tax-rates",      icon: Percent,         permission: "tax_rates.view" },
   { label: "Price Lists",  href: "/admin/price-lists",    icon: Tag,             permission: "price_lists.view" },

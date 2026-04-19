@@ -241,7 +241,7 @@ export default function Orders() {
                         <td className="px-4 py-3 text-foreground">{order.customer_name}</td>
                         <td className="px-4 py-3 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-center font-mono-tech text-muted-foreground">{order.item_count || 0}</td>
-                        <td className="px-4 py-3 text-right font-mono-tech text-foreground">${(order.total / 100).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono-tech text-foreground">{Number(order.total).toLocaleString()}</td>
                         <td className="px-4 py-3 text-center">{getStatusBadge(order.status)}</td>
                       </tr>
                     ))
@@ -420,7 +420,7 @@ export default function Orders() {
                       {selectedOrder.items?.map((item) => (
                         <div key={item.id} className="flex justify-between text-sm">
                           <span className="text-foreground">{item.product_name} × {item.quantity}</span>
-                          <span className="font-mono-tech text-muted-foreground">${(item.subtotal / 100).toFixed(2)}</span>
+                          <span className="font-mono-tech text-muted-foreground">{Number(item.subtotal).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -429,15 +429,15 @@ export default function Orders() {
                   <div className="border-t border-border-subtle pt-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-mono-tech text-foreground">${(selectedOrder.subtotal / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech text-foreground">{Number(selectedOrder.subtotal).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">Shipping:</span>
-                      <span className="font-mono-tech text-foreground">${(selectedOrder.shipping_cost / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech text-foreground">{Number(selectedOrder.shipping_cost).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold border-t border-border-subtle pt-2 mt-2">
                       <span className="text-foreground">Total:</span>
-                      <span className="font-mono-tech text-primary">${(selectedOrder.total / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech text-primary">{Number(selectedOrder.total).toLocaleString()}</span>
                     </div>
                   </div>
 

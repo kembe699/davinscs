@@ -419,7 +419,7 @@ export default function ReportsNew() {
     if (selectedReport === "sales-by-scheme" && Array.isArray(reportData)) {
       return reportData.map((row: any) => {
         const sym = row.currency_symbol || baseCurrency?.symbol || 'UGX';
-        const fmt = (v: any) => `${sym} ${Math.round(parseFloat(v) / 100).toLocaleString('en-US')}`;
+        const fmt = (v: any) => `${sym} ${Math.round(parseFloat(v)).toLocaleString('en-US')}`;
         return {
           scheme_name: row.scheme_name,
           currency_code: row.currency_code || baseCurrency?.code || 'UGX',

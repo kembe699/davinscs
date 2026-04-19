@@ -11,6 +11,7 @@ export default function CashManagement() {
   const { baseCurrency } = useCurrency();
   const [currentSession, setCurrentSession] = useState<CashDrawerSession | null>(null);
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
+  const [movements, setMovements] = useState<any[]>([]);
   const [showCashInModal, setShowCashInModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -32,6 +33,12 @@ export default function CashManagement() {
       ]);
       setCurrentSession(current);
       setSessions(allSessions);
+      if (current?.id) {
+        const moves = await api.cashDrawer.getMovements(current.id).catch(() => []);
+        setMovements(moves);
+      } else {
+        setMovements([]);
+      }
     } catch (err) {
       console.error("Failed to load cash drawer data:", err);
     }
@@ -70,7 +77,7 @@ export default function CashManagement() {
       setShowCashInModal(false);
       setAmount(0);
       setReason("");
-      loadData();
+      await loadData();
     } catch (err: any) {
       alert(err.message || "Failed to record cash in");
     }
@@ -82,7 +89,7 @@ export default function CashManagement() {
       setShowCashOutModal(false);
       setAmount(0);
       setReason("");
-      loadData();
+      await loadData();
     } catch (err: any) {
       alert(err.message || "Failed to record cash out");
     }
@@ -146,7 +153,7 @@ export default function CashManagement() {
               <p className="text-sm text-admin-text">{new Date(currentSession.opened_at).toLocaleString()}</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-5">
             <button
               onClick={() => setShowCashInModal(true)}
               className="px-4 py-2 bg-admin-success text-white hover:opacity-90 flex items-center gap-2"
@@ -165,6 +172,41 @@ export default function CashManagement() {
             >
               Close Session
             </button>
+          </div>
+
+          {/* Movements log for this session */}
+          <div className="border-t border-admin-border pt-4">
+            <h3 className="text-sm font-semibold text-admin-text mb-3 uppercase tracking-widest">Cash Movements</h3>
+            {movements.length === 0 ? (
+              <p className="text-sm text-admin-text-secondary py-2">No movements recorded yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-admin-border">
+                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Time</th>
+                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Type</th>
+                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Reason</th>
+                    <th className="text-right py-2 text-admin-text-secondary font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((m: any) => (
+                    <tr key={m.id} className="border-b border-admin-border last:border-0">
+                      <td className="py-2 pr-4 text-admin-text-secondary">{new Date(m.created_at).toLocaleTimeString()}</td>
+                      <td className="py-2 pr-4">
+                        <span className={`px-2 py-0.5 text-xs font-bold ${m.type === 'in' ? 'bg-admin-success/20 text-admin-success' : 'bg-admin-danger/20 text-admin-danger'}`}>
+                          {m.type === 'in' ? '▲ IN' : '▼ OUT'}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-admin-text">{m.reason || '—'}</td>
+                      <td className={`py-2 text-right font-mono font-semibold ${m.type === 'in' ? 'text-admin-success' : 'text-admin-danger'}`}>
+                        {m.type === 'out' ? '-' : '+'}{formatCurrencySync(m.amount, baseCurrency?.symbol || 'UGX', false)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
@@ -221,6 +263,42 @@ export default function CashManagement() {
           </tbody>
         </table>
       </div>
+
+      {/* Close Session Modal */}
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-6 w-96">
+            <h2 className="text-xl font-bold text-admin-text mb-4">Close Cash Drawer Session</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-admin-text-secondary mb-2">Closing Cash Amount</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={closingCash}
+                  onChange={(e) => setClosingCash(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-lg font-mono focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowCloseModal(false)}
+                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCloseSession}
+                disabled={sessionLoading}
+                className="flex-1 px-4 py-2 bg-admin-danger text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {sessionLoading ? "Closing…" : "Close Session"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cash In Modal */}
       {showCashInModal && (

@@ -36,6 +36,7 @@ import exchangeRatesRoutes from "./routes/exchangeRates.js";
 import reportsRoutes from "./routes/reports.js";
 import invoicesRoutes from "./routes/invoices.js";
 import rolesRoutes from "./routes/roles.js";
+import auditLogsRoutes from "./routes/audit-logs.js";
 
 dotenv.config();
 
@@ -96,6 +97,7 @@ app.use("/api/exchange-rates", exchangeRatesRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/invoices", invoicesRoutes);
 app.use("/api/roles", rolesRoutes);
+app.use("/api/audit-logs", auditLogsRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -502,6 +504,28 @@ async function migrate() {
         ALTER TABLE company_settings ADD COLUMN brand_color_end VARCHAR(20) DEFAULT '#32CD32';
       EXCEPTION
         WHEN duplicate_column THEN NULL;
+      END;
+    END $$;
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      user_email VARCHAR(255),
+      action VARCHAR(100) NOT NULL,
+      entity_type VARCHAR(50),
+      entity_id INTEGER,
+      details JSONB,
+      ip_address VARCHAR(45),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+
+    DO $$ BEGIN
+      BEGIN
+        ALTER TABLE products ADD COLUMN expense_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL DEFAULT 9;
+      EXCEPTION WHEN duplicate_column THEN NULL;
       END;
     END $$;
     

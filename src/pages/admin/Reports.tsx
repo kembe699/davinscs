@@ -150,31 +150,31 @@ export default function Reports() {
         </div>
 
         {reportData && (
-          <div className="border border-border-subtle p-6 bg-background">
+          <div className="border border-border-subtle p-6 bg-background text-black">
             {reportType === "trial-balance" && (
               <div>
-                <h2 className="text-xl font-bold text-foreground mb-4">Trial Balance</h2>
-                <p className="text-sm text-muted-foreground mb-4">As of {asOfDate}</p>
+                <h2 className="text-xl font-bold text-black mb-4">Trial Balance</h2>
+                <p className="text-sm text-black mb-4">As of {asOfDate}</p>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-border-subtle">
-                      <th className="text-left py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Account</th>
-                      <th className="text-right py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Debit</th>
-                      <th className="text-right py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Credit</th>
+                      <th className="text-left py-2 font-mono-tech text-[9px] text-black uppercase tracking-widest">Account</th>
+                      <th className="text-right py-2 font-mono-tech text-[9px] text-black uppercase tracking-widest">Debit</th>
+                      <th className="text-right py-2 font-mono-tech text-[9px] text-black uppercase tracking-widest">Credit</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportData.accounts?.map((acc: any) => (
                       <tr key={acc.code} className="border-b border-border-subtle">
                         <td className="py-2">{acc.code} - {acc.name}</td>
-                        <td className="text-right font-mono-tech">{(acc.total_debit / 100).toFixed(2)}</td>
-                        <td className="text-right font-mono-tech">{(acc.total_credit / 100).toFixed(2)}</td>
+                        <td className="text-right font-mono-tech">{Number(acc.total_debit).toLocaleString()}</td>
+                        <td className="text-right font-mono-tech">{Number(acc.total_credit).toLocaleString()}</td>
                       </tr>
                     ))}
                     <tr className="border-t-2 border-border-subtle font-bold">
                       <td className="py-2">TOTAL</td>
-                      <td className="text-right font-mono-tech">{(reportData.total_debit / 100).toFixed(2)}</td>
-                      <td className="text-right font-mono-tech">{(reportData.total_credit / 100).toFixed(2)}</td>
+                      <td className="text-right font-mono-tech">{Number(reportData.total_debit).toLocaleString()}</td>
+                      <td className="text-right font-mono-tech">{Number(reportData.total_credit).toLocaleString()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -183,92 +183,89 @@ export default function Reports() {
 
             {reportType === "income-statement" && (
               <div>
-                <h2 className="text-xl font-bold text-foreground mb-4">Income Statement</h2>
-                <p className="text-sm text-muted-foreground mb-4">{startDate} to {endDate}</p>
+                <h2 className="text-xl font-bold text-black mb-4">Income Statement</h2>
+                <p className="text-sm text-black mb-4">{startDate} to {endDate}</p>
                 
                 <div className="mb-6">
-                  <h3 className="font-bold text-foreground mb-2">Revenue</h3>
+                  <h3 className="font-bold text-black mb-2">Revenue</h3>
                   {reportData.revenue?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
                       <span>{acc.name}</span>
-                      <span className="font-mono-tech">${(acc.amount / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech">{Number(acc.amount).toLocaleString()}</span>
                     </div>
                   ))}
                   <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                     <span>Total Revenue</span>
-                    <span className="font-mono-tech">${(reportData.total_revenue / 100).toFixed(2)}</span>
+                    <span className="font-mono-tech">{Number(reportData.total_revenue).toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="font-bold text-foreground mb-2">Expenses</h3>
+                  <h3 className="font-bold text-black mb-2">Expenses</h3>
                   {reportData.expenses?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
                       <span>{acc.name}</span>
-                      <span className="font-mono-tech">${(Math.abs(acc.amount) / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech">{Number(Math.abs(acc.amount)).toLocaleString()}</span>
                     </div>
                   ))}
                   <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                     <span>Total Expenses</span>
-                    <span className="font-mono-tech">${(reportData.total_expenses / 100).toFixed(2)}</span>
+                    <span className="font-mono-tech">{Number(reportData.total_expenses).toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className={`flex justify-between py-3 border-t-2 border-border-subtle text-lg font-bold ${
-                  reportData.net_income >= 0 ? "text-green-500" : "text-red-500"
-                }`}>
+                <div className="flex justify-between py-3 border-t-2 border-border-subtle text-lg font-bold text-black">
                   <span>Net Income</span>
-                  <span className="font-mono-tech">${(reportData.net_income / 100).toFixed(2)}</span>
+                  <span className="font-mono-tech">{Number(reportData.net_income).toLocaleString()}</span>
                 </div>
               </div>
             )}
 
             {reportType === "balance-sheet" && (
               <div>
-                <h2 className="text-xl font-bold text-foreground mb-4">Balance Sheet</h2>
-                <p className="text-sm text-muted-foreground mb-4">As of {asOfDate}</p>
+                <h2 className="text-xl font-bold text-black mb-4">Balance Sheet</h2>
+                <p className="text-sm text-black mb-4">As of {asOfDate}</p>
                 
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <h3 className="font-bold text-foreground mb-2">Assets</h3>
+                    <h3 className="font-bold text-black mb-2">Assets</h3>
                     {reportData.assets?.map((acc: any) => (
                       <div key={acc.code} className="flex justify-between py-1 text-sm">
                         <span>{acc.name}</span>
-                        <span className="font-mono-tech">${(acc.balance / 100).toFixed(2)}</span>
+                        <span className="font-mono-tech">{Number(acc.balance).toLocaleString()}</span>
                       </div>
                     ))}
                     <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                       <span>Total Assets</span>
-                      <span className="font-mono-tech">${(reportData.total_assets / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech">{Number(reportData.total_assets).toLocaleString()}</span>
                     </div>
                   </div>
 
                   <div>
                     <div className="mb-6">
-                      <h3 className="font-bold text-foreground mb-2">Liabilities</h3>
+                      <h3 className="font-bold text-black mb-2">Liabilities</h3>
                       {reportData.liabilities?.map((acc: any) => (
                         <div key={acc.code} className="flex justify-between py-1 text-sm">
                           <span>{acc.name}</span>
-                          <span className="font-mono-tech">${(Math.abs(acc.balance) / 100).toFixed(2)}</span>
+                          <span className="font-mono-tech">{Number(Math.abs(acc.balance)).toLocaleString()}</span>
                         </div>
                       ))}
                       <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                         <span>Total Liabilities</span>
-                        <span className="font-mono-tech">${(reportData.total_liabilities / 100).toFixed(2)}</span>
+                        <span className="font-mono-tech">{Number(reportData.total_liabilities).toLocaleString()}</span>
                       </div>
                     </div>
-
                     <div>
-                      <h3 className="font-bold text-foreground mb-2">Equity</h3>
+                      <h3 className="font-bold text-black mb-2">Equity</h3>
                       {reportData.equity?.map((acc: any) => (
                         <div key={acc.code} className="flex justify-between py-1 text-sm">
                           <span>{acc.name}</span>
-                          <span className="font-mono-tech">${(Math.abs(acc.balance) / 100).toFixed(2)}</span>
+                          <span className="font-mono-tech">{Number(Math.abs(acc.balance)).toLocaleString()}</span>
                         </div>
                       ))}
                       <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                         <span>Total Equity</span>
-                        <span className="font-mono-tech">${(reportData.total_equity / 100).toFixed(2)}</span>
+                        <span className="font-mono-tech">{Number(reportData.total_equity).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -278,19 +275,19 @@ export default function Reports() {
 
             {reportType === "inventory-valuation" && (
               <div>
-                <h2 className="text-xl font-bold text-foreground mb-4">Inventory Valuation</h2>
+                <h2 className="text-xl font-bold text-black mb-4">Inventory Valuation</h2>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="border border-border-subtle p-4">
-                    <p className="text-xs font-mono-tech text-muted-foreground uppercase tracking-widest mb-1">Total Products</p>
-                    <p className="text-2xl font-bold text-foreground">{reportData.total_products}</p>
+                    <p className="text-xs font-mono-tech text-black uppercase tracking-widest mb-1">Total Products</p>
+                    <p className="text-2xl font-bold text-black">{reportData.total_products}</p>
                   </div>
                   <div className="border border-border-subtle p-4">
-                    <p className="text-xs font-mono-tech text-muted-foreground uppercase tracking-widest mb-1">Total Units</p>
-                    <p className="text-2xl font-bold text-foreground">{reportData.total_units}</p>
+                    <p className="text-xs font-mono-tech text-black uppercase tracking-widest mb-1">Total Units</p>
+                    <p className="text-2xl font-bold text-black">{reportData.total_units}</p>
                   </div>
                   <div className="border border-border-subtle p-4">
-                    <p className="text-xs font-mono-tech text-muted-foreground uppercase tracking-widest mb-1">Total Value</p>
-                    <p className="text-2xl font-bold text-primary">${(reportData.total_value / 100).toFixed(2)}</p>
+                    <p className="text-xs font-mono-tech text-black uppercase tracking-widest mb-1">Total Value</p>
+                    <p className="text-2xl font-bold text-black">{Number(reportData.total_value).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

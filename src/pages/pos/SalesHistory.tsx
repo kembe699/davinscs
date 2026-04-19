@@ -344,12 +344,12 @@ export default function SalesHistory() {
                       <td className="px-3 py-2 text-xs">{item.product_name}</td>
                       <td className="px-3 py-2 text-xs">pcs</td>
                       <td className="px-3 py-2 text-xs text-right">{item.quantity}</td>
-                      <td className="px-3 py-2 text-xs text-right">{(item.unit_price / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-xs text-right">{(item.tax_amount / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-xs text-right">{((item.unit_price + item.tax_amount) / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-xs text-right">{(item.subtotal / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-xs text-right">{(item.discount_amount / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2 text-xs text-right font-mono">{((item.subtotal - item.discount_amount) / 100).toFixed(2)}</td>
+                      <td className="px-3 py-2 text-xs text-right">{Number(item.unit_price).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-right">{Number(item.tax_amount).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-right">{Number(item.unit_price + item.tax_amount).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-right">{Number(item.subtotal).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-right">{Number(item.discount_amount).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-right font-mono">{Number(item.subtotal - item.discount_amount).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

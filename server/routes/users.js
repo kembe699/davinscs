@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.post("/", requireAuth, async (req, res) => {
       "INSERT INTO users (email, password_hash, role, role_id) VALUES ($1, $2, 'admin', $3) RETURNING id, email, role, role_id, created_at",
       [email.toLowerCase(), hash, role_id || null]
     );
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_CREATED', entityType: 'user', entityId: rows[0].id, details: { email: rows[0].email }, ip: req.ip });
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
@@ -56,6 +58,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     }
     const { rows } = await pool.query(query, params);
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_UPDATED', entityType: 'user', entityId: id, details: { email, password_changed: !!password }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
@@ -75,6 +78,7 @@ router.put("/:id/role", requireAuth, async (req, res) => {
       [role_id || null, id]
     );
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_ROLE_CHANGED', entityType: 'user', entityId: id, details: { role_id: role_id || null }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -88,6 +92,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const { rowCount } = await pool.query("DELETE FROM users WHERE id = $1", [id]);
     if (rowCount === 0) return res.status(404).json({ error: "User not found" });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_DELETED', entityType: 'user', entityId: id, details: null, ip: req.ip });
     res.json({ success: true });
   } catch (err) {
     console.error(err);

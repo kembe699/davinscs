@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../db.js";
+import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -18,7 +19,10 @@ router.post("/login", async (req, res) => {
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+    if (!valid) {
+      await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN_FAILED', entityType: 'user', entityId: user.id, details: { reason: 'Wrong password' }, ip: req.ip });
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
     // Load permissions for this user's role
     let permissions = [];
@@ -45,6 +49,7 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+    await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN', entityType: 'user', entityId: user.id, details: { role: roleName }, ip: req.ip });
     res.json({
       token,
       user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions }

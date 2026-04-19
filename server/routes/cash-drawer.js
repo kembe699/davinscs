@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -48,6 +49,7 @@ router.post("/open", requireAuth, async (req, res) => {
       [user_id, opening_cash]
     );
     
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_SESSION_OPENED', entityType: 'cash_drawer', entityId: rows[0].id, details: { opening_cash }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -119,6 +121,7 @@ router.post("/close", requireAuth, async (req, res) => {
       [session.id]
     );
     
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_SESSION_CLOSED', entityType: 'cash_drawer', entityId: session.id, details: { closing_cash, expected_cash, cash_difference }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -155,6 +158,7 @@ router.post("/cash-in", requireAuth, async (req, res) => {
       [sessionResult.rows[0].id, user_id, amount, reason]
     );
     
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_IN', entityType: 'cash_movement', entityId: rows[0].id, details: { amount, reason }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -188,6 +192,7 @@ router.post("/cash-out", requireAuth, async (req, res) => {
       [sessionResult.rows[0].id, user_id, amount, reason]
     );
     
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_OUT', entityType: 'cash_movement', entityId: rows[0].id, details: { amount, reason }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);

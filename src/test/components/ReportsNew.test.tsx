@@ -84,7 +84,7 @@ vi.mock("@/pages/admin/AdminLayout", () => ({
 }));
 
 vi.mock("@/utils/currency", () => ({
-  formatCurrencySync: (amount: number, symbol = "UGX") => `${symbol} ${(amount / 100).toLocaleString()}`,
+  formatCurrencySync: (amount: number, symbol = "UGX") => `${symbol} ${amount.toLocaleString()}`,
 }));
 
 import ReportsNew from "@/pages/admin/ReportsNew";

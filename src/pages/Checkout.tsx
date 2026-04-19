@@ -207,7 +207,7 @@ export default function Checkout() {
                           {item.name} × {item.quantity}
                         </span>
                         <span className="font-mono-tech text-foreground">
-                          ${((item.price * item.quantity) / 100).toFixed(2)}
+                          {(item.price * item.quantity).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -216,7 +216,7 @@ export default function Checkout() {
                   <div className="border-t border-border-subtle pt-4 space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono-tech text-foreground">${(subtotal / 100).toFixed(2)}</span>
+                      <span className="font-mono-tech text-foreground">{subtotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Shipping</span>
@@ -227,7 +227,7 @@ export default function Checkout() {
                   <div className="border-t border-border-subtle pt-4 mb-6">
                     <div className="flex justify-between">
                       <span className="font-bold text-foreground">Total</span>
-                      <span className="font-bold text-primary text-xl">${(total / 100).toFixed(2)}</span>
+                      <span className="font-bold text-primary text-xl">{total.toLocaleString()}</span>
                     </div>
                   </div>
 

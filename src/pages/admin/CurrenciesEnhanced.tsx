@@ -527,11 +527,11 @@ export default function CurrenciesEnhanced() {
               {convertResult && (
                 <div className="mt-4 p-4 bg-primary/5 border border-primary/30">
                   <p className="text-sm text-foreground">
-                    <span className="font-mono-tech">{(convertResult.original_amount / 100).toFixed(2)}</span>
+                    <span className="font-mono-tech">{Number(convertResult.original_amount).toLocaleString()}</span>
                     {' '} at rate {' '}
                     <span className="font-mono-tech text-primary">{convertResult.rate.toFixed(6)}</span>
                     {' '} = {' '}
-                    <span className="font-mono-tech font-bold text-primary">{(convertResult.converted_amount / 100).toFixed(2)}</span>
+                    <span className="font-mono-tech font-bold text-primary">{Number(convertResult.converted_amount).toLocaleString()}</span>
                   </p>
                 </div>
               )}

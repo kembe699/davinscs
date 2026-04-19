@@ -115,11 +115,11 @@ export default function OrderConfirmation() {
                   <div>
                     <p className="text-foreground">{item.product_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      ${(item.product_price / 100).toFixed(2)} × {item.quantity}
+                      {Number(item.product_price).toLocaleString()} × {item.quantity}
                     </p>
                   </div>
                   <p className="font-mono-tech text-foreground">
-                    ${(item.subtotal / 100).toFixed(2)}
+                    {Number(item.subtotal).toLocaleString()}
                   </p>
                 </div>
               ))}
@@ -129,19 +129,19 @@ export default function OrderConfirmation() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-mono-tech text-foreground">
-                  ${(order.subtotal / 100).toFixed(2)}
+                  {Number(order.subtotal).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="font-mono-tech text-foreground">
-                  {order.shipping_cost === 0 ? "FREE" : `$${(order.shipping_cost / 100).toFixed(2)}`}
+                  {order.shipping_cost === 0 ? "FREE" : Number(order.shipping_cost).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-border-subtle">
                 <span className="font-bold text-foreground">Total</span>
                 <span className="font-bold text-primary text-xl">
-                  ${(order.total / 100).toFixed(2)}
+                  {Number(order.total).toLocaleString()}
                 </span>
               </div>
             </div>

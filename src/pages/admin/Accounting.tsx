@@ -225,6 +225,9 @@ export default function Accounting() {
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Code</th>
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Name</th>
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Type</th>
+                    <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Debit</th>
+                    <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Credit</th>
+                    <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Balance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
@@ -241,6 +244,17 @@ export default function Accounting() {
                       <td className="px-4 py-3">
                         <span className="font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border border-primary/30 text-primary bg-primary/5">
                           {account.account_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-sm text-foreground">
+                        {Number(account.total_debit) > 0 ? Number(account.total_debit).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-sm text-foreground">
+                        {Number(account.total_credit) > 0 ? Number(account.total_credit).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-sm font-bold">
+                        <span className={Number(account.balance) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                          {Number(account.balance).toLocaleString()}
                         </span>
                       </td>
                     </tr>
@@ -399,10 +413,10 @@ export default function Accounting() {
                       <td className="px-4 py-3 font-mono-tech text-foreground">{tx.reference || '—'}</td>
                       <td className="px-4 py-3 text-muted-foreground">{tx.description || '—'}</td>
                       <td className="px-4 py-3 text-right font-mono-tech text-foreground">
-                        {(tx.total_debit / 100).toFixed(2)}
+                        {Number(tx.total_debit).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right font-mono-tech text-foreground">
-                        {(tx.total_credit / 100).toFixed(2)}
+                        {Number(tx.total_credit).toLocaleString()}
                       </td>
                     </tr>
                   ))}

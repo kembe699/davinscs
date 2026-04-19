@@ -82,7 +82,7 @@ export function getCurrencySymbol(code: string): string {
 // Format amount with currency symbol
 // Amount is expected in cents (divide by 100 for display)
 export async function formatCurrency(
-  amountInCents: number, 
+  amount: number, 
   currencyCode?: string,
   showDecimals: boolean = true
 ): Promise<string> {
@@ -90,7 +90,6 @@ export async function formatCurrency(
   const code = currencyCode || baseCurrency.code;
   const symbol = getCurrencySymbol(code) || code;
   
-  const amount = amountInCents / 100;
   const formatted = showDecimals 
     ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -100,11 +99,10 @@ export async function formatCurrency(
 
 // Synchronous version for when currency is already loaded
 export function formatCurrencySync(
-  amountInCents: number,
+  amount: number,
   currencySymbol: string = 'UGX',
   showDecimals: boolean = true
 ): string {
-  const amount = amountInCents / 100;
   const formatted = showDecimals 
     ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });

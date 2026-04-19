@@ -956,4 +956,104 @@ router.get("/income-statement", requireAuth, async (req, res) => {
   }
 });
 
+// ============ CASHFLOW REPORT ============
+
+router.get("/cashflow", requireAuth, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    const startDate = start_date || new Date(new Date().setDate(1)).toISOString().split('T')[0];
+    const endDate   = end_date   || new Date().toISOString().split('T')[0];
+
+    // 1. Cash-in from POS sales (cash payment type only, completed, not voided)
+    const posCashIn = await pool.query(`
+      SELECT DATE(s.created_at) as date,
+             COALESCE(SUM(s.total_amount), 0) as amount,
+             COUNT(*) as tx_count
+      FROM pos_sales s
+      JOIN payment_types pt ON s.payment_type_id = pt.id
+      WHERE pt.code = 'cash'
+        AND s.voided = false
+        AND s.sale_type != 'refund'
+        AND s.status = 'completed'
+        AND DATE(s.created_at) BETWEEN $1 AND $2
+      GROUP BY DATE(s.created_at)
+      ORDER BY date`, [startDate, endDate]);
+
+    // 2. Cash-out from refunds (cash only)
+    const posCashOut = await pool.query(`
+      SELECT DATE(s.created_at) as date,
+             COALESCE(SUM(ABS(s.total_amount)), 0) as amount,
+             COUNT(*) as tx_count
+      FROM pos_sales s
+      JOIN payment_types pt ON s.payment_type_id = pt.id
+      WHERE pt.code = 'cash'
+        AND s.sale_type = 'refund'
+        AND DATE(s.created_at) BETWEEN $1 AND $2
+      GROUP BY DATE(s.created_at)
+      ORDER BY date`, [startDate, endDate]);
+
+    // 3. Manual cash movements (in / out)
+    const manualMovements = await pool.query(`
+      SELECT DATE(m.created_at) as date,
+             m.type,
+             COALESCE(SUM(m.amount), 0) as amount,
+             COUNT(*) as tx_count
+      FROM cash_movements m
+      WHERE DATE(m.created_at) BETWEEN $1 AND $2
+      GROUP BY DATE(m.created_at), m.type
+      ORDER BY date`, [startDate, endDate]);
+
+    // 4. Daily breakdown — merge all sources
+    const dayMap = {};
+    const ensureDay = d => {
+      if (!dayMap[d]) dayMap[d] = { date: d, sales_in: 0, sales_tx: 0, refunds_out: 0, refunds_tx: 0, manual_in: 0, manual_out: 0, manual_in_tx: 0, manual_out_tx: 0 };
+    };
+
+    posCashIn.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].sales_in += parseInt(r.amount); dayMap[r.date].sales_tx += parseInt(r.tx_count); });
+    posCashOut.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].refunds_out += parseInt(r.amount); dayMap[r.date].refunds_tx += parseInt(r.tx_count); });
+    manualMovements.rows.forEach(r => {
+      ensureDay(r.date);
+      if (r.type === 'in')  { dayMap[r.date].manual_in  += parseInt(r.amount); dayMap[r.date].manual_in_tx  += parseInt(r.tx_count); }
+      if (r.type === 'out') { dayMap[r.date].manual_out += parseInt(r.amount); dayMap[r.date].manual_out_tx += parseInt(r.tx_count); }
+    });
+
+    const daily = Object.values(dayMap)
+      .map(d => ({
+        ...d,
+        total_in:  d.sales_in  + d.manual_in,
+        total_out: d.refunds_out + d.manual_out,
+        net:       (d.sales_in + d.manual_in) - (d.refunds_out + d.manual_out),
+      }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 5. Totals summary
+    const totals = daily.reduce((acc, d) => ({
+      total_in:     acc.total_in  + d.total_in,
+      total_out:    acc.total_out + d.total_out,
+      sales_in:     acc.sales_in  + d.sales_in,
+      refunds_out:  acc.refunds_out  + d.refunds_out,
+      manual_in:    acc.manual_in + d.manual_in,
+      manual_out:   acc.manual_out + d.manual_out,
+    }), { total_in: 0, total_out: 0, sales_in: 0, refunds_out: 0, manual_in: 0, manual_out: 0 });
+
+    totals.net = totals.total_in - totals.total_out;
+
+    // 6. Cash drawer sessions in range
+    const sessions = await pool.query(`
+      SELECT s.id, s.opening_cash, s.closing_cash, s.expected_cash,
+             s.cash_difference, s.status, s.opened_at, s.closed_at,
+             u.email as user_email
+      FROM cash_drawer_sessions s
+      LEFT JOIN users u ON s.user_id = u.id
+      WHERE DATE(s.opened_at) BETWEEN $1 AND $2
+      ORDER BY s.opened_at DESC`, [startDate, endDate]);
+
+    res.json({ start_date: startDate, end_date: endDate, summary: totals, daily, sessions: sessions.rows });
+  } catch (err) {
+    console.error("Error in cashflow report:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;
+

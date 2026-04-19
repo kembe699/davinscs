@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -137,6 +138,21 @@ router.post("/sales", requireAuth, async (req, res) => {
       );
     }
     
+    // Auto-record cash sales as cash_movements 'in' for the active session
+    if (session_id && sale_type !== 'credit' && (status || 'completed') === 'completed') {
+      const ptResult = await client.query(
+        "SELECT code FROM payment_types WHERE id = $1",
+        [payment_type_id]
+      );
+      if (ptResult.rows[0]?.code === 'cash') {
+        await client.query(
+          `INSERT INTO cash_movements (session_id, user_id, type, amount, reason)
+           VALUES ($1, $2, 'in', $3, $4)`,
+          [session_id, user_id, total_amount, `POS Sale ${sale_number}`]
+        );
+      }
+    }
+
     // If credit sale, create credit record
     if (sale_type === 'credit' && customer_id) {
       const due_date = new Date();
@@ -177,6 +193,7 @@ router.post("/sales", requireAuth, async (req, res) => {
       [sale.id]
     );
     
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_CREATED', entityType: 'sale', entityId: sale.id, details: { sale_number, total_amount, payment_type_id, sale_type: sale_type || 'regular', items_count: items.length }, ip: req.ip });
     res.json(completeSale.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -347,7 +364,7 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
     );
     
     await client.query("COMMIT");
-    
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_VOIDED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
     res.json({ message: "Sale voided successfully" });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -464,6 +481,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
 
     await client.query("COMMIT");
 
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_REFUNDED', entityType: 'sale', entityId: parseInt(id), details: { refund_number, refund_total, reason }, ip: req.ip });
     res.json({
       message: "Refund processed successfully",
       refund_amount: refund_total,

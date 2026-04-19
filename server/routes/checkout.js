@@ -118,8 +118,8 @@ router.post("/", async (req, res) => {
       `<tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${(item.price / 100).toFixed(2)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$${((item.price * item.quantity) / 100).toFixed(2)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${item.price.toLocaleString()}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${(item.price * item.quantity).toLocaleString()}</td>
       </tr>`
     ).join('');
     
@@ -146,15 +146,15 @@ router.post("/", async (req, res) => {
           <tfoot>
             <tr>
               <td colspan="3" style="padding: 8px; text-align: right; font-weight: bold;">Subtotal:</td>
-              <td style="padding: 8px; text-align: right; font-weight: bold;">$${(subtotal / 100).toFixed(2)}</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold;">${subtotal.toLocaleString()}</td>
             </tr>
             <tr>
               <td colspan="3" style="padding: 8px; text-align: right; font-weight: bold;">Shipping:</td>
-              <td style="padding: 8px; text-align: right; font-weight: bold;">$${(shippingCost / 100).toFixed(2)}</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold;">${shippingCost.toLocaleString()}</td>
             </tr>
             <tr>
               <td colspan="3" style="padding: 8px; text-align: right; font-weight: bold; font-size: 18px;">Total:</td>
-              <td style="padding: 8px; text-align: right; font-weight: bold; font-size: 18px;">$${(total / 100).toFixed(2)}</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold; font-size: 18px;">${total.toLocaleString()}</td>
             </tr>
           </tfoot>
         </table>
@@ -198,7 +198,7 @@ router.post("/", async (req, res) => {
           </tbody>
         </table>
         
-        <p><strong>Total:</strong> $${(total / 100).toFixed(2)}</p>
+        <p><strong>Total:</strong> ${total.toLocaleString()}</p>
         
         <h3>Shipping Address</h3>
         <p>

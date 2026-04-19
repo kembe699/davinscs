@@ -20,8 +20,8 @@ const STATUS_ICON: Record<string, JSX.Element> = {
   voided:  <Ban size={12} />,
 };
 
-function fmt(cents: number | string, sym = "UGX") {
-  const n = Math.round(parseFloat(String(cents)) / 100);
+function fmt(amount: number | string, sym = "UGX") {
+  const n = Math.round(parseFloat(String(amount)));
   return `${sym} ${n.toLocaleString("en-US")}`;
 }
 
@@ -466,7 +466,7 @@ export default function Invoices() {
                       <button
                         onClick={() => {
                           const balance = detail.total_amount - detail.paid_amount;
-                          setPayAmount((balance / 100).toFixed(2));
+                          setPayAmount(String(balance));
                           setShowPayment(true);
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm hover:bg-green-700"

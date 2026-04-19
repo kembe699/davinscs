@@ -8,10 +8,15 @@ const router = express.Router();
 router.get("/accounts", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT a.*, p.name as parent_name
+      SELECT a.*, p.name as parent_name,
+        COALESCE(SUM(tl.debit), 0)  AS total_debit,
+        COALESCE(SUM(tl.credit), 0) AS total_credit,
+        COALESCE(SUM(tl.debit), 0) - COALESCE(SUM(tl.credit), 0) AS balance
       FROM accounts a
       LEFT JOIN accounts p ON a.parent_id = p.id
+      LEFT JOIN transaction_lines tl ON tl.account_id = a.id
       WHERE a.is_active = true
+      GROUP BY a.id, p.name
       ORDER BY a.code
     `);
     res.json(rows);

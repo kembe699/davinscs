@@ -21,7 +21,7 @@ export interface ReportExportOptions {
 
 // Format currency for display
 const formatCurrency = (value: number, symbol: string = 'UGX'): string => {
-  return `${symbol} ${(value / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${symbol} ${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 // Export to Excel
@@ -50,7 +50,7 @@ export const exportToExcel = (options: ReportExportOptions) => {
       const value = row[col.dataKey];
       // Check if it's a currency value (typically large numbers)
       if (typeof value === 'number' && value > 1000) {
-        return (value / 100).toFixed(2);
+        return value.toLocaleString();
       }
       return value;
     })
@@ -68,7 +68,7 @@ export const exportToExcel = (options: ReportExportOptions) => {
       }, 0);
       
       if (sum > 1000) {
-        return (sum / 100).toFixed(2);
+        return sum.toLocaleString();
       }
       return sum;
     }

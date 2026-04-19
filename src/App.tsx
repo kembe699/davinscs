@@ -44,6 +44,8 @@ import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
 import PriceLists from "./pages/admin/PriceLists.tsx";
 import Invoices from "./pages/admin/Invoices.tsx";
 import Promotions from "./pages/admin/Promotions.tsx";
+import CashflowReport from "./pages/admin/CashflowReport.tsx";
+import AuditTrail from "./pages/admin/AuditTrail.tsx";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +102,8 @@ const App = () => (
             <Route path="/admin/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
+            <Route path="/admin/cashflow" element={<ProtectedRoute><CashflowReport /></ProtectedRoute>} />
+            <Route path="/admin/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
             <Route path="/admin/reset-password" element={<ResetPassword />} />
             <Route path="/pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
             <Route path="/pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
