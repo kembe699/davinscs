@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { useLayout } from "@/contexts/LayoutContext";
 
 const Login = () => {
   const { login } = useAuth();
+  const { logo, companyName } = useLayout();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,7 +52,10 @@ const Login = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <img src="/logo.jpeg" alt="Davin's" className="h-14 mx-auto mb-4 object-contain" />
+          {logo
+            ? <img src={logo} alt={companyName || "Logo"} className="h-28 mx-auto mb-4 object-contain" />
+            : <p className="text-3xl font-black text-foreground tracking-widest uppercase mb-4">{companyName}</p>
+          }
           <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase">CMS Admin Portal</p>
         </div>
 

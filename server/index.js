@@ -486,6 +486,23 @@ async function migrate() {
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;
+
+      -- Add brand color columns if they don't exist
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN brand_color_start VARCHAR(20) DEFAULT '#004A99';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN brand_color_mid VARCHAR(20) DEFAULT '#008B8B';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN brand_color_end VARCHAR(20) DEFAULT '#32CD32';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
     END $$;
     
     CREATE TABLE IF NOT EXISTS cash_drawer_sessions (

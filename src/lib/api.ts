@@ -565,6 +565,9 @@ export type CompanySettings = {
   whatsapp: string;
   site_layout: string;
   description: string;
+  brand_color_start: string;
+  brand_color_mid: string;
+  brand_color_end: string;
 };
 
 export type POSSale = {

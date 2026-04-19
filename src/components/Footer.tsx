@@ -19,8 +19,8 @@ const Footer = () => {
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center mb-4">
               {company?.logo
-                ? <img src={company.logo} alt={company.name} className="h-12 w-auto object-contain" />
-                : <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-12 w-auto object-contain" />
+                ? <img src={company.logo} alt={company.name} className="h-20 w-auto object-contain" />
+                : <span className="font-bold text-foreground tracking-widest uppercase">{company?.name}</span>
               }
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mb-4">

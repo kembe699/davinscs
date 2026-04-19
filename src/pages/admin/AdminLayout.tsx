@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayout } from "@/contexts/LayoutContext";
 import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt, Shield } from "lucide-react";
 
 const allNavItems = [
@@ -25,6 +26,7 @@ const allNavItems = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, logout, hasPermission } = useAuth();
+  const { logo, companyName } = useLayout();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -41,7 +43,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside className="w-56 shrink-0 border-r border-admin-border flex flex-col bg-admin-bg sticky top-0 h-screen overflow-y-auto">
         <div className="p-5 border-b border-admin-border">
           <Link to="/">
-            <img src="/logo.jpeg" alt="Davin's" className="h-10 object-contain" />
+            {logo
+              ? <img src={logo} alt={companyName || "Logo"} className="h-16 object-contain" />
+              : <span className="font-bold text-sm text-admin-text tracking-widest uppercase">{companyName}</span>
+            }
           </Link>
           <div className="mt-2 flex items-center justify-between">
             <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">ADMIN PANEL</p>

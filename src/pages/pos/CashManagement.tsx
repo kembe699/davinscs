@@ -13,8 +13,12 @@ export default function CashManagement() {
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
   const [showCashInModal, setShowCashInModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
   const [amount, setAmount] = useState(0);
   const [reason, setReason] = useState("");
+  const [openingCash, setOpeningCash] = useState(0);
+  const [closingCash, setClosingCash] = useState(0);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,6 +34,33 @@ export default function CashManagement() {
       setSessions(allSessions);
     } catch (err) {
       console.error("Failed to load cash drawer data:", err);
+    }
+  };
+
+  const handleOpenSession = async () => {
+    setSessionLoading(true);
+    try {
+      await api.cashDrawer.open(openingCash);
+      setOpeningCash(0);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to open session");
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const handleCloseSession = async () => {
+    setSessionLoading(true);
+    try {
+      await api.cashDrawer.close(closingCash);
+      setShowCloseModal(false);
+      setClosingCash(0);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to close session");
+    } finally {
+      setSessionLoading(false);
     }
   };
 
@@ -70,11 +101,42 @@ export default function CashManagement() {
         <h1 className="text-2xl font-bold text-admin-text">Cash Management</h1>
       </div>
 
-      {/* Current Session */}
+      {/* Open Session — shown when no active session */}
+      {!currentSession && (
+        <div className="bg-admin-surface border border-admin-border p-6 mb-6">
+          <h2 className="text-lg font-bold text-admin-text mb-1">Open Cash Drawer Session</h2>
+          <p className="text-sm text-admin-text-secondary mb-4">Enter the opening float to start a new session.</p>
+          <div className="flex items-end gap-4">
+            <div className="flex-1 max-w-xs">
+              <label className="block text-sm text-admin-text-secondary mb-2">Opening Cash Amount</label>
+              <input
+                type="number"
+                min="0"
+                value={openingCash}
+                onChange={(e) => setOpeningCash(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-lg font-mono focus:outline-none focus:border-primary"
+                placeholder="0"
+              />
+            </div>
+            <button
+              onClick={handleOpenSession}
+              disabled={sessionLoading}
+              className="px-6 py-2 bg-admin-success text-white font-bold hover:opacity-90 disabled:opacity-50"
+            >
+              {sessionLoading ? "Opening…" : "Open Session"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Current Session — shown when active session exists */}
       {currentSession && (
         <div className="bg-admin-surface border border-admin-border p-6 mb-6">
-          <h2 className="text-lg font-bold text-admin-text mb-4">Current Session</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-admin-text">Current Session</h2>
+            <span className="px-3 py-1 text-xs font-bold bg-admin-success text-white uppercase tracking-widest">Open</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
               <p className="text-sm text-admin-text-secondary">Opening Cash</p>
               <p className="text-xl font-mono text-admin-text">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', false)}</p>
@@ -84,18 +146,24 @@ export default function CashManagement() {
               <p className="text-sm text-admin-text">{new Date(currentSession.opened_at).toLocaleString()}</p>
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-3">
             <button
               onClick={() => setShowCashInModal(true)}
-              className="px-4 py-2 bg-admin-success text-white hover:opacity-90"
+              className="px-4 py-2 bg-admin-success text-white hover:opacity-90 flex items-center gap-2"
             >
-              Cash In
+              <TrendingUp size={16} /> Cash In
             </button>
             <button
               onClick={() => setShowCashOutModal(true)}
-              className="px-4 py-2 bg-admin-danger text-white hover:opacity-90"
+              className="px-4 py-2 bg-admin-danger text-white hover:opacity-90 flex items-center gap-2"
             >
-              Cash Out
+              <TrendingDown size={16} /> Cash Out
+            </button>
+            <button
+              onClick={() => { setClosingCash(currentSession.opening_cash); setShowCloseModal(true); }}
+              className="px-4 py-2 bg-admin-surface border border-admin-border text-admin-text hover:bg-admin-bg ml-auto"
+            >
+              Close Session
             </button>
           </div>
         </div>

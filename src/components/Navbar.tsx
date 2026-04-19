@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X, ShoppingCart } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
+import { useLayout } from "@/contexts/LayoutContext";
 
 const staticLinks = [
   { label: "Support", to: "/support" },
@@ -9,6 +10,7 @@ const staticLinks = [
 ];
 
 const Navbar = () => {
+  const { logo, companyName } = useLayout();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [cartCount, setCartCount] = useState(0);
@@ -43,7 +45,10 @@ const Navbar = () => {
     <nav className="border-b border-border-subtle px-6 lg:px-8 h-16 flex items-center justify-between sticky top-0 bg-chassis/80 backdrop-blur-md z-50">
       <div className="flex items-center gap-8 lg:gap-12">
         <Link to="/" className="flex items-center">
-          <img src="/logo.jpeg" alt="Davin's Camera Store" className="h-10 w-auto object-contain" />
+          {logo
+            ? <img src={logo} alt={companyName || "Logo"} className="h-14 w-auto object-contain" />
+            : <span className="font-bold text-sm text-foreground tracking-widest uppercase">{companyName}</span>
+          }
         </Link>
         <div className="hidden lg:flex gap-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           {allLinks.map((link) => (
