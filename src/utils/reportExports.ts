@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { SHARED_PRINT_CSS } from './printUtils';
 
 export interface CompanyInfo {
   name: string;
@@ -139,101 +140,38 @@ export const exportToPDF = (options: ReportExportOptions) => {
     </table>` : '<p class="no-data">No data available for the selected date range</p>';
 
   pdfWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${reportTitle}</title>
-  <style>
-    @page {
-      size: A4 portrait;
-      margin: 1.2cm 1.5cm;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
-      color: #222;
-      background: #fff;
-    }
-    .header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      border-bottom: 2px solid #2980b9;
-      padding-bottom: 14px;
-      margin-bottom: 14px;
-    }
-    .logo { width: 80px; height: 80px; object-fit: contain; }
-    .logo-placeholder {
-      width: 80px; height: 80px;
-      border: 1px solid #ccc;
-      display: flex; align-items: center; justify-content: center;
-      color: #aaa; font-size: 10px; text-align: center;
-    }
-    .company-info { text-align: right; }
-    .company-name { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 6px; }
-    .company-detail { font-size: 10px; color: #666; line-height: 1.6; }
-    .report-title { font-size: 16px; font-weight: bold; text-align: center; color: #2c3e50; margin: 10px 0 4px; }
-    .date-range { font-size: 10px; text-align: center; color: #888; margin-bottom: 14px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-    th {
-      background: #2980b9; color: #fff;
-      padding: 7px 6px; font-size: 10px; font-weight: bold;
-      text-align: left; border: 1px solid #2471a3;
-    }
-    td {
-      padding: 6px; font-size: 10px; color: #222;
-      border: 1px solid #ddd; vertical-align: top;
-    }
-    tr.alt td { background: #f7f9fb; }
-    tfoot td { background: #e8edf1; font-weight: bold; border-top: 2px solid #999; }
-    .num { text-align: right; font-family: monospace; }
-    .no-data { text-align: center; padding: 30px; color: #888; font-style: italic; }
-    .footer {
-      margin-top: 20px; padding-top: 10px;
-      border-top: 1px solid #ddd;
-      font-size: 9px; color: #888; text-align: center;
-    }
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    }
-  </style>
-</head>
-<body>
+<html><head>
+  <meta charset="utf-8"><title>${reportTitle}</title>
+  <style>${SHARED_PRINT_CSS}</style>
+</head><body>
   <div class="header">
-    <div>
+    <div class="header-left">
       ${companyInfo.logo
         ? `<img class="logo" src="${companyInfo.logo}" alt="${companyInfo.name}">`
-        : `<div class="logo-placeholder">No Logo</div>`}
-    </div>
-    <div class="company-info">
-      <div class="company-name">${companyInfo.name}</div>
-      <div class="company-detail">
-        ${companyInfo.address}<br>
-        Phone: ${companyInfo.phone} | Email: ${companyInfo.email}
-        ${companyInfo.website ? `<br>Website: ${companyInfo.website}` : ''}
-        ${companyInfo.tax_id ? `<br>Tax ID: ${companyInfo.tax_id}` : ''}
+        : `<div class="logo-placeholder">No<br>Logo</div>`}
+      <div>
+        <div class="company-name">${companyInfo.name}</div>
+        <div class="company-detail">
+          ${companyInfo.address ? companyInfo.address + '<br>' : ''}
+          Phone: ${companyInfo.phone}${companyInfo.email ? ' | Email: ' + companyInfo.email : ''}
+          ${companyInfo.website ? '<br>Web: ' + companyInfo.website : ''}
+          ${companyInfo.tax_id ? '<br>Tax ID: ' + companyInfo.tax_id : ''}
+        </div>
       </div>
     </div>
+    <div class="doc-meta">
+      <div class="doc-title">${reportTitle.toUpperCase()}</div>
+      <div class="doc-date">Period: ${dateRange}</div>
+    </div>
   </div>
-
-  <div class="report-title">${reportTitle.toUpperCase()}</div>
-  <div class="date-range">Period: ${dateRange}</div>
 
   ${tableRows}
 
   <div class="footer">
-    Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp;
-    This is a computer-generated document. No signature is required.
+    Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp; This is a computer-generated document. No signature is required.
   </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 300);
-    };
-  <\/script>
-</body>
-</html>`);
+  <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>
+</body></html>`);
 
   pdfWindow.document.close();
 };
@@ -251,150 +189,30 @@ export const printReport = (options: ReportExportOptions) => {
 
   // Build HTML content
   let htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
+    <!DOCTYPE html><html><head>
       <title>${reportTitle}</title>
-      <style>
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 1cm;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-        
-        body {
-          font-family: Arial, sans-serif;
-          padding: 20px;
-          color: #333;
-        }
-        
-        .header {
-          display: flex;
-          align-items: flex-start;
-          gap: 30px;
-          margin-bottom: 30px;
-          border-bottom: 2px solid #2980b9;
-          padding-bottom: 20px;
-        }
-        
-        .logo-container {
-          flex-shrink: 0;
-        }
-        
-        .logo-container img {
-          width: 120px;
-          height: 120px;
-          object-fit: contain;
-        }
-        
-        .company-details {
-          flex: 1;
-          text-align: right;
-        }
-        
-        .company-name {
-          font-size: 24px;
-          font-weight: bold;
-          color: #2c3e50;
-          margin-bottom: 10px;
-        }
-        
-        .company-info {
-          font-size: 12px;
-          color: #7f8c8d;
-          line-height: 1.6;
-        }
-        
-        .report-title {
-          font-size: 18px;
-          font-weight: bold;
-          text-align: center;
-          margin: 20px 0 10px 0;
-          color: #2c3e50;
-        }
-        
-        .date-range {
-          text-align: center;
-          font-size: 12px;
-          color: #7f8c8d;
-          margin-bottom: 20px;
-        }
-        
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 20px;
-        }
-        
-        th {
-          background-color: #2980b9;
-          color: white;
-          padding: 12px 8px;
-          text-align: left;
-          font-size: 12px;
-          font-weight: bold;
-        }
-        
-        td {
-          padding: 10px 8px;
-          border-bottom: 1px solid #ddd;
-          font-size: 11px;
-        }
-        
-        tr:nth-child(even) {
-          background-color: #f9f9f9;
-        }
-        
-        tr:hover {
-          background-color: #f5f5f5;
-        }
-        
-        .text-right {
-          text-align: right;
-        }
-        
-        .footer {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #ddd;
-          font-size: 10px;
-          color: #7f8c8d;
-          text-align: center;
-        }
-        
-        .no-data {
-          text-align: center;
-          padding: 40px;
-          color: #7f8c8d;
-          font-style: italic;
-        }
-      </style>
-    </head>
-    <body>
+      <style>${SHARED_PRINT_CSS}</style>
+    </head><body>
       <div class="header">
-        <div class="logo-container">
-          ${companyInfo.logo ? `<img src="${companyInfo.logo}" alt="${companyInfo.name}">` : '<div style="width: 120px; height: 120px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; color: #999;">No Logo</div>'}
-        </div>
-        <div class="company-details">
-          <div class="company-name">${companyInfo.name}</div>
-          <div class="company-info">
-            ${companyInfo.address}<br>
-            Phone: ${companyInfo.phone} | Email: ${companyInfo.email}
-            ${companyInfo.website ? `<br>Website: ${companyInfo.website}` : ''}
-            ${companyInfo.tax_id ? `<br>Tax ID: ${companyInfo.tax_id}` : ''}
+        <div class="header-left">
+          ${companyInfo.logo
+            ? `<img class="logo" src="${companyInfo.logo}" alt="${companyInfo.name}">`
+            : `<div class="logo-placeholder">No<br>Logo</div>`}
+          <div>
+            <div class="company-name">${companyInfo.name}</div>
+            <div class="company-detail">
+              ${companyInfo.address ? companyInfo.address + '<br>' : ''}
+              Phone: ${companyInfo.phone}${companyInfo.email ? ' | Email: ' + companyInfo.email : ''}
+              ${companyInfo.website ? '<br>Web: ' + companyInfo.website : ''}
+              ${companyInfo.tax_id ? '<br>Tax ID: ' + companyInfo.tax_id : ''}
+            </div>
           </div>
         </div>
+        <div class="doc-meta">
+          <div class="doc-title">${reportTitle.toUpperCase()}</div>
+          <div class="doc-date">${dateRange}</div>
+        </div>
       </div>
-      
-      <div class="report-title">${reportTitle}</div>
-      <div class="date-range">${dateRange}</div>
       
       ${data.length > 0 ? `
         <table>

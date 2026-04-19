@@ -223,9 +223,9 @@ router.post("/:id/convert", requireAuth, async (req, res) => {
 
     for (const item of items) {
       await client.query(
-        `INSERT INTO invoice_items (invoice_id, product_id, product_name, description, quantity, unit_price, tax_rate, subtotal)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [inv.id, item.product_id, item.product_name, item.description, item.quantity, item.unit_price, item.tax_rate, item.subtotal]
+        `INSERT INTO invoice_items (invoice_id, product_id, product_name, description, quantity, unit_price, tax_rate, subtotal, discount_amount, total_price)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0,$8)`,
+        [inv.id, item.product_id, item.product_name, item.description || null, item.quantity, item.unit_price, item.tax_rate || 0, item.subtotal]
       );
     }
 

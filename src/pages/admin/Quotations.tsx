@@ -3,7 +3,8 @@ import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
-import { Plus, Search, Trash2, Edit2, X, Eye, FileText, ChevronRight, Printer } from "lucide-react";
+import { Plus, Search, Trash2, Edit2, X, Eye, FileText, ChevronRight, Printer, Download } from "lucide-react";
+import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 
 const STATUS_OPTIONS = ["draft", "sent", "accepted", "rejected", "converted"];
 const STATUS_STYLE: Record<string, string> = {
@@ -204,36 +205,70 @@ export default function Quotations() {
 
   const { subtotal, tax, total } = calcTotals(form.items, form.discount_amount);
 
-  const printQuote = () => {
-    if (!detail) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    const items = detail.items.map((i: any) => `
+  const buildQuoteBody = async (): Promise<string> => {
+    if (!detail) return '';
+    const co = await api.company.get().catch(() => ({}));
+    const fmt = (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;
+
+    const itemRows = detail.items.map((i: any) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #eee">${i.product_name}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${i.quantity}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${Number(i.unit_price).toLocaleString()}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${Number(i.subtotal).toLocaleString()}</td>
-      </tr>`).join("");
-    win.document.write(`<!DOCTYPE html><html><head><title>Quotation ${detail.quote_number}</title>
-      <style>body{font-family:Arial,sans-serif;padding:40px;color:#111}table{width:100%;border-collapse:collapse}th{background:#f5f5f5;padding:10px;text-align:left}h1{font-size:24px}h2{font-size:16px;color:#555}.totals td{padding:6px 8px}</style>
-      </head><body>
-      <h1>Quotation</h1>
-      <div style="display:flex;justify-content:space-between;margin-bottom:32px">
-        <div><h2>${detail.customer_name}</h2><p>${detail.customer_email||""}</p><p>${detail.customer_phone||""}</p><p>${detail.customer_address||""}</p></div>
-        <div style="text-align:right"><p><strong>${detail.quote_number}</strong></p><p>Valid until: ${detail.valid_until ? new Date(detail.valid_until).toLocaleDateString() : "—"}</p></div>
+        <td>${i.product_name}${i.description ? `<br><span style="color:#888;font-size:9px">${i.description}</span>` : ''}</td>
+        <td class="num">${i.quantity}</td>
+        <td class="num">${fmt(i.unit_price)}</td>
+        <td class="num">${i.tax_rate || 0}%</td>
+        <td class="num">${fmt(i.subtotal)}</td>
+      </tr>`).join('');
+
+    const extraMeta = `
+      <div class="doc-date">Date: ${new Date(detail.created_at).toLocaleDateString()}</div>
+      ${detail.valid_until ? `<div class="doc-date">Valid Until: ${new Date(detail.valid_until).toLocaleDateString()}</div>` : ''}
+      <span class="status-badge status-${detail.status}">${detail.status.toUpperCase()}</span>`;
+
+    const body = `
+      ${companyHeaderHTML(co, 'QUOTATION', detail.quote_number, extraMeta)}
+
+      <div class="info-box">
+        <div class="info-label">Quote To</div>
+        <div class="info-name">${detail.customer_name}</div>
+        ${detail.customer_phone ? `<div class="info-detail">Phone: ${detail.customer_phone}</div>` : ''}
+        ${detail.customer_email ? `<div class="info-detail">Email: ${detail.customer_email}</div>` : ''}
+        ${detail.customer_address ? `<div class="info-detail">${detail.customer_address}</div>` : ''}
       </div>
-      <table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Subtotal</th></tr></thead>
-      <tbody>${items}</tbody></table>
-      <table class="totals" style="margin-top:16px;width:320px;margin-left:auto">
-        <tr><td>Subtotal</td><td style="text-align:right">${sym} ${Number(detail.subtotal).toLocaleString()}</td></tr>
-        <tr><td>Tax</td><td style="text-align:right">${sym} ${Number(detail.tax_amount).toLocaleString()}</td></tr>
-        <tr><td>Discount</td><td style="text-align:right">-${sym} ${Number(detail.discount_amount||0).toLocaleString()}</td></tr>
-        <tr style="font-weight:bold;font-size:16px"><td>Total</td><td style="text-align:right">${sym} ${Number(detail.total_amount).toLocaleString()}</td></tr>
+
+      <div class="section-title">Items</div>
+      <table>
+        <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Tax</th><th>Total</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+        <tfoot>
+          <tr><td colspan="4" class="num">Subtotal</td><td class="num">${fmt(detail.subtotal)}</td></tr>
+          ${detail.tax_amount > 0 ? `<tr><td colspan="4" class="num">Tax</td><td class="num">${fmt(detail.tax_amount)}</td></tr>` : ''}
+          ${detail.discount_amount > 0 ? `<tr><td colspan="4" class="num">Discount</td><td class="num">-${fmt(detail.discount_amount)}</td></tr>` : ''}
+        </tfoot>
       </table>
-      ${detail.notes ? `<p style="margin-top:32px"><strong>Notes:</strong> ${detail.notes}</p>` : ""}
-      </body></html>`);
-    win.print();
+
+      <div class="summary">
+        <table class="summary-table">
+          <tr class="total-row"><td>TOTAL</td><td class="num">${fmt(detail.total_amount)}</td></tr>
+        </table>
+      </div>
+
+      ${detail.notes ? `<div class="notes-box"><strong>Notes:</strong> ${detail.notes}</div>` : ''}
+
+      <div class="footer">
+        Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp; This is a computer-generated document. No signature is required.
+      </div>`;
+
+    return body;
+  };
+
+  const printQuote = async () => {
+    if (!detail) return;
+    openPrintWindow(`Quotation ${detail.quote_number}`, await buildQuoteBody());
+  };
+
+  const downloadQuote = async () => {
+    if (!detail) return;
+    downloadDocument(`Quotation_${detail.quote_number}`, await buildQuoteBody());
   };
 
   return (
@@ -479,6 +514,9 @@ export default function Quotations() {
                   <div className="flex items-center gap-2">
                     <button onClick={printQuote} className="flex items-center gap-1 h-8 px-3 border border-border-subtle text-xs text-muted-foreground hover:text-foreground">
                       <Printer size={12} /> Print
+                    </button>
+                    <button onClick={downloadQuote} className="flex items-center gap-1 h-8 px-3 bg-blue-600 text-white text-xs hover:bg-blue-700">
+                      <Download size={12} /> Download PDF
                     </button>
                     {detail.status !== "converted" && (
                       <button onClick={() => handleConvert(detail.id)} disabled={converting}

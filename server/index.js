@@ -791,6 +791,12 @@ async function migrate() {
     );
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id);
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_address TEXT;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS balance INTEGER DEFAULT 0;
+    ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2) DEFAULT 0;
+    ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS subtotal INTEGER DEFAULT 0;
     ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS item_name VARCHAR(255);
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_id INTEGER REFERENCES currencies(id);
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_code VARCHAR(10) DEFAULT 'UGX';

@@ -17,8 +17,8 @@ router.get("/", requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT c.*,
         (SELECT COUNT(*) FROM customer_orders co WHERE co.customer_id = c.id) as order_count,
-        (SELECT COUNT(*) FROM invoices i WHERE i.customer_id = c.id) as invoice_count,
-        (SELECT COALESCE(SUM(co.total_amount),0) FROM customer_orders co WHERE co.customer_id = c.id) as total_spent
+        (SELECT COUNT(*) FROM invoices i WHERE i.customer_id = c.id OR LOWER(i.customer_email) = LOWER(c.email)) as invoice_count,
+        (SELECT COALESCE(SUM(co.total),0) FROM customer_orders co WHERE co.customer_id = c.id) as total_spent
        FROM customers c
        WHERE ${where}
        ORDER BY c.name ASC`,
@@ -39,7 +39,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     if (!cRows[0]) return res.status(404).json({ error: "Customer not found" });
 
     const { rows: orders } = await pool.query(
-      `SELECT id, order_number, status, total_amount, created_at, customer_name
+      `SELECT id, order_number, status, total as total_amount, created_at, customer_name
        FROM customer_orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [id]
     );
@@ -52,8 +52,9 @@ router.get("/:id", requireAuth, async (req, res) => {
       [id]
     );
     const { rows: invoices } = await pool.query(
-      `SELECT id, invoice_number, status, total_amount, paid_amount, balance, due_date, created_at
-       FROM invoices WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      `SELECT id, invoice_number, status, total_amount, paid_amount, COALESCE(balance,0) as balance, due_date, created_at
+       FROM invoices WHERE customer_id = $1 OR (customer_email IS NOT NULL AND LOWER(customer_email) = (SELECT LOWER(email) FROM customers WHERE id = $1))
+       ORDER BY created_at DESC LIMIT 50`,
       [id]
     );
 

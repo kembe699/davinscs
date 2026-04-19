@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 import {
   ArrowLeft, Printer, RefreshCw, Lock, AlertCircle,
   ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, Package, Users,
@@ -73,13 +74,9 @@ export default function EndOfDay() {
     }
   };
 
-  const handlePrint = () => {
-    const win = window.open("", "", "width=400,height=700");
-    if (!win) return;
-
+  const buildEodBody = () => {
     const s = report?.sales_summary;
     const fmt = (n: number) => `${sym} ${Number(n).toLocaleString()}`;
-    const line = `<div class="line"></div>`;
 
     const paymentRows = (report?.payment_breakdown ?? [])
       .map((pm: any) =>
@@ -148,116 +145,44 @@ export default function EndOfDay() {
         </tbody>
       </table>`;
 
-    win.document.write(`
-      <html>
-        <head>
-          <title>End of Day Report — ${selectedDate}</title>
-          <style>
-            @page { size: A4; margin: 18mm 18mm 18mm 18mm; }
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
-            .company-name { font-size: 18px; font-weight: bold; }
-            .company-sub { font-size: 10px; color: #444; margin-top: 2px; }
-            .doc-title { text-align: right; }
-            .doc-title h1 { font-size: 16px; font-weight: bold; }
-            .doc-title p { font-size: 10px; color: #444; margin-top: 2px; }
-            .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
-            .summary-card { border: 1px solid #ccc; padding: 8px 10px; }
-            .summary-card .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-bottom: 3px; }
-            .summary-card .value { font-size: 15px; font-weight: bold; }
-            .section { margin-bottom: 14px; }
-            .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 6px; }
-            .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 10px; }
-            th { text-align: left; padding: 4px 6px; background: #f0f0f0; border-bottom: 1px solid #999; font-weight: bold; font-size: 10px; }
-            td { padding: 4px 6px; border-bottom: 1px solid #e0e0e0; }
-            .right { text-align: right; }
-            .total-row td { border-top: 1px solid #999; border-bottom: 2px solid #000; }
-            .muted { color: #888; font-style: italic; }
-            .footer { border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; display: flex; justify-content: space-between; font-size: 9px; color: #555; }
-            .voided-note { background: #fffbe6; border: 1px solid #f0c000; padding: 5px 8px; font-size: 10px; margin-bottom: 10px; }
-          </style>
-        </head>
-        <body>
-          <!-- Header -->
-          <div class="header">
-            <div>
-              ${companyData?.logo ? `<img src="${companyData.logo}" style="height:36px;object-fit:contain;margin-bottom:4px;display:block;" />` : ""}
-              <div class="company-name">${companyData?.name || "Davin's Camera Store"}</div>
-              <div class="company-sub">${companyData?.address || "Kampala, Uganda"}</div>
-              ${companyData?.city ? `<div class="company-sub">${companyData.city}${companyData.country ? ", " + companyData.country : ""}</div>` : ""}
-              <div class="company-sub">Tel: ${companyData?.phone || ""}${companyData?.email ? " | " + companyData.email : ""}</div>
-              ${companyData?.tax_id ? `<div class="company-sub">TIN: ${companyData.tax_id}</div>` : ""}
-            </div>
-            <div class="doc-title">
-              <h1>END OF DAY REPORT</h1>
-              <p>Date: ${selectedDate}</p>
-              <p>Printed: ${new Date().toLocaleString()}</p>
-            </div>
-          </div>
+    const eodBody = `
+      ${companyHeaderHTML(companyData, 'END OF DAY REPORT', selectedDate,
+        `<div class="doc-date">Printed: ${new Date().toLocaleString()}</div>`)}
 
-          <!-- Summary Cards -->
-          <div class="summary-grid">
-            <div class="summary-card">
-              <div class="label">Transactions</div>
-              <div class="value">${Number(s?.total_transactions ?? 0)}</div>
-            </div>
-            <div class="summary-card">
-              <div class="label">Total Revenue</div>
-              <div class="value">${fmt(Number(s?.total_sales ?? 0))}</div>
-            </div>
-            <div class="summary-card">
-              <div class="label">Tax Collected</div>
-              <div class="value">${fmt(Number(s?.total_tax ?? 0))}</div>
-            </div>
-            <div class="summary-card">
-              <div class="label">Discounts Given</div>
-              <div class="value">${fmt(Number(s?.total_discounts ?? 0))}</div>
-            </div>
-          </div>
+      <div class="summary-grid">
+        <div class="summary-card"><div class="s-label">Transactions</div><div class="s-value">${Number(s?.total_transactions ?? 0)}</div></div>
+        <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value">${fmt(Number(s?.total_sales ?? 0))}</div></div>
+        <div class="summary-card"><div class="s-label">Tax Collected</div><div class="s-value">${fmt(Number(s?.total_tax ?? 0))}</div></div>
+        <div class="summary-card"><div class="s-label">Discounts Given</div><div class="s-value">${fmt(Number(s?.total_discounts ?? 0))}</div></div>
+      </div>
 
-          ${Number(report?.refund_summary?.count) > 0
-            ? `<div class="voided-note" style="background:#fff3e0;border-color:#f59e0b;">↩ ${report.refund_summary.count} refund(s) processed — ${fmt(Number(report.refund_summary.total_refunded))} refunded to customers.</div>`
-            : ""}
-          ${Number(report?.voided_sales?.count) > 0
-            ? `<div class="voided-note">⚠ ${report.voided_sales.count} voided sale(s) totalling ${fmt(Number(report.voided_sales.total))} excluded from totals.</div>`
-            : ""}
+      ${Number(report?.refund_summary?.count) > 0
+        ? `<div style="background:#fff3e0;border:1px solid #f59e0b;padding:5px 8px;font-size:10px;margin-bottom:10px;">↩ ${report.refund_summary.count} refund(s) — ${fmt(Number(report.refund_summary.total_refunded))} refunded.</div>`
+        : ""}
+      ${Number(report?.voided_sales?.count) > 0
+        ? `<div style="background:#fffbe6;border:1px solid #f0c000;padding:5px 8px;font-size:10px;margin-bottom:10px;">⚠ ${report.voided_sales.count} voided sale(s) totalling ${fmt(Number(report.voided_sales.total))} excluded.</div>`
+        : ""}
 
-          <!-- Sales by Cashier (full width) -->
-          <div class="section">
-            <div class="section-title">Sales by Cashier</div>
-            ${cashierTable}
-          </div>
+      <div class="section-title">Sales by Cashier</div>
+      ${cashierTable}
 
-          <!-- Payment Methods + Top Products (side by side) -->
-          <div class="two-col">
-            <div>
-              <div class="section-title">Payment Methods</div>
-              ${paymentTable}
-            </div>
-            <div>
-              <div class="section-title">Top Products Sold</div>
-              ${productTable}
-            </div>
-          </div>
+      <div class="two-col" style="margin-top:14px">
+        <div><div class="section-title">Payment Methods</div>${paymentTable}</div>
+        <div><div class="section-title">Top Products Sold</div>${productTable}</div>
+      </div>
 
-          <!-- Hourly Breakdown (full width) -->
-          <div class="section">
-            <div class="section-title">Hourly Sales Breakdown</div>
-            ${hourlyTable}
-          </div>
+      <div class="section-title" style="margin-top:14px">Hourly Sales Breakdown</div>
+      ${hourlyTable}
 
-          <!-- Footer -->
-          <div class="footer">
-            <span>${companyData?.name || "Davin's Camera Store"} — Confidential</span>
-            <span>End of Day Report | ${selectedDate}</span>
-          </div>
-        </body>
-      </html>`);
-    win.document.close();
-    win.print();
+      <div class="footer">
+        ${companyData?.name || ''} — Confidential &nbsp;|&nbsp; End of Day Report ${selectedDate}
+      </div>`;
+
+    return eodBody;
   };
+
+  const handlePrint = () => openPrintWindow(`End of Day Report — ${selectedDate}`, buildEodBody());
+  const handleDownload = () => downloadDocument(`EndOfDay_${selectedDate}`, buildEodBody());
 
   const ss    = report?.sales_summary;
   const maxHr = hourly.length ? Math.max(...hourly.map((h: any) => Number(h.total_amount) || 0)) : 1;
@@ -284,7 +209,10 @@ export default function EndOfDay() {
           <RefreshCw size={14} /> Refresh
         </button>
         <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-admin-text text-admin-bg text-sm hover:opacity-90">
-          <Printer size={14} /> Print Report
+          <Printer size={14} /> Print
+        </button>
+        <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700">
+          <Download size={14} /> Download PDF
         </button>
         {session && (
           <button

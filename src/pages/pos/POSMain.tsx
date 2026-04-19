@@ -4,6 +4,7 @@ import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, 
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { openPrintWindow } from "@/utils/printUtils";
 
 export default function POSMain() {
   const navigate = useNavigate();
@@ -352,37 +353,44 @@ export default function POSMain() {
   };
 
   const printSaleOrder = (sale: any) => {
-    const printWindow = window.open('', '', 'width=400,height=600');
-    if (!printWindow) return;
-    
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Sale Order - ${sale.sale_number}</title>
-          <style>
-            body { font-family: monospace; padding: 20px; }
-            h2 { text-align: center; }
-            .line { border-top: 1px solid black; margin: 10px 0; }
-          </style>
-        </head>
-        <body>
-          <h2>SALE ORDER</h2>
-          <p>Order #: ${sale.sale_number}</p>
-          <p>Customer: ${sale.customerName}</p>
-          <p>Date: ${new Date().toLocaleString()}</p>
-          <div class="line"></div>
-          <h3>Items:</h3>
-          ${sale.items.map((item: any) => `
-            <p>${item.product.name} x ${item.quantity} - ${formatCurrencySync(item.product.price, baseCurrency?.symbol || 'UGX', false)}</p>
-          `).join('')}
-          <div class="line"></div>
-          <p><strong>Total: ${formatCurrencySync(sale.total, baseCurrency?.symbol || 'UGX', false)}</strong></p>
-          <p style="text-align: center; margin-top: 20px;">*** HELD - NOT PAID ***</p>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    const s = baseCurrency?.symbol || 'UGX';
+    const fmt = (n: number) => `${s} ${Number(n || 0).toLocaleString()}`;
+    const itemRows = sale.items.map((item: any) => `
+      <tr>
+        <td>${item.product.name}</td>
+        <td class="num">${item.quantity}</td>
+        <td class="num">${fmt(item.product.price)}</td>
+        <td class="num">${fmt(item.product.price * item.quantity)}</td>
+      </tr>`).join('');
+    const body = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2980b9;padding-bottom:14px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:18px;font-weight:bold;color:#2c3e50;">HELD SALE ORDER</div>
+          <div style="font-size:10px;color:#666;margin-top:4px;">*** NOT PAID — HELD FOR LATER ***</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px;font-weight:bold;color:#2980b9;letter-spacing:2px;">HOLD</div>
+          <div style="font-size:13px;color:#2c3e50;font-weight:bold;margin-top:4px;">${sale.sale_number}</div>
+          <div style="font-size:10px;color:#666;margin-top:2px;">Date: ${new Date().toLocaleDateString()}</div>
+        </div>
+      </div>
+      <div style="background:#f7f9fb;border:1px solid #dce3ea;padding:10px 14px;margin:14px 0;">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Customer</div>
+        <div style="font-size:13px;font-weight:bold;color:#2c3e50;">${sale.customerName || 'Walk-in Customer'}</div>
+      </div>
+      <div style="font-size:11px;font-weight:bold;color:#2c3e50;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Items</div>
+      <table>
+        <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+        <tfoot><tr><td colspan="3" class="num">Total</td><td class="num">${fmt(sale.total)}</td></tr></tfoot>
+      </table>
+      <div style="margin-top:20px;padding:10px;background:#fff3e0;border:1px solid #f59e0b;font-size:11px;text-align:center;color:#92400e;font-weight:bold;">
+        *** HELD SALE — NOT YET PAID ***
+      </div>
+      <div style="margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#888;text-align:center;">
+        Printed on ${new Date().toLocaleString()}
+      </div>`;
+    openPrintWindow(`Held Sale — ${sale.sale_number}`, body);
   };
 
   const loadHeldSale = (heldSale: any) => {

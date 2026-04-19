@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, FileText, Plus, X, Download, CheckCircle, Clock, AlertCircle, Ban, ChevronRight, DollarSign } from "lucide-react";
+import { Search, FileText, Plus, X, Download, Printer, CheckCircle, Clock, AlertCircle, Ban, ChevronRight, DollarSign, Trash2 } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { printDocument, downloadDocument } from "@/utils/printUtils";
+import CreateInvoiceModal from "./CreateInvoiceModal";
 
 const STATUS_STYLES: Record<string, string> = {
   unpaid:  "bg-red-500/10 text-red-400 border border-red-500/30",
@@ -58,10 +60,6 @@ export default function Invoices() {
 
   // Create invoice modal
   const [showCreate, setShowCreate] = useState(false);
-  const [newInv, setNewInv] = useState({
-    customer_name: "", customer_email: "", customer_phone: "",
-    total_amount: "", due_date: "", notes: ""
-  });
 
   useEffect(() => {
     api.company.get().then(setCompanyData).catch(() => {});
@@ -130,34 +128,8 @@ export default function Invoices() {
     }
   };
 
-  const handleCreateManual = async () => {
-    if (!newInv.customer_name.trim() || !newInv.total_amount) {
-      alert("Customer name and total amount are required");
-      return;
-    }
-    try {
-      const totalCents = Math.round(parseFloat(newInv.total_amount) * 100);
-      await api.invoices.create({
-        customer_name: newInv.customer_name,
-        customer_email: newInv.customer_email || undefined,
-        customer_phone: newInv.customer_phone || undefined,
-        subtotal: totalCents,
-        tax_amount: 0,
-        discount_amount: 0,
-        total_amount: totalCents,
-        due_date: newInv.due_date || undefined,
-        notes: newInv.notes || undefined,
-        items: [],
-      });
-      setShowCreate(false);
-      setNewInv({ customer_name: "", customer_email: "", customer_phone: "", total_amount: "", due_date: "", notes: "" });
-      loadInvoices();
-    } catch (err: any) {
-      alert(err.message || "Failed to create invoice");
-    }
-  };
 
-  const downloadPDF = (inv: any) => {
+  const buildInvoiceBody = (inv: any) => {
     const d = inv;
     const co = companyData || {};
     const items: any[] = d.items || [];
@@ -183,60 +155,10 @@ export default function Invoices() {
         <td>${p.notes || '-'}</td>
       </tr>`).join('');
 
-    const win = window.open('', '_blank');
-    if (!win) { alert('Allow pop-ups to download invoice'); return; }
-
-    win.document.write(`<!DOCTYPE html>
-<html><head>
-  <meta charset="utf-8">
-  <title>Invoice ${d.invoice_number}</title>
-  <style>
-    @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; background: #fff; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2980b9; padding-bottom: 14px; margin-bottom: 14px; }
-    .header-left { display: flex; align-items: flex-start; gap: 14px; }
-    .logo { width: 70px; height: 70px; object-fit: contain; }
-    .logo-placeholder { width: 70px; height: 70px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 9px; text-align: center; }
-    .company-name { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
-    .company-detail { font-size: 10px; color: #666; line-height: 1.7; }
-    .inv-meta { text-align: right; flex-shrink: 0; }
-    .inv-title { font-size: 22px; font-weight: bold; color: #2980b9; letter-spacing: 2px; }
-    .inv-number { font-size: 13px; color: #2c3e50; font-weight: bold; margin-top: 4px; }
-    .inv-date { font-size: 10px; color: #666; margin-top: 2px; }
-    .customer-box { background: #f7f9fb; border: 1px solid #dce3ea; padding: 10px 14px; margin: 14px 0; }
-    .customer-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .customer-name { font-size: 13px; font-weight: bold; color: #2c3e50; }
-    .customer-contact { font-size: 10px; color: #666; margin-top: 2px; }
-    .due-status { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: bold; margin-top: 6px; }
-    .status-unpaid  { background: #fee2e2; color: #dc2626; }
-    .status-partial { background: #fef3c7; color: #d97706; }
-    .status-paid    { background: #d1fae5; color: #059669; }
-    .status-overdue { background: #ffedd5; color: #ea580c; }
-    .status-voided  { background: #f3f4f6; color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    th { background: #2980b9; color: #fff; padding: 7px 6px; font-size: 10px; font-weight: bold; text-align: left; border: 1px solid #2471a3; }
-    td { padding: 6px; font-size: 10px; color: #222; border: 1px solid #ddd; }
-    tr:nth-child(even) td { background: #f7f9fb; }
-    tfoot td { background: #e8edf1; font-weight: bold; border-top: 2px solid #999; }
-    .num { text-align: right; font-family: monospace; }
-    .section-title { font-size: 11px; font-weight: bold; color: #2c3e50; margin: 16px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-    .summary { display: flex; justify-content: flex-end; margin: 10px 0; }
-    .summary-table { width: 260px; }
-    .summary-table td { border: none; padding: 3px 6px; font-size: 11px; }
-    .summary-table .total-row td { font-size: 13px; font-weight: bold; border-top: 2px solid #999; padding-top: 6px; }
-    .summary-table .paid-row td { color: #059669; }
-    .summary-table .balance-row td { color: #dc2626; font-weight: bold; }
-    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 9px; color: #888; text-align: center; }
-    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-  </style>
-</head>
-<body>
+    return `
   <div class="header">
     <div class="header-left">
-      ${co.logo
-        ? `<img class="logo" src="${co.logo}" alt="${co.name || ''}">`
-        : `<div class="logo-placeholder">No<br>Logo</div>`}
+      ${co.logo ? `<img class="logo" src="${co.logo}" alt="${co.name || ''}">` : `<div class="logo-placeholder">No<br>Logo</div>`}
       <div>
         <div class="company-name">${co.name || 'Company Name'}</div>
         <div class="company-detail">
@@ -249,38 +171,30 @@ export default function Invoices() {
         </div>
       </div>
     </div>
-    <div class="inv-meta">
-      <div class="inv-title">INVOICE</div>
-      <div class="inv-number">${d.invoice_number}</div>
-      <div class="inv-date">Date: ${new Date(d.created_at).toLocaleDateString()}</div>
-      ${d.due_date ? `<div class="inv-date">Due: ${new Date(d.due_date).toLocaleDateString()}</div>` : ''}
-      <span class="due-status status-${d.status}">${d.status.toUpperCase()}</span>
+    <div class="doc-meta">
+      <div class="doc-title">INVOICE</div>
+      <div class="doc-number">${d.invoice_number}</div>
+      <div class="doc-date">Date: ${new Date(d.created_at).toLocaleDateString()}</div>
+      ${d.due_date ? `<div class="doc-date">Due: ${new Date(d.due_date).toLocaleDateString()}</div>` : ''}
+      <span class="status-badge status-${d.status}">${d.status.toUpperCase()}</span>
     </div>
   </div>
-
-  <div class="customer-box">
-    <div class="customer-label">Bill To</div>
-    <div class="customer-name">${d.customer_name}</div>
-    ${d.customer_phone ? `<div class="customer-contact">Phone: ${d.customer_phone}</div>` : ''}
-    ${d.customer_email ? `<div class="customer-contact">Email: ${d.customer_email}</div>` : ''}
+  <div class="info-box">
+    <div class="info-label">Bill To</div>
+    <div class="info-name">${d.customer_name}</div>
+    ${d.customer_phone ? `<div class="info-detail">Phone: ${d.customer_phone}</div>` : ''}
+    ${d.customer_email ? `<div class="info-detail">Email: ${d.customer_email}</div>` : ''}
   </div>
-
   <div class="section-title">Items</div>
   <table>
-    <thead>
-      <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Discount</th><th>Total</th></tr>
-    </thead>
+    <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Discount</th><th>Total</th></tr></thead>
     <tbody>${itemRows}</tbody>
     <tfoot>
-      <tr>
-        <td colspan="4" class="num">Subtotal</td>
-        <td class="num">${fmt(d.subtotal, sym)}</td>
-      </tr>
+      <tr><td colspan="4" class="num">Subtotal</td><td class="num">${fmt(d.subtotal, sym)}</td></tr>
       ${d.discount_amount > 0 ? `<tr><td colspan="4" class="num">Discount</td><td class="num">-${fmt(d.discount_amount, sym)}</td></tr>` : ''}
       ${d.tax_amount > 0 ? `<tr><td colspan="4" class="num">Tax</td><td class="num">${fmt(d.tax_amount, sym)}</td></tr>` : ''}
     </tfoot>
   </table>
-
   <div class="summary">
     <table class="summary-table">
       <tr class="total-row"><td>TOTAL</td><td class="num">${fmt(d.total_amount, sym)}</td></tr>
@@ -288,23 +202,17 @@ export default function Invoices() {
       <tr class="balance-row"><td>Balance Due</td><td class="num">${fmt(balance, sym)}</td></tr>
     </table>
   </div>
+  ${payments.length > 0 ? `<div class="section-title">Payment History</div><table><thead><tr><th>Date</th><th>Method</th><th>Amount</th><th>Notes</th></tr></thead><tbody>${payRows}</tbody></table>` : ''}
+  ${d.notes ? `<div class="notes-box"><strong>Notes:</strong> ${d.notes}</div>` : ''}
+  <div class="footer">Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp; This is a computer-generated document. No signature is required.</div>`;
+  };
 
-  ${payments.length > 0 ? `
-  <div class="section-title">Payment History</div>
-  <table>
-    <thead><tr><th>Date</th><th>Method</th><th>Amount</th><th>Notes</th></tr></thead>
-    <tbody>${payRows}</tbody>
-  </table>` : ''}
+  const handlePrintInvoice = (inv: any) => {
+    printDocument(`Invoice ${inv.invoice_number}`, buildInvoiceBody(inv));
+  };
 
-  ${d.notes ? `<div style="margin-top:14px;font-size:10px;color:#555;border:1px solid #ddd;padding:8px;"><strong>Notes:</strong> ${d.notes}</div>` : ''}
-
-  <div class="footer">
-    Generated on ${new Date().toLocaleString()} &nbsp;|&nbsp; This is a computer-generated document. No signature is required.
-  </div>
-
-  <script>window.onload = function() { setTimeout(function() { window.print(); }, 300); };<\/script>
-</body></html>`);
-    win.document.close();
+  const handleDownloadInvoice = (inv: any) => {
+    downloadDocument(`Invoice_${inv.invoice_number}`, buildInvoiceBody(inv));
   };
 
   const filtered = invoices.filter(i =>
@@ -456,7 +364,14 @@ export default function Invoices() {
                 {detail && (
                   <>
                     <button
-                      onClick={() => downloadPDF(detail)}
+                      onClick={() => handlePrintInvoice(detail)}
+                      title="Print"
+                      className="p-2 text-admin-text-secondary hover:text-admin-text border border-admin-border hover:bg-admin-surface"
+                    >
+                      <Printer size={15} />
+                    </button>
+                    <button
+                      onClick={() => handleDownloadInvoice(detail)}
                       title="Download PDF"
                       className="p-2 text-admin-text-secondary hover:text-admin-text border border-admin-border hover:bg-admin-surface"
                     >
@@ -693,61 +608,10 @@ export default function Invoices() {
 
       {/* Create Invoice Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-[420px]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-admin-text">New Invoice</h3>
-              <button onClick={() => setShowCreate(false)}><X size={16} className="text-admin-text-secondary" /></button>
-            </div>
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-xs text-admin-text-secondary mb-1">Customer Name <span className="text-red-400">*</span></label>
-                <input type="text" value={newInv.customer_name}
-                  onChange={e => setNewInv({...newInv, customer_name: e.target.value})}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-admin-text-secondary mb-1">Phone</label>
-                  <input type="text" value={newInv.customer_phone}
-                    onChange={e => setNewInv({...newInv, customer_phone: e.target.value})}
-                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs text-admin-text-secondary mb-1">Email</label>
-                  <input type="email" value={newInv.customer_email}
-                    onChange={e => setNewInv({...newInv, customer_email: e.target.value})}
-                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-admin-text-secondary mb-1">Total Amount ({sym}) <span className="text-red-400">*</span></label>
-                  <input type="number" min="0" step="0.01" value={newInv.total_amount}
-                    onChange={e => setNewInv({...newInv, total_amount: e.target.value})}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs text-admin-text-secondary mb-1">Due Date</label>
-                  <input type="date" value={newInv.due_date}
-                    onChange={e => setNewInv({...newInv, due_date: e.target.value})}
-                    className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-admin-text-secondary mb-1">Notes</label>
-                <textarea value={newInv.notes} rows={2}
-                  onChange={e => setNewInv({...newInv, notes: e.target.value})}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm resize-none" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowCreate(false)} className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm">Cancel</button>
-              <button onClick={handleCreateManual} className="flex-1 px-4 py-2 bg-admin-text text-admin-bg text-sm hover:opacity-90">Create Invoice</button>
-            </div>
-          </div>
-        </div>
+        <CreateInvoiceModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); loadInvoices(); }}
+        />
       )}
     </AdminLayout>
   );
