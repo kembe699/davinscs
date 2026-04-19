@@ -1214,4 +1214,27 @@ export const api = {
       request<any>(`/api/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(data) }),
     void: (id: number) => request<any>(`/api/invoices/${id}`, { method: 'DELETE' }),
   },
+  customers: {
+    list: (search?: string) => {
+      const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+      return request<any[]>(`/api/customers${qs}`);
+    },
+    get: (id: number) => request<any>(`/api/customers/${id}`),
+    create: (data: any) => request<any>('/api/customers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/api/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/api/customers/${id}`, { method: 'DELETE' }),
+  },
+  quotations: {
+    list: (params?: { status?: string; search?: string }) => {
+      const qs = params ? `?${new URLSearchParams(params as any)}` : '';
+      return request<any[]>(`/api/quotations${qs}`);
+    },
+    get: (id: number) => request<any>(`/api/quotations/${id}`),
+    create: (data: any) => request<any>('/api/quotations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/api/quotations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateStatus: (id: number, status: string) =>
+      request<any>(`/api/quotations/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    convert: (id: number) => request<any>(`/api/quotations/${id}/convert`, { method: 'POST' }),
+    delete: (id: number) => request<any>(`/api/quotations/${id}`, { method: 'DELETE' }),
+  },
 };

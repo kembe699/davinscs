@@ -9,6 +9,12 @@ import { formatCurrencySync } from "@/utils/currency";
 
 const CATEGORIES = ["cameras", "lenses", "microphones", "teleprompters", "lighting"];
 
+function compactNumber(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + "K";
+  return n.toLocaleString();
+}
+
 export default function Dashboard() {
   const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -43,10 +49,11 @@ export default function Dashboard() {
       setSalesSummary(summary);
       
       // Calculate financial metrics
-      const totalRevenue = sales.reduce((sum: number, sale: any) => sum + sale.total_amount, 0);
-      const totalCost = sales.reduce((sum: number, sale: any) => sum + sale.subtotal, 0);
-      const totalTax = sales.reduce((sum: number, sale: any) => sum + sale.tax_amount, 0);
-      const totalDiscount = sales.reduce((sum: number, sale: any) => sum + (sale.discount_amount || 0), 0);
+      const _sales = sales as any[];
+      const totalRevenue = _sales.reduce((sum: number, sale) => sum + sale.total_amount, 0);
+      const totalCost = _sales.reduce((sum: number, sale) => sum + sale.subtotal, 0);
+      const totalTax = _sales.reduce((sum: number, sale) => sum + sale.tax_amount, 0);
+      const totalDiscount = _sales.reduce((sum: number, sale) => sum + (sale.discount_amount || 0), 0);
       
       // Get today's sales
       const today = new Date();
@@ -219,7 +226,7 @@ export default function Dashboard() {
                 <div className="p-6">
                   <div className="text-center mb-6">
                     <p className="text-6xl font-bold text-primary font-mono">
-                      {salesSummary ? formatCurrencySync(salesSummary.totalSales, baseCurrency?.symbol || 'UGX', false).split(' ')[1] : '0'}
+                      {salesSummary ? compactNumber(salesSummary.totalSales) : '0'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2 font-mono-tech uppercase tracking-widest">
                       {baseCurrency?.symbol || 'UGX'}

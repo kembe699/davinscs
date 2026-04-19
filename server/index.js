@@ -37,6 +37,8 @@ import reportsRoutes from "./routes/reports.js";
 import invoicesRoutes from "./routes/invoices.js";
 import rolesRoutes from "./routes/roles.js";
 import auditLogsRoutes from "./routes/audit-logs.js";
+import customersRoutes from "./routes/customers.js";
+import quotationsRoutes, { migrateQuotations } from "./routes/quotations.js";
 
 dotenv.config();
 
@@ -98,6 +100,8 @@ app.use("/api/reports", reportsRoutes);
 app.use("/api/invoices", invoicesRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/audit-logs", auditLogsRoutes);
+app.use("/api/customers", customersRoutes);
+app.use("/api/quotations", quotationsRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -796,6 +800,7 @@ async function migrate() {
 }
 
 migrate()
+  .then(() => migrateQuotations(pool))
   .then(() => autoSeed())
   .then(() => {
     app.listen(PORT, () => {
