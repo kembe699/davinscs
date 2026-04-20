@@ -356,23 +356,22 @@ router.get("/expenses/cash-drawer", requireAuth, async (req, res) => {
     try {
       const { rows } = await pool.query(
         `SELECT 
-          cdt.id,
-          cdt.amount,
-          cdt.reason,
-          cdt.created_at,
+          cm.id,
+          cm.amount,
+          cm.reason,
+          cm.created_at,
           u.email as user_email,
-          cds.id as session_id
-         FROM cash_drawer_transactions cdt
-         LEFT JOIN users u ON cdt.user_id = u.id
-         LEFT JOIN cash_drawer_sessions cds ON cdt.session_id = cds.id
-         WHERE cdt.type = 'cash_out'
-           AND DATE(cdt.created_at) BETWEEN $1 AND $2
-         ORDER BY cdt.created_at DESC`,
+          cm.session_id
+         FROM cash_movements cm
+         LEFT JOIN users u ON cm.user_id = u.id
+         WHERE cm.type = 'out'
+           AND DATE(cm.created_at) BETWEEN $1 AND $2
+         ORDER BY cm.created_at DESC`,
         [startDate, endDate]
       );
       res.json(rows);
     } catch (err) {
-      console.log("Cash drawer transactions table not available");
+      console.error("Cash drawer expenses query error:", err.message);
       res.json([]);
     }
   } catch (err) {
@@ -546,19 +545,19 @@ router.get("/trending/products", requireAuth, async (req, res) => {
     try {
       posSales = await pool.query(
         `SELECT 
-          product_id,
-          product_name,
-          SUM(quantity) as quantity_sold,
-          COALESCE(SUM(subtotal), 0) as revenue,
+          si.product_id,
+          si.product_name,
+          SUM(si.quantity) as quantity_sold,
+          COALESCE(SUM(si.subtotal), 0) as revenue,
           'POS' as source
          FROM pos_sale_items si
          JOIN pos_sales s ON si.sale_id = s.id
          WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
-         GROUP BY product_id, product_name`,
+         GROUP BY si.product_id, si.product_name`,
         [startDate, endDate]
       );
     } catch (err) {
-      console.log("POS sale items table not available");
+      console.error("POS trending query error:", err.message);
     }
 
     // Website orders
@@ -898,8 +897,22 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       webRevenue = parseInt(rows[0].total) || 0;
     } catch (e) {}
 
-    // ── EXPENSES ─────────────────────────────────────────────────────────
-    let procurementExpenses = 0, cashDrawerExpenses = 0, accountingExpenses = 0;
+    // ── COGS (from actual sale items × cost_price) ────────────────────
+    let cogsAmount = 0;
+    try {
+      const { rows } = await pool.query(
+        `SELECT COALESCE(SUM(psi.quantity * COALESCE(p.cost_price,0)),0)::bigint as total
+         FROM pos_sale_items psi
+         JOIN pos_sales ps ON psi.sale_id = ps.id
+         JOIN products p   ON psi.product_id = p.id
+         WHERE DATE(ps.created_at) BETWEEN $1 AND $2 AND ps.voided = false`,
+        [startDate, endDate]
+      );
+      cogsAmount = parseInt(rows[0].total) || 0;
+    } catch (e) { console.error('COGS query error:', e.message); }
+
+    // ── OPERATING EXPENSES ────────────────────────────────────────────
+    let procurementExpenses = 0, cashDrawerExpenses = 0, otherAccountingExpenses = 0;
 
     try {
       const { rows } = await pool.query(
@@ -912,43 +925,51 @@ router.get("/income-statement", requireAuth, async (req, res) => {
 
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM cash_drawer_transactions
-         WHERE type = 'cash_out' AND DATE(created_at) BETWEEN $1 AND $2`,
+        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM cash_movements
+         WHERE type = 'out' AND DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
       cashDrawerExpenses = parseInt(rows[0].total) || 0;
-    } catch (e) {}
+    } catch (e) { console.error('Cash drawer expenses query error:', e.message); }
 
+    // Other accounting expenses (exclude COGS account 5000)
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(ABS(t.amount)),0)::bigint as total
-         FROM transactions t JOIN accounts a ON t.account_id = a.id
-         WHERE a.type = 'expense' AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
+        `SELECT COALESCE(SUM(tl.debit),0)::bigint as total
+         FROM transaction_lines tl
+         JOIN transactions t  ON tl.transaction_id = t.id
+         JOIN accounts a      ON tl.account_id = a.id
+         WHERE a.account_type = 'expense'
+           AND a.code != '5000'
+           AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      accountingExpenses = parseInt(rows[0].total) || 0;
+      otherAccountingExpenses = parseInt(rows[0].total) || 0;
     } catch (e) {}
 
-    const totalRevenue  = posRevenue + invoiceRevenue + webRevenue;
-    const totalExpenses = procurementExpenses + cashDrawerExpenses + accountingExpenses;
-    const netIncome     = totalRevenue - totalExpenses;
+    const totalRevenue      = posRevenue + invoiceRevenue + webRevenue;
+    const grossProfit       = totalRevenue - cogsAmount;
+    const totalOpExpenses   = procurementExpenses + cashDrawerExpenses + otherAccountingExpenses;
+    const netIncome         = grossProfit - totalOpExpenses;
 
     res.json({
       start_date: startDate,
       end_date:   endDate,
       revenue: [
-        { label: 'POS Sales',            amount: posRevenue },
-        { label: 'Invoice Collections',  amount: invoiceRevenue },
-        { label: 'Website Orders',       amount: webRevenue },
+        { label: 'POS Sales',           amount: posRevenue },
+        { label: 'Invoice Collections', amount: invoiceRevenue },
+        { label: 'Website Orders',      amount: webRevenue },
       ].filter(r => r.amount > 0),
-      total_revenue: totalRevenue,
+      total_revenue:    totalRevenue,
+      cogs:             cogsAmount,
+      gross_profit:     grossProfit,
       expenses: [
-        { label: 'Procurement Payments', amount: procurementExpenses },
-        { label: 'Cash Drawer Expenses', amount: cashDrawerExpenses },
-        { label: 'Accounting Expenses',  amount: accountingExpenses },
+        { label: 'Procurement Payments',  amount: procurementExpenses },
+        { label: 'Cash Drawer Expenses',  amount: cashDrawerExpenses },
+        { label: 'Other Expenses',        amount: otherAccountingExpenses },
       ].filter(e => e.amount > 0),
-      total_expenses: totalExpenses,
-      net_income: netIncome,
+      total_expenses: totalOpExpenses,
+      net_income:     netIncome,
     });
   } catch (err) {
     console.error("Error in income statement:", err);

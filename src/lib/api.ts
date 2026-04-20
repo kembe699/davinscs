@@ -51,6 +51,7 @@ export type ApiCategory = {
   slug: string;
   name: string;
   sort_order: number;
+  image_url: string;
   created_at: string;
 };
 
@@ -654,7 +655,7 @@ export const api = {
   },
   categories: {
     list: () => request<ApiCategory[]>("/api/categories"),
-    create: (data: { slug: string; name: string; sort_order: number }) =>
+    create: (data: { slug: string; name: string; sort_order: number; image_url?: string }) =>
       request<ApiCategory>("/api/categories", { method: "POST", body: JSON.stringify(data) }),
     update: (id: number, data: Partial<ApiCategory>) =>
       request<ApiCategory>(`/api/categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),

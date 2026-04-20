@@ -47,6 +47,13 @@ export default function ReportsNew() {
     api.priceLists.active().then(setSchemesList).catch(() => {});
   }, [datePreset]);
 
+  // Auto-generate whenever the selected report or date range changes
+  useEffect(() => {
+    if (startDate && endDate) {
+      generateReport();
+    }
+  }, [selectedReport, startDate, endDate]);
+
   const loadCompanyInfo = async () => {
     try {
       const info = await api.company.get();
@@ -728,7 +735,7 @@ export default function ReportsNew() {
             )}
 
             {reportData && !loading && (
-              <div className="bg-white border border-gray-300 shadow-lg" style={{ minHeight: '800px' }}>
+              <div className="bg-white border border-gray-300 shadow-lg text-gray-900" style={{ minHeight: '800px' }}>
                 {/* Professional Document Header */}
                 <div className="border-b-2 border-gray-800 p-8 bg-white">
                   <div className="flex items-start gap-6">
@@ -920,9 +927,22 @@ export default function ReportsNew() {
                       </div>
                     </div>
 
-                    {/* Expenses */}
+                    {/* Cost of Goods Sold */}
                     <div className="mb-6">
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-gray-800 pb-1 mb-3">Expenses</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-orange-600 pb-1 mb-3">Cost of Goods Sold</h3>
+                      <div className="flex justify-between py-1.5 text-sm border-b border-gray-100">
+                        <span className="text-gray-700">Cost of Goods Sold (COGS)</span>
+                        <span className="font-mono font-medium text-orange-700">{formatCurrencySync(reportData.cogs || 0, baseCurrency?.symbol || 'UGX', false)}</span>
+                      </div>
+                      <div className={`flex justify-between py-2 border-t-2 mt-1 font-bold ${(reportData.gross_profit ?? reportData.total_revenue) >= 0 ? 'border-green-700 text-green-800' : 'border-red-600 text-red-700'}`}>
+                        <span>Gross Profit</span>
+                        <span className="font-mono">{formatCurrencySync(reportData.gross_profit ?? reportData.total_revenue, baseCurrency?.symbol || 'UGX', false)}</span>
+                      </div>
+                    </div>
+
+                    {/* Operating Expenses */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-gray-800 pb-1 mb-3">Operating Expenses</h3>
                       {(reportData.expenses || []).map((e: any, i: number) => (
                         <div key={i} className="flex justify-between py-1.5 text-sm border-b border-gray-100">
                           <span className="text-gray-700">{e.label}</span>
@@ -930,10 +950,10 @@ export default function ReportsNew() {
                         </div>
                       ))}
                       {(reportData.expenses || []).length === 0 && (
-                        <p className="text-sm text-gray-400 italic py-2">No expenses recorded in this period</p>
+                        <p className="text-sm text-gray-400 italic py-2">No operating expenses in this period</p>
                       )}
                       <div className="flex justify-between py-2 border-t-2 border-gray-800 mt-1 font-bold">
-                        <span className="text-gray-900">Total Expenses</span>
+                        <span className="text-gray-900">Total Operating Expenses</span>
                         <span className="font-mono text-red-600">{formatCurrencySync(reportData.total_expenses, baseCurrency?.symbol || 'UGX', false)}</span>
                       </div>
                     </div>

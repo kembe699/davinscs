@@ -185,38 +185,71 @@ export default function Reports() {
               <div>
                 <h2 className="text-xl font-bold text-black mb-4">Income Statement</h2>
                 <p className="text-sm text-black mb-4">{startDate} to {endDate}</p>
-                
+
+                {/* Revenue */}
                 <div className="mb-6">
-                  <h3 className="font-bold text-black mb-2">Revenue</h3>
+                  <h3 className="font-bold text-black mb-2 uppercase tracking-wide text-xs border-b border-border-subtle pb-1">Revenue</h3>
                   {reportData.revenue?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
-                      <span>{acc.name}</span>
+                      <span className="text-foreground">{acc.name}</span>
                       <span className="font-mono-tech">{Number(acc.amount).toLocaleString()}</span>
                     </div>
                   ))}
+                  {(!reportData.revenue || reportData.revenue.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic py-1">No revenue in period</p>
+                  )}
                   <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
                     <span>Total Revenue</span>
-                    <span className="font-mono-tech">{Number(reportData.total_revenue).toLocaleString()}</span>
+                    <span className="font-mono-tech text-green-500">{Number(reportData.total_revenue).toLocaleString()}</span>
                   </div>
                 </div>
 
+                {/* Cost of Goods Sold */}
                 <div className="mb-6">
-                  <h3 className="font-bold text-black mb-2">Expenses</h3>
+                  <h3 className="font-bold text-black mb-2 uppercase tracking-wide text-xs border-b border-orange-500/40 pb-1">Cost of Goods Sold</h3>
+                  {(reportData.cogs || []).map((acc: any) => (
+                    <div key={acc.code} className="flex justify-between py-1 text-sm">
+                      <span className="text-foreground">{acc.name}</span>
+                      <span className="font-mono-tech text-orange-400">{Number(Math.abs(acc.amount)).toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {(!reportData.cogs || reportData.cogs.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic py-1">No COGS recorded in period</p>
+                  )}
+                  <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
+                    <span>Total COGS</span>
+                    <span className="font-mono-tech text-orange-400">{Number(reportData.total_cogs ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Gross Profit */}
+                <div className={`flex justify-between py-2 px-3 mb-6 font-bold border ${(reportData.gross_profit ?? reportData.total_revenue) >= 0 ? 'border-green-500/40 bg-green-500/5 text-green-400' : 'border-red-500/40 bg-red-500/5 text-red-400'}`}>
+                  <span>Gross Profit</span>
+                  <span className="font-mono-tech">{Number(reportData.gross_profit ?? reportData.total_revenue).toLocaleString()}</span>
+                </div>
+
+                {/* Operating Expenses */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-black mb-2 uppercase tracking-wide text-xs border-b border-border-subtle pb-1">Operating Expenses</h3>
                   {reportData.expenses?.map((acc: any) => (
                     <div key={acc.code} className="flex justify-between py-1 text-sm">
-                      <span>{acc.name}</span>
+                      <span className="text-foreground">{acc.name}</span>
                       <span className="font-mono-tech">{Number(Math.abs(acc.amount)).toLocaleString()}</span>
                     </div>
                   ))}
+                  {(!reportData.expenses || reportData.expenses.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic py-1">No operating expenses in period</p>
+                  )}
                   <div className="flex justify-between py-2 border-t border-border-subtle font-bold">
-                    <span>Total Expenses</span>
-                    <span className="font-mono-tech">{Number(reportData.total_expenses).toLocaleString()}</span>
+                    <span>Total Operating Expenses</span>
+                    <span className="font-mono-tech text-red-400">{Number(reportData.total_expenses).toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className="flex justify-between py-3 border-t-2 border-border-subtle text-lg font-bold text-black">
-                  <span>Net Income</span>
-                  <span className="font-mono-tech">{Number(reportData.net_income).toLocaleString()}</span>
+                {/* Net Income */}
+                <div className={`flex justify-between py-3 border-t-2 border-border-subtle text-lg font-bold ${reportData.net_income >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span>{reportData.net_income >= 0 ? 'Net Income (Profit)' : 'Net Loss'}</span>
+                  <span className="font-mono-tech">{Number(Math.abs(reportData.net_income)).toLocaleString()}</span>
                 </div>
               </div>
             )}

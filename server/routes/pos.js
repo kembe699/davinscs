@@ -82,7 +82,8 @@ router.post("/sales", requireAuth, async (req, res) => {
         unit_price,
         discount_amount: item_discount,
         tax_amount: item_tax,
-        subtotal: item_subtotal
+        subtotal: item_subtotal,
+        cogs: Math.round((product.cost_price || 0) * item.quantity),
       });
       
       // Update inventory
@@ -138,6 +139,45 @@ router.post("/sales", requireAuth, async (req, res) => {
       );
     }
     
+    // ── Accounting journal entries ─────────────────────────────────────
+    try {
+      const acctRows = await client.query(
+        `SELECT id, code FROM accounts WHERE code IN ('1000','1100','1200','4000','5000') AND is_active = true`
+      );
+      const acct = {};
+      acctRows.rows.forEach(r => { acct[r.code] = r.id; });
+      const today = new Date().toISOString().split('T')[0];
+
+      // Revenue entry: DR Cash(1000)/AR(1100)  CR Sales Revenue(4000)
+      if (total_amount > 0 && acct['4000']) {
+        const drAcct = sale_type === 'credit' ? (acct['1100'] || acct['1000']) : (acct['1000'] || acct['1100']);
+        if (drAcct) {
+          const { rows: tx1 } = await client.query(
+            `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+            [today, sale_number, `POS Sale Revenue – ${sale_number}`, user_id]
+          );
+          const tid1 = tx1[0].id;
+          await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid1, drAcct, total_amount]);
+          await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid1, acct['4000'], total_amount]);
+        }
+      }
+
+      // COGS entry: DR Cost of Goods Sold(5000)  CR Inventory(1200)
+      const total_cogs = processedItems.reduce((s, it) => s + it.cogs, 0);
+      if (total_cogs > 0 && acct['5000'] && acct['1200']) {
+        const { rows: tx2 } = await client.query(
+          `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+          [today, sale_number, `COGS – ${sale_number}`, user_id]
+        );
+        const tid2 = tx2[0].id;
+        await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid2, acct['5000'], total_cogs]);
+        await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid2, acct['1200'], total_cogs]);
+      }
+    } catch (acctErr) {
+      // Non-fatal: log but don't fail the sale
+      console.error('Accounting journal error (sale still saved):', acctErr.message);
+    }
+
     // Auto-record cash sales as cash_movements 'in' for the active session
     if (session_id && sale_type !== 'credit' && (status || 'completed') === 'completed') {
       const ptResult = await client.query(

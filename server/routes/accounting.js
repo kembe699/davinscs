@@ -228,19 +228,25 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       ORDER BY a.account_type, a.code
     `, [start_date, end_date]);
     
-    const revenue = rows.filter(r => r.account_type === 'revenue');
-    const expenses = rows.filter(r => r.account_type === 'expense');
-    
-    const totalRevenue = revenue.reduce((sum, r) => sum + parseFloat(r.amount), 0);
-    const totalExpenses = expenses.reduce((sum, r) => sum + Math.abs(parseFloat(r.amount)), 0);
-    const netIncome = totalRevenue - totalExpenses;
-    
+    const revenue  = rows.filter(r => r.account_type === 'revenue');
+    const cogs     = rows.filter(r => r.account_type === 'expense' && r.code === '5000');
+    const expenses = rows.filter(r => r.account_type === 'expense' && r.code !== '5000');
+
+    const totalRevenue   = revenue.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+    const totalCogs      = cogs.reduce((sum, r) => sum + Math.abs(parseFloat(r.amount)), 0);
+    const grossProfit    = totalRevenue - totalCogs;
+    const totalExpenses  = expenses.reduce((sum, r) => sum + Math.abs(parseFloat(r.amount)), 0);
+    const netIncome      = grossProfit - totalExpenses;
+
     res.json({
       revenue,
+      cogs,
+      gross_profit:   grossProfit,
       expenses,
-      total_revenue: totalRevenue,
+      total_revenue:  totalRevenue,
+      total_cogs:     totalCogs,
       total_expenses: totalExpenses,
-      net_income: netIncome
+      net_income:     netIncome
     });
   } catch (err) {
     console.error(err);

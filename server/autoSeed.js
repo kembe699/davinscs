@@ -2,14 +2,20 @@ import bcrypt from "bcryptjs";
 import pool from "./db.js";
 
 const categoryData = [
-  { slug: "cameras",       name: "Cameras",       sort_order: 1 },
-  { slug: "lenses",        name: "Lenses",        sort_order: 2 },
-  { slug: "microphones",   name: "Microphones",   sort_order: 3 },
-  { slug: "teleprompters", name: "Teleprompters", sort_order: 4 },
-  { slug: "lighting",      name: "Lighting",      sort_order: 5 },
+  { slug: "beverages",         name: "Beverages",              sort_order: 1 },
+  { slug: "dairy-eggs",        name: "Dairy & Eggs",           sort_order: 2 },
+  { slug: "bread-bakery",      name: "Bread & Bakery",         sort_order: 3 },
+  { slug: "fruits-vegetables", name: "Fruits & Vegetables",    sort_order: 4 },
+  { slug: "meat-seafood",      name: "Meat & Seafood",         sort_order: 5 },
+  { slug: "snacks",            name: "Snacks & Confectionery", sort_order: 6 },
+  { slug: "household",         name: "Household & Cleaning",   sort_order: 7 },
+  { slug: "personal-care",     name: "Personal Care",          sort_order: 8 },
+  { slug: "cereals-grains",    name: "Cereals & Grains",       sort_order: 9 },
+  { slug: "canned-preserved",  name: "Canned & Preserved",     sort_order: 10 },
 ];
 
-const products = [
+const products = [ /* supermarket products – seeded via SQL; kept here as reference for fresh installs */
+  // (populated at runtime from DB; autoSeed skips if products already exist)
   { slug: "sony-fx3", name: "Sony FX3 Full-Frame Cinema Camera", brand: "Sony", price: 795000, tag: "FULL_FRAME", category: "cameras", in_stock: true, image_url: "/products/sony-fx3.jpg", description: "A compact full-frame cinema camera with 12.1MP sensor, 4K 120fps recording, and dual native ISO up to 409600.", specs: [{ label: "Sensor", value: "12.1MP Full-Frame BSI CMOS" }, { label: "Resolution", value: "4K 120fps / 1080p 240fps" }, { label: "ISO Range", value: "80 – 409,600" }, { label: "Mount", value: "Sony E-Mount" }, { label: "Body Weight", value: "715g (body only)" }, { label: "Battery", value: "NP-FZ100" }] },
   { slug: "bmpcc-6k-g2", name: "Blackmagic Pocket Cinema 6K G2", brand: "Blackmagic Design", price: 407000, tag: "6K_CINEMA", category: "cameras", in_stock: true, image_url: "/products/bmpcc-6k-g2.jpg", description: "The Pocket Cinema Camera 6K G2 features a Super 35 sensor with 6144×3456 resolution and 13 stops of dynamic range.", specs: [{ label: "Sensor", value: "Super 35 CMOS" }, { label: "Resolution", value: "6K / 4K / 2.8K / 2K / 1080p" }, { label: "Dynamic Range", value: "13 stops" }, { label: "Mount", value: "Canon EF / EF-S" }, { label: "Body Weight", value: "900g" }, { label: "Battery", value: "LP-E6" }] },
   { slug: "canon-r5c", name: "Canon EOS R5 C Cinema Camera", brand: "Canon", price: 877000, tag: "8K_RAW", category: "cameras", in_stock: true, image_url: "/products/canon-r5c.jpg", description: "Merges Canon's EOS R5 mirrorless system with cinema-grade 8K RAW recording and unlimited record times.", specs: [{ label: "Sensor", value: "45MP Full-Frame CMOS" }, { label: "Resolution", value: "8K RAW / 4K 120fps" }, { label: "Cooling", value: "Active Fan Cooling" }, { label: "Mount", value: "Canon RF Mount" }, { label: "Body Weight", value: "680g" }, { label: "Recording", value: "CFexpress + SD" }] },
@@ -37,7 +43,6 @@ const products = [
   { slug: "godox-sl-200ii", name: "Godox SL-200W II LED Video Light", brand: "Godox", price: 59000, tag: "STUDIO_LED", category: "lighting", in_stock: true, image_url: "/products/godox-sl-200ii.jpg", description: "200W daylight-balanced studio LED with quiet fan and Bowens mount.", specs: [{ label: "Power", value: "200W" }, { label: "Color Temp", value: "5600K ±200K" }, { label: "CRI / TLCI", value: "96 / 97" }, { label: "Output", value: "18,100 lux @ 1m" }, { label: "Mount", value: "Bowens Mount" }, { label: "Dimming", value: "0–100% PWM" }] },
   { slug: "luxli-cello-2", name: "Luxli Cello 2 RGBAW Panel", brand: "Luxli", price: 112000, tag: "RGBAW_PANEL", category: "lighting", in_stock: true, image_url: "/products/luxli-cello-2.jpg", description: "Compact RGBAW on-camera LED panel with 2000–10000K range and free iOS/Android app.", specs: [{ label: "Size", value: "6\" × 6\" Panel" }, { label: "Color Temp", value: "2000K – 10,000K" }, { label: "Colors", value: "RGBAW" }, { label: "CRI", value: "95+" }, { label: "Power", value: "V-Mount / Anton Bauer / USB-C" }, { label: "Control", value: "Bluetooth App + DMX" }] },
   { slug: "aputure-amaran-200x", name: "Aputure Amaran 200x Bi-Color", brand: "Aputure", price: 53000, tag: "AMARAN_SERIES", category: "lighting", in_stock: true, image_url: "/products/aputure-amaran-200x.jpg", description: "200W bi-color LED with sidus Link app control and Bowens S-mount compatibility.", specs: [{ label: "Power", value: "200W" }, { label: "Color Temp", value: "2700K – 6500K" }, { label: "CRI / TLCI", value: "95 / 97" }, { label: "Output", value: "14,200 lux @ 1m" }, { label: "Control", value: "Sidus Link App + 2.4GHz" }, { label: "Mount", value: "Bowens S-Mount" }] },
-  { slug: "nanlite-pavotube-ii-30c", name: "Nanlite PavoTube II 30C RGB Tube", brand: "Nanlite", price: 41000, tag: "RGB_TUBE", category: "lighting", in_stock: true, image_url: "/products/nanlite-pavotube.jpg", description: "2-foot RGBWW LED tube light with internal battery and 14 built-in effects.", specs: [{ label: "Length", value: "60cm / 2ft" }, { label: "Color Temp", value: "2700K – 6500K + RGB" }, { label: "CRI", value: "95+" }, { label: "Output", value: "1,300 lux @ 1m" }, { label: "Battery", value: "Built-in (2 hrs runtime)" }, { label: "Effects", value: "14 built-in (lightning, fire, etc.)" }] },
 ];
 
 export async function autoSeed() {
@@ -48,28 +53,16 @@ export async function autoSeed() {
     ["admin@divinsstore.com", hash]
   );
 
-  // Categories
-  for (const c of categoryData) {
-    await pool.query(
-      `INSERT INTO categories (slug, name, sort_order) VALUES ($1, $2, $3)
-       ON CONFLICT (slug) DO UPDATE SET name=EXCLUDED.name, sort_order=EXCLUDED.sort_order`,
-      [c.slug, c.name, c.sort_order]
-    );
-  }
-
-  // Products
-  for (const p of products) {
-    await pool.query(
-      `INSERT INTO products (slug, name, brand, price, tag, description, specs, image_url, in_stock, is_featured, category)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       ON CONFLICT (slug) DO UPDATE SET
-         name=EXCLUDED.name, brand=EXCLUDED.brand, price=EXCLUDED.price,
-         tag=EXCLUDED.tag, description=EXCLUDED.description, specs=EXCLUDED.specs,
-         image_url=EXCLUDED.image_url, in_stock=EXCLUDED.in_stock, category=EXCLUDED.category,
-         updated_at=NOW()`,
-      [p.slug, p.name, p.brand, p.price, p.tag, p.description,
-       JSON.stringify(p.specs), p.image_url, p.in_stock, false, p.category]
-    );
+  // Categories & Products — only seed if DB is empty (preserves manually seeded data)
+  const { rows: existingProducts } = await pool.query('SELECT id FROM products LIMIT 1');
+  if (existingProducts.length === 0) {
+    for (const c of categoryData) {
+      await pool.query(
+        `INSERT INTO categories (slug, name, sort_order) VALUES ($1, $2, $3)
+         ON CONFLICT (slug) DO UPDATE SET name=EXCLUDED.name, sort_order=EXCLUDED.sort_order`,
+        [c.slug, c.name, c.sort_order]
+      );
+    }
   }
 
   // Seed suppliers — only Nile Hive Concept Co. Ltd

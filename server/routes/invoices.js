@@ -177,10 +177,11 @@ router.post("/:id/payments", requireAuth, async (req, res) => {
       [invoiceId, amount, payment_method || "Cash", notes || null, req.user.id]
     );
 
+    const clampedPaid = Math.min(newPaid, invoice.total_amount);
     const { rows } = await client.query(
-      `UPDATE invoices SET paid_amount=$1, status=$2, updated_at=NOW()
-       WHERE id=$3 RETURNING *`,
-      [Math.min(newPaid, invoice.total_amount), status, invoiceId]
+      `UPDATE invoices SET paid_amount=$1, balance=$2, status=$3, updated_at=NOW()
+       WHERE id=$4 RETURNING *`,
+      [clampedPaid, invoice.total_amount - clampedPaid, status, invoiceId]
     );
 
     await client.query("COMMIT");

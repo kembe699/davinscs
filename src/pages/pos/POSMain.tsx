@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode } from "lucide-react";
-import { api, ApiProduct, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
+import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -37,7 +37,7 @@ export default function POSMain() {
   const [creditDueDate, setCreditDueDate] = useState('');
   const [createdInvoice, setCreatedInvoice] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [secondaryCurrency, setSecondaryCurrency] = useState<ApiCurrency | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [schemes, setSchemes] = useState<PriceList[]>([]);
@@ -81,11 +81,6 @@ export default function POSMain() {
     })));
   }, [schemeItemMap]);
 
-  useEffect(() => {
-    // Extract unique categories from products
-    const uniqueCategories = [...new Set(products.map(p => p.category))].filter(Boolean);
-    setCategories(uniqueCategories);
-  }, [products]);
 
   const loadSchemes = async () => {
     try {
@@ -189,15 +184,17 @@ export default function POSMain() {
 
   const loadData = async () => {
     try {
-      const [productsData, paymentTypesData, taxData] = await Promise.all([
+      const [productsData, paymentTypesData, taxData, catsData] = await Promise.all([
         api.products.list(),
         api.paymentTypes.active(),
         api.taxRates.default(),
+        api.categories.list(),
       ]);
       setProducts(productsData);
       setFilteredProducts(productsData);
       setPaymentTypes(paymentTypesData);
       setDefaultTax(taxData);
+      setCategories(catsData);
       if (paymentTypesData.length > 0) {
         setSelectedPaymentType(paymentTypesData[0].id);
       }
@@ -732,28 +729,33 @@ export default function POSMain() {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {categories.map(category => {
-                    const categoryProducts = products.filter(p => p.category === category);
-                    const productCount = categoryProducts.length;
-                    
+                  {categories.map(cat => {
+                    const productCount = products.filter(p => p.category === cat.slug).length;
                     return (
                       <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className="bg-admin-surface border-2 border-admin-border p-6 hover:border-admin-text transition-colors flex flex-col items-center justify-center gap-3 min-h-[150px]"
+                        key={cat.slug}
+                        onClick={() => setSelectedCategory(cat.slug)}
+                        className="bg-admin-surface border-2 border-admin-border hover:border-primary transition-colors flex flex-col items-center overflow-hidden min-h-[150px] rounded"
                       >
-                        <div className="w-16 h-16 bg-admin-bg rounded-full flex items-center justify-center">
-                          <svg className="w-8 h-8 text-admin-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                          </svg>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-admin-text font-medium capitalize mb-1">
-                            {category}
+                        {cat.image_url ? (
+                          <div className="w-full h-24 overflow-hidden">
+                            <img
+                              src={cat.image_url}
+                              alt={cat.name}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
                           </div>
-                          <div className="text-xs text-admin-text-secondary">
-                            {productCount} product{productCount !== 1 ? 's' : ''}
+                        ) : (
+                          <div className="w-full h-24 bg-admin-bg flex items-center justify-center">
+                            <svg className="w-8 h-8 text-admin-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
                           </div>
+                        )}
+                        <div className="p-2 text-center">
+                          <div className="text-admin-text font-medium text-sm mb-0.5">{cat.name}</div>
+                          <div className="text-xs text-admin-text-secondary">{productCount} product{productCount !== 1 ? 's' : ''}</div>
                         </div>
                       </button>
                     );
@@ -790,13 +792,19 @@ export default function POSMain() {
                           disabled={!product.in_stock || availableStock <= 0}
                           className="bg-admin-surface border border-admin-border p-3 text-left hover:bg-admin-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col"
                         >
-                          {product.image_url && (
+                          {product.image_url ? (
                             <div className="w-full h-32 mb-3 bg-admin-bg rounded overflow-hidden">
-                              <img 
-                                src={product.image_url} 
+                              <img
+                                src={product.image_url}
                                 alt={product.name}
                                 className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />
+                            </div>
+                          ) : (
+                            <div className="w-full h-32 mb-3 bg-admin-bg rounded flex items-center justify-center">
+                              <svg className="w-10 h-10 text-admin-text-secondary opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                             </div>
                           )}
                           <div className="text-admin-text font-medium text-sm mb-2 line-clamp-2">

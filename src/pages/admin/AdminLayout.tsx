@@ -1,31 +1,72 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
-import { LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart, DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor, ShoppingBag, Receipt, Shield, TrendingUp, Activity, UserCheck, ClipboardList } from "lucide-react";
+import {
+  LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart,
+  DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
+  ShoppingBag, Receipt, Shield, TrendingUp, Activity, UserCheck, ClipboardList,
+  ChevronDown, ChevronRight, BarChart2, Wallet,
+} from "lucide-react";
 
-const allNavItems = [
-  { label: "Dashboard",    href: "/admin",                icon: LayoutDashboard, permission: "dashboard.view" },
-  { label: "POS",          href: "/pos",                  icon: Monitor,         permission: "pos.access" },
-  { label: "Orders",       href: "/admin/orders",         icon: ShoppingBag,     permission: "orders.view" },
-  { label: "Products",     href: "/admin/products",       icon: Package,         permission: "products.view" },
-  { label: "Categories",   href: "/admin/categories",     icon: Layers,          permission: "categories.view" },
-  { label: "Inventory",    href: "/admin/inventory",      icon: PackageCheck,    permission: "inventory.view" },
-  { label: "Procurement",  href: "/admin/procurement",    icon: ShoppingCart,    permission: "procurement.view" },
-  { label: "Accounting",   href: "/admin/accounting",     icon: DollarSign,      permission: "accounting.view" },
-  { label: "Currencies",   href: "/admin/currencies",     icon: Globe,           permission: "currencies.view" },
-  { label: "Invoices",     href: "/admin/invoices",       icon: Receipt,         permission: "invoices.view" },
-  { label: "Reports",      href: "/admin/reports",        icon: FileText,        permission: "reports.view" },
-  { label: "Cashflow",     href: "/admin/cashflow",       icon: TrendingUp,      permission: "reports.view" },
-  { label: "Audit Trail",  href: "/admin/audit-trail",    icon: Activity,        permission: "reports.view" },
-  { label: "Customers",    href: "/admin/customers",      icon: UserCheck,       permission: "orders.view" },
-  { label: "Quotations",   href: "/admin/quotations",     icon: ClipboardList,   permission: "invoices.view" },
-  { label: "Payment Types",href: "/admin/payment-types",  icon: CreditCard,      permission: "payment_types.view" },
-  { label: "Tax Rates",    href: "/admin/tax-rates",      icon: Percent,         permission: "tax_rates.view" },
-  { label: "Price Lists",  href: "/admin/price-lists",    icon: Tag,             permission: "price_lists.view" },
-  { label: "Promotions",   href: "/admin/promotions",     icon: Tag,             permission: "promotions.view" },
-  { label: "My Company",   href: "/admin/company",        icon: Building,        permission: "company.view" },
-  { label: "Users",        href: "/admin/users",          icon: Users,           permission: "users.view" },
+type NavItem = { label: string; href: string; icon: any; permission: string };
+type NavGroup = { label: string; icon: any; items: NavItem[] };
+
+const TOP_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/admin",  icon: LayoutDashboard, permission: "dashboard.view" },
+  { label: "POS",       href: "/pos",    icon: Monitor,          permission: "pos.access" },
+];
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Sales",
+    icon: ShoppingBag,
+    items: [
+      { label: "Customers",   href: "/admin/customers",   icon: UserCheck,    permission: "orders.view" },
+      { label: "Quotations",  href: "/admin/quotations",  icon: ClipboardList,permission: "invoices.view" },
+      { label: "Invoices",    href: "/admin/invoices",    icon: Receipt,      permission: "invoices.view" },
+      { label: "Orders",      href: "/admin/orders",      icon: ShoppingCart, permission: "orders.view" },
+    ],
+  },
+  {
+    label: "Inventory",
+    icon: Package,
+    items: [
+      { label: "Products",    href: "/admin/products",    icon: Package,      permission: "products.view" },
+      { label: "Categories",  href: "/admin/categories",  icon: Layers,       permission: "categories.view" },
+      { label: "Stock",       href: "/admin/inventory",   icon: PackageCheck, permission: "inventory.view" },
+      { label: "Procurement", href: "/admin/procurement", icon: ShoppingCart, permission: "procurement.view" },
+    ],
+  },
+  {
+    label: "Finance",
+    icon: DollarSign,
+    items: [
+      { label: "Accounting",    href: "/admin/accounting",    icon: DollarSign, permission: "accounting.view" },
+      { label: "Cashflow",      href: "/admin/cashflow",      icon: Wallet,     permission: "reports.view" },
+      { label: "Currencies",    href: "/admin/currencies",    icon: Globe,      permission: "currencies.view" },
+      { label: "Payment Types", href: "/admin/payment-types", icon: CreditCard, permission: "payment_types.view" },
+      { label: "Tax Rates",     href: "/admin/tax-rates",     icon: Percent,    permission: "tax_rates.view" },
+      { label: "Price Lists",   href: "/admin/price-lists",   icon: Tag,        permission: "price_lists.view" },
+      { label: "Promotions",    href: "/admin/promotions",    icon: Tag,        permission: "promotions.view" },
+    ],
+  },
+  {
+    label: "Reports",
+    icon: BarChart2,
+    items: [
+      { label: "Reports",     href: "/admin/reports",     icon: FileText,  permission: "reports.view" },
+      { label: "Audit Trail", href: "/admin/audit-trail", icon: Activity,  permission: "reports.view" },
+    ],
+  },
+  {
+    label: "Settings",
+    icon: Building,
+    items: [
+      { label: "My Company", href: "/admin/company", icon: Building, permission: "company.view" },
+      { label: "Users",      href: "/admin/users",   icon: Users,    permission: "users.view" },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -34,17 +75,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/admin/login");
-  };
+  const isActive = (href: string) =>
+    href === "/admin"
+      ? location.pathname === "/admin"
+      : location.pathname.startsWith(href);
 
-  const navItems = allNavItems.filter(item => hasPermission(item.permission));
+  const groupHasActive = (group: NavGroup) =>
+    group.items.some(i => isActive(i.href));
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    NAV_GROUPS.forEach(g => { if (groupHasActive(g)) init[g.label] = true; });
+    return init;
+  });
+
+  const toggleGroup = (label: string) =>
+    setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
+
+  const handleLogout = () => { logout(); navigate("/admin/login"); };
 
   return (
     <div className="min-h-screen bg-admin-bg flex">
       {/* Sidebar */}
       <aside className="w-56 shrink-0 border-r border-admin-border flex flex-col bg-admin-bg sticky top-0 h-screen overflow-y-auto">
+        {/* Logo */}
         <div className="p-5 border-b border-admin-border">
           <Link to="/">
             {logo
@@ -62,32 +116,82 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
-          {navItems.map((item) => {
-            const active = location.pathname === item.href || (item.href !== "/admin" && location.pathname.startsWith(item.href));
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {/* Standalone top items */}
+          {TOP_ITEMS.filter(i => hasPermission(i.permission)).map(item => {
+            const active = isActive(item.href);
             return (
-              <Link
-                key={item.href}
-                to={item.href}
+              <Link key={item.href} to={item.href}
                 className={`flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded ${
                   active
                     ? "bg-admin-surface text-admin-text border border-admin-border"
                     : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
                 }`}
               >
-                <item.icon size={16} />
+                <item.icon size={15} />
                 {item.label}
               </Link>
             );
           })}
+
+          <div className="my-2 border-t border-admin-border/50" />
+
+          {/* Grouped sections */}
+          {NAV_GROUPS.map(group => {
+            const visibleItems = group.items.filter(i => hasPermission(i.permission));
+            if (visibleItems.length === 0) return null;
+            const isOpen = !!openGroups[group.label];
+            const hasActive = groupHasActive(group);
+            return (
+              <div key={group.label}>
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded transition-colors ${
+                    hasActive
+                      ? "text-admin-text"
+                      : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <group.icon size={14} />
+                    {group.label}
+                  </span>
+                  {isOpen
+                    ? <ChevronDown size={12} className="opacity-60" />
+                    : <ChevronRight size={12} className="opacity-40" />
+                  }
+                </button>
+
+                {isOpen && (
+                  <div className="ml-3 mt-0.5 mb-1 pl-3 border-l border-admin-border/50 space-y-0.5">
+                    {visibleItems.map(item => {
+                      const active = isActive(item.href);
+                      return (
+                        <Link key={item.href} to={item.href}
+                          className={`flex items-center gap-2.5 px-2.5 py-1.5 text-sm rounded transition-colors ${
+                            active
+                              ? "bg-admin-surface text-admin-text border border-admin-border"
+                              : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
+                          }`}
+                        >
+                          <item.icon size={13} />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
+        {/* Footer */}
         <div className="p-4 border-t border-admin-border">
           <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
             {user?.email}
           </p>
-          <button
-            onClick={handleLogout}
+          <button onClick={handleLogout}
             className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
           >
             <LogOut size={14} />

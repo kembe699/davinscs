@@ -3,9 +3,9 @@ import { api, ApiCategory } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 
-type DraftRow = { slug: string; name: string; sort_order: number };
+type DraftRow = { slug: string; name: string; sort_order: number; image_url: string };
 
-const emptyDraft: DraftRow = { slug: "", name: "", sort_order: 0 };
+const emptyDraft: DraftRow = { slug: "", name: "", sort_order: 0, image_url: "" };
 
 function autoSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -51,7 +51,7 @@ export default function Categories() {
 
   const startEdit = (c: ApiCategory) => {
     setEditId(c.id);
-    setEditDraft({ slug: c.slug, name: c.name, sort_order: c.sort_order });
+    setEditDraft({ slug: c.slug, name: c.name, sort_order: c.sort_order, image_url: c.image_url ?? "" });
   };
 
   const handleEdit = async (id: number) => {
@@ -112,8 +112,10 @@ export default function Categories() {
             <thead>
               <tr className="border-b border-border-subtle bg-chassis">
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest w-12">#</th>
+                <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest w-12">Img</th>
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Name</th>
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Slug</th>
+                <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Image URL</th>
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest w-20">Order</th>
                 <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Actions</th>
               </tr>
@@ -121,7 +123,7 @@ export default function Categories() {
             <tbody className="divide-y divide-border-subtle">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
+                  <td colSpan={7} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
                     Loading…
                   </td>
                 </tr>
@@ -137,6 +139,13 @@ export default function Categories() {
                         />
                       </td>
                       <td className="px-4 py-2">
+                        {editDraft.image_url ? (
+                          <img src={editDraft.image_url} alt="" className="w-8 h-8 rounded object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-8 h-8 rounded bg-muted" />
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
                         <input
                           type="text" value={editDraft.name}
                           onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
@@ -147,6 +156,13 @@ export default function Categories() {
                         <input
                           type="text" value={editDraft.slug}
                           onChange={(e) => setEditDraft((d) => ({ ...d, slug: e.target.value }))}
+                          className="field-input"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="url" value={editDraft.image_url} placeholder="https://…"
+                          onChange={(e) => setEditDraft((d) => ({ ...d, image_url: e.target.value }))}
                           className="field-input"
                         />
                       </td>
@@ -172,8 +188,18 @@ export default function Categories() {
                   ) : (
                     <>
                       <td className="px-4 py-3 font-mono-tech text-[11px] text-muted-foreground">{c.sort_order}</td>
+                      <td className="px-4 py-3">
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.name} className="w-9 h-9 rounded object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-muted flex items-center justify-center text-muted-foreground text-[10px]">–</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-medium text-foreground">{c.name}</td>
                       <td className="px-4 py-3 font-mono-tech text-[11px] text-muted-foreground">{c.slug}</td>
+                      <td className="px-4 py-3 font-mono-tech text-[10px] text-muted-foreground max-w-[220px] truncate" title={c.image_url}>
+                        {c.image_url ? c.image_url.replace('https://images.unsplash.com/photo-', 'unsplash/…') : <span className="opacity-40">none</span>}
+                      </td>
                       <td />
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
@@ -225,8 +251,15 @@ export default function Categories() {
                     />
                   </td>
                   <td className="px-4 py-2">
+                    {draft.image_url ? (
+                      <img src={draft.image_url} alt="" className="w-8 h-8 rounded object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-muted" />
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
                     <input
-                      type="text" value={draft.name} placeholder="e.g. Drones"
+                      type="text" value={draft.name} placeholder="e.g. Frozen Foods"
                       onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value, slug: autoSlug(e.target.value) }))}
                       className="field-input"
                       autoFocus
@@ -234,8 +267,15 @@ export default function Categories() {
                   </td>
                   <td className="px-4 py-2">
                     <input
-                      type="text" value={draft.slug} placeholder="e.g. drones"
+                      type="text" value={draft.slug} placeholder="e.g. frozen-foods"
                       onChange={(e) => setDraft((d) => ({ ...d, slug: e.target.value }))}
+                      className="field-input"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="url" value={draft.image_url} placeholder="https://images.unsplash.com/…"
+                      onChange={(e) => setDraft((d) => ({ ...d, image_url: e.target.value }))}
                       className="field-input"
                     />
                   </td>

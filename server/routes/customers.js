@@ -52,7 +52,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       [id]
     );
     const { rows: invoices } = await pool.query(
-      `SELECT id, invoice_number, status, total_amount, paid_amount, COALESCE(balance,0) as balance, due_date, created_at
+      `SELECT id, invoice_number, status, total_amount, paid_amount, (total_amount - paid_amount) as balance, due_date, created_at
        FROM invoices WHERE customer_id = $1 OR (customer_email IS NOT NULL AND LOWER(customer_email) = (SELECT LOWER(email) FROM customers WHERE id = $1))
        ORDER BY created_at DESC LIMIT 50`,
       [id]

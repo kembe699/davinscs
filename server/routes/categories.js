@@ -16,12 +16,12 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", requireAuth, async (req, res) => {
-  const { slug, name, sort_order = 0 } = req.body;
+  const { slug, name, sort_order = 0, image_url = "" } = req.body;
   if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
   try {
     const { rows } = await pool.query(
-      "INSERT INTO categories (slug, name, sort_order) VALUES ($1,$2,$3) RETURNING *",
-      [slug.toLowerCase().trim(), name.trim(), sort_order]
+      "INSERT INTO categories (slug, name, sort_order, image_url) VALUES ($1,$2,$3,$4) RETURNING *",
+      [slug.toLowerCase().trim(), name.trim(), sort_order, image_url.trim()]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -31,15 +31,16 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 router.put("/:id", requireAuth, async (req, res) => {
-  const { slug, name, sort_order } = req.body;
+  const { slug, name, sort_order, image_url } = req.body;
   try {
     const { rows } = await pool.query(
       `UPDATE categories SET
         slug = COALESCE($1, slug),
         name = COALESCE($2, name),
-        sort_order = COALESCE($3, sort_order)
-       WHERE id = $4 RETURNING *`,
-      [slug?.toLowerCase().trim(), name?.trim(), sort_order, req.params.id]
+        sort_order = COALESCE($3, sort_order),
+        image_url = COALESCE($4, image_url)
+       WHERE id = $5 RETURNING *`,
+      [slug?.toLowerCase().trim(), name?.trim(), sort_order, image_url?.trim() ?? null, req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: "Category not found" });
     res.json(rows[0]);

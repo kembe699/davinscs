@@ -1,18 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
-import { api, ApiProduct } from "@/lib/api";
+import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, Search, RefreshCw, Upload, Download, Edit } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 
-const CATEGORIES = ["all", "cameras", "lenses", "microphones", "teleprompters", "lighting"];
-
 export default function Products() {
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categoryList, setCategoryList] = useState<ApiCategory[]>([]);
   const [filtered, setFiltered] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -25,8 +24,12 @@ export default function Products() {
 
   const load = () => {
     setLoading(true);
-    api.products.list()
-      .then((p) => { setProducts(p); setFiltered(p); })
+    Promise.all([api.products.list(), api.categories.list()])
+      .then(([p, cats]) => {
+        setProducts(p);
+        setFiltered(p);
+        setCategoryList(cats);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -122,7 +125,7 @@ export default function Products() {
   const handleExportTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
       ["name","brand","category","price","cost_price","barcode","description","quantity","reorder_level","in_stock"],
-      ["Example Product","Example Brand","cameras","100000","80000","123456789","A great product","10","2","true"],
+      ["Example Product","Example Brand",categoryList[0]?.slug ?? "beverages","100000","80000","123456789","A great product","10","2","true"],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Products");
@@ -200,10 +203,32 @@ export default function Products() {
               <h3 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Categories</h3>
             </div>
             <div className="divide-y divide-border-subtle">
-              {CATEGORIES.map((c) => (
-                <button key={c} onClick={() => setCategory(c)} className={`w-full text-left px-4 py-3 text-sm transition-colors ${category === c ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-chassis-hover"}`}>
-                  <span className="capitalize">{c}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">({c === 'all' ? products.length : products.filter(p => p.category === c).length})</span>
+              <button
+                onClick={() => setCategory("all")}
+                className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center gap-2 ${
+                  category === "all" ? "bg-primary text-white font-medium" : "text-foreground hover:bg-chassis-hover"
+                }`}
+              >
+                <span className="flex-1">All Products</span>
+                <span className={`text-xs ${category === "all" ? "text-white/70" : "text-muted-foreground"}`}>({products.length})</span>
+              </button>
+              {categoryList.map((c) => (
+                <button
+                  key={c.slug}
+                  onClick={() => setCategory(c.slug)}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                    category === c.slug ? "bg-primary text-white font-medium" : "text-foreground hover:bg-chassis-hover"
+                  }`}
+                >
+                  {c.image_url ? (
+                    <img src={c.image_url} alt={c.name} className="w-7 h-7 rounded object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-7 h-7 rounded bg-muted flex-shrink-0" />
+                  )}
+                  <span className="flex-1 capitalize">{c.name}</span>
+                  <span className={`text-xs ${category === c.slug ? "text-white/70" : "text-muted-foreground"}`}>
+                    ({products.filter(p => p.category === c.slug).length})
+                  </span>
                 </button>
               ))}
             </div>
