@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { printThermal } from "@/utils/printUtils";
+import { buildThermalReceipt } from "@/utils/receiptUtils";
 
 export default function SalesHistory() {
   const navigate = useNavigate();
@@ -17,9 +19,9 @@ export default function SalesHistory() {
   const [endDate, setEndDate] = useState(today);
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [receiptData, setReceiptData] = useState<any>(null);
   const [companyData, setCompanyData] = useState<any>(null);
+  const [secondaryCurrency, setSecondaryCurrency] = useState<any>(null);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Refund modal state
   const [showRefundModal, setShowRefundModal]   = useState(false);
@@ -32,6 +34,7 @@ export default function SalesHistory() {
   useEffect(() => {
     loadData();
     loadCompanyData();
+    loadSecondaryCurrency();
   }, []);
 
   // Re-sync refund item state whenever saleItems reloads (e.g. after a refund)
@@ -57,6 +60,30 @@ export default function SalesHistory() {
       setCompanyData(data);
     } catch (err) {
       console.error("Failed to load company data:", err);
+    }
+  };
+
+  const loadSecondaryCurrency = async () => {
+    try {
+      const currencies = await api.currencies.list();
+      const base      = currencies.find((c: any) => c.is_base);
+      const secondary = currencies.find((c: any) => !c.is_base && c.is_active);
+      if (!secondary || !base) return;
+      setSecondaryCurrency(secondary);
+      let resolvedRate: number | null = null;
+      try {
+        const r = await api.exchangeRates.getActive(base.id, secondary.id);
+        if (r) resolvedRate = parseFloat(r.rate.toString());
+      } catch { /* try reverse */ }
+      if (!resolvedRate) {
+        try {
+          const r = await api.exchangeRates.getActive(secondary.id, base.id);
+          if (r) resolvedRate = 1 / parseFloat(r.rate.toString());
+        } catch { /* no rate available */ }
+      }
+      if (resolvedRate && resolvedRate > 0) setExchangeRate(resolvedRate);
+    } catch (err) {
+      console.error("Failed to load secondary currency:", err);
     }
   };
 
@@ -96,12 +123,34 @@ export default function SalesHistory() {
   };
 
   const handlePrint = () => {
-    if (!selectedSale) {
-      alert("Please select a sale to print");
-      return;
-    }
-    setReceiptData(selectedSale);
-    setShowReceiptModal(true);
+    if (!selectedSale) { alert("Please select a sale to print"); return; }
+    const items = (saleItems || []).map((item: any) => ({
+      name:       item.product_name || '',
+      quantity:   item.quantity,
+      unit_price: item.unit_price,
+      total:      item.subtotal ?? item.unit_price * item.quantity,
+    }));
+    const sale = {
+      ...selectedSale,
+      customerName:    selectedSale.customer_name,
+      subtotal:        selectedSale.subtotal,
+      tax_amount:      selectedSale.tax_amount,
+      taxAmount:       selectedSale.tax_amount,
+      taxRate:         0,
+      discountAmount:  selectedSale.discount_amount ?? 0,
+      total:           selectedSale.total_amount,
+      paymentTypeName: getPaymentTypeName(selectedSale.payment_type_id),
+    };
+    const html = buildThermalReceipt({
+      sale,
+      items,
+      companyData,
+      baseCurrencySymbol: baseCurrency?.symbol || 'UGX',
+      baseCurrencyCode:   baseCurrency?.code   || 'UGX',
+      secondaryCurrency:  secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
+      exchangeRate,
+    });
+    printThermal(`Receipt_${selectedSale.sale_number}`, html);
   };
 
   const openRefundModal = () => {
@@ -501,93 +550,6 @@ export default function SalesHistory() {
         </div>
       )}
 
-      {/* Receipt Modal */}
-      {showReceiptModal && receiptData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
-            <div className="text-center mb-6">
-              {companyData?.logo && (
-                <div className="flex justify-center mb-2">
-                  <img src={companyData.logo} alt={companyData.name} className="h-12 object-contain" />
-                </div>
-              )}
-              <h2 className="text-xl font-bold text-black uppercase">{companyData?.name || "Davin's Camera Store"}</h2>
-              <p className="text-xs text-black">{companyData?.address || "Kampala, Uganda"}</p>
-              {companyData?.city && <p className="text-xs text-black">{companyData.city}, {companyData.country}</p>}
-              <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
-              {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
-              {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
-              <div className="border-t border-black my-3"></div>
-              <p className="text-sm font-bold text-black">SALES RECEIPT</p>
-              <p className="text-xs text-black">#{receiptData.sale_number}</p>
-              <p className="text-xs text-black">{new Date(receiptData.created_at).toLocaleString()}</p>
-              <div className="border-t border-black my-3"></div>
-              <p className="text-xs text-black text-left">Customer: {receiptData.customer_name || 'Walk-in Customer'}</p>
-            </div>
-
-            <div className="mb-4">
-              <div className="border-b border-black pb-1 mb-2">
-                <div className="flex justify-between text-xs font-bold text-black">
-                  <span>ITEM</span>
-                  <span>QTY</span>
-                  <span>PRICE</span>
-                  <span>TOTAL</span>
-                </div>
-              </div>
-              {saleItems.map((item: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <div className="text-xs text-black">{item.product_name}</div>
-                  <div className="flex justify-between text-xs text-black">
-                    <span></span>
-                    <span>{item.quantity}</span>
-                    <span>{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
-                    <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-black pt-2 mb-4">
-              <div className="flex justify-between text-xs text-black mb-1">
-                <span>Subtotal:</span>
-                <span>{formatCurrencySync(receiptData.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-black mb-1">
-                <span>Tax (18%):</span>
-                <span>{formatCurrencySync(receiptData.tax_amount, baseCurrency?.symbol || 'UGX', false)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
-                <span className="text-black">TOTAL:</span>
-                <span className="text-black">{formatCurrencySync(receiptData.total_amount, baseCurrency?.symbol || 'UGX', false)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-black mt-3">
-                <span>Payment:</span>
-                <span>{getPaymentTypeName(receiptData.payment_type_id)}</span>
-              </div>
-            </div>
-
-            <div className="text-center text-xs text-black mb-6 border-t border-black pt-3">
-              <p>*** Thank you for your business! ***</p>
-              <p>*** Please come again ***</p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.print()}
-                className="flex-1 px-4 py-2 bg-gray-800 text-white hover:bg-gray-700"
-              >
-                Print Receipt
-              </button>
-              <button
-                onClick={() => setShowReceiptModal(false)}
-                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

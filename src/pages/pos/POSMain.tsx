@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock } from "lucide-react";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
-import { openPrintWindow } from "@/utils/printUtils";
+import { openPrintWindow, printDocument, printThermal } from "@/utils/printUtils";
+import { buildThermalReceipt } from "@/utils/receiptUtils";
 
 export default function POSMain() {
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
+  const { user } = useAuth();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,6 +22,7 @@ export default function POSMain() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cartDiscount, setCartDiscount] = useState(0);
   const [cashDrawerSession, setCashDrawerSession] = useState<CashDrawerSession | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
@@ -134,24 +138,24 @@ export default function POSMain() {
   const loadSecondaryCurrency = async () => {
     try {
       const currencies = await api.currencies.list();
-      // Get first non-base active currency as secondary
-      const secondary = currencies.find(c => !c.is_base && c.is_active);
-      if (secondary) {
-        setSecondaryCurrency(secondary);
-        // Get base currency
-        const base = currencies.find(c => c.is_base);
-        if (base) {
-          // Try to get exchange rate from base to secondary
-          try {
-            const rate = await api.exchangeRates.getActive(base.id, secondary.id);
-            setExchangeRate(parseFloat(rate.rate.toString()));
-          } catch (err) {
-            // If no rate found, calculate from exchange_rate fields
-            const calculatedRate = parseFloat(secondary.exchange_rate.toString()) / parseFloat(base.exchange_rate.toString());
-            setExchangeRate(calculatedRate);
-          }
-        }
+      const secondary = currencies.find((c: ApiCurrency) => !c.is_base && c.is_active);
+      if (!secondary) return;
+      setSecondaryCurrency(secondary);
+      const base = currencies.find((c: ApiCurrency) => c.is_base);
+      if (!base) return;
+      // Try base→secondary direction first, then reverse with inversion
+      let resolvedRate: number | null = null;
+      try {
+        const r = await api.exchangeRates.getActive(base.id, secondary.id);
+        if (r) resolvedRate = parseFloat(r.rate.toString());
+      } catch { /* not found in this direction */ }
+      if (!resolvedRate) {
+        try {
+          const r = await api.exchangeRates.getActive(secondary.id, base.id);
+          if (r) resolvedRate = 1 / parseFloat(r.rate.toString());
+        } catch { /* not found in reverse either */ }
       }
+      if (resolvedRate && resolvedRate > 0) setExchangeRate(resolvedRate);
     } catch (err) {
       console.error("Error loading secondary currency:", err);
     }
@@ -208,7 +212,9 @@ export default function POSMain() {
       const session = await api.cashDrawer.getCurrent();
       setCashDrawerSession(session);
     } catch (err) {
-      console.error("No active cash drawer session");
+      setCashDrawerSession(null);
+    } finally {
+      setSessionChecked(true);
     }
   };
 
@@ -390,6 +396,25 @@ export default function POSMain() {
     openPrintWindow(`Held Sale — ${sale.sale_number}`, body);
   };
 
+  const buildReceiptBody = (sale: any): string => {
+    const items = (sale.items || []).map((item: any) => ({
+      name:       item.product?.name || item.product_name || '',
+      quantity:   item.quantity,
+      unit_price: item.unit_price,
+      total:      item.unit_price * item.quantity - (item.discount || 0),
+    }));
+    return buildThermalReceipt({
+      sale,
+      items,
+      companyData,
+      baseCurrencySymbol: baseCurrency?.symbol || 'UGX',
+      baseCurrencyCode:   baseCurrency?.code   || 'UGX',
+      secondaryCurrency:  secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
+      exchangeRate,
+    });
+  };
+
+
   const loadHeldSale = (heldSale: any) => {
     setCart(heldSale.items);
     setCustomerName(heldSale.customerName);
@@ -468,9 +493,8 @@ export default function POSMain() {
       };
 
       const sale = await api.pos.createSale(saleData);
-      
-      // Store completed sale data for receipt
-      setCompletedSale({
+
+      const completedSaleData = {
         ...sale,
         items: cart,
         subtotal,
@@ -480,16 +504,58 @@ export default function POSMain() {
         promotionName: appliedPromotion?.name || null,
         paymentTypeName: paymentTypes.find(pt => pt.id === selectedPaymentType)?.name || 'Cash',
         customerName: customerName || 'Walk-in Customer',
+      };
+
+      // Store completed sale data for receipt modal
+      setCompletedSale(completedSaleData);
+
+      // Fetch currency data fresh for print (avoids any stale-state issue)
+      let printSecondary: { id: number; code: string; symbol: string } | null = null;
+      let printRate: number | null = null;
+      try {
+        const allCurrencies = await api.currencies.list();
+        const printBase = allCurrencies.find((c: ApiCurrency) => c.is_base);
+        const printSec  = allCurrencies.find((c: ApiCurrency) => !c.is_base && c.is_active);
+        if (printBase && printSec) {
+          printSecondary = { id: printSec.id, code: printSec.code, symbol: printSec.symbol };
+          try {
+            const r = await api.exchangeRates.getActive(printBase.id, printSec.id);
+            if (r) printRate = parseFloat(r.rate.toString());
+          } catch { /* try reverse */ }
+          if (!printRate) {
+            try {
+              const r = await api.exchangeRates.getActive(printSec.id, printBase.id);
+              if (r) printRate = 1 / parseFloat(r.rate.toString());
+            } catch { /* no rate */ }
+          }
+        }
+      } catch { /* use state fallback */ }
+
+      const receiptItems = cart.map(item => ({
+        name:       item.product.name,
+        quantity:   item.quantity,
+        unit_price: item.unit_price,
+        total:      item.unit_price * item.quantity - (item.discount || 0),
+      }));
+      const html = buildThermalReceipt({
+        sale: completedSaleData,
+        items: receiptItems,
+        companyData,
+        baseCurrencySymbol: baseCurrency?.symbol || 'SSP',
+        baseCurrencyCode:   baseCurrency?.code   || 'SSP',
+        secondaryCurrency:  printSecondary,
+        exchangeRate:       printRate,
       });
-      
+      printThermal(`Receipt_${completedSaleData.sale_number}`, html);
+
       // Clear cart
       setCart([]);
       setCartDiscount(0);
       setAppliedPromotion(null);
       setDiscountValue(0);
       setShowPaymentModal(false);
-      
-      // Show receipt
+
+      // Show receipt modal
       setShowReceipt(true);
     } catch (err: any) {
       alert(err.message || "Failed to process sale");
@@ -497,6 +563,46 @@ export default function POSMain() {
   };
 
   const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
+
+  // Session gate — show blocking screen until check resolves
+  if (!sessionChecked) {
+    return (
+      <div className="h-screen bg-admin-bg flex items-center justify-center">
+        <div className="text-admin-text-secondary text-sm">Checking session…</div>
+      </div>
+    );
+  }
+
+  if (!cashDrawerSession) {
+    return (
+      <div className="h-screen bg-admin-bg flex items-center justify-center">
+        <div className="bg-admin-surface border border-admin-border p-10 max-w-md w-full text-center space-y-5">
+          <div className="flex justify-center">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-full p-4">
+              <Lock size={32} className="text-yellow-400" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-admin-text">Session Required</h2>
+          <p className="text-sm text-admin-text-secondary leading-relaxed">
+            You must open a cash drawer session before you can start selling.
+            {user?.email && <><br /><span className="text-admin-text font-medium">{user.email}</span></>}
+          </p>
+          <button
+            onClick={() => navigate("/pos/cash-management")}
+            className="w-full py-3 bg-admin-success text-white font-semibold hover:opacity-90 text-sm"
+          >
+            Open Session in Cash Management
+          </button>
+          <button
+            onClick={checkCashDrawer}
+            className="w-full py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-admin-bg flex flex-col">
@@ -1018,52 +1124,60 @@ export default function POSMain() {
       {showReceipt && completedSale && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
-            <div className="text-center mb-6">
-              {companyData?.logo && (
-                <div className="flex justify-center mb-2">
-                  <img src={companyData.logo} alt={companyData.name} className="h-12 object-contain" />
+            <div className="mb-4">
+              {/* Logo left — company details right */}
+              <div className="flex items-start gap-3 mb-3">
+                {companyData?.logo && (
+                  <img src={companyData.logo} alt={companyData.name} className="h-14 w-auto object-contain flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h2 className="text-sm font-bold text-black uppercase leading-tight">{companyData?.name || "Davin's Camera Store"}</h2>
+                  {companyData?.address && <p className="text-xs text-black">{companyData.address}</p>}
+                  {companyData?.city && <p className="text-xs text-black">{companyData.city}{companyData.country ? `, ${companyData.country}` : ''}</p>}
+                  <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
+                  {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
+                  {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
                 </div>
-              )}
-              <h2 className="text-xl font-bold text-black uppercase">{companyData?.name || "Davin's Camera Store"}</h2>
-              <p className="text-xs text-black">{companyData?.address || "Kampala, Uganda"}</p>
-              {companyData?.city && <p className="text-xs text-black">{companyData.city}, {companyData.country}</p>}
-              <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
-              {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
-              {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
-              <div className="border-t border-black my-3"></div>
-              <p className="text-sm font-bold text-black">SALES RECEIPT</p>
-              <p className="text-xs text-black">#{completedSale.sale_number}</p>
-              <p className="text-xs text-black">{new Date(completedSale.created_at).toLocaleString()}</p>
-              <div className="border-t border-black my-3"></div>
-              <p className="text-xs text-black text-left">Customer: {completedSale.customerName}</p>
+              </div>
+              <div className="border-t border-black my-2"></div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-black">SALES RECEIPT</p>
+                <p className="text-xs text-black">#{completedSale.sale_number}</p>
+                <p className="text-xs text-black">{new Date(completedSale.created_at).toLocaleString()}</p>
+              </div>
+              <div className="border-t border-black my-2"></div>
+              <p className="text-xs text-black">Customer: {completedSale.customerName}</p>
             </div>
 
             <div className="mb-4">
-              <div className="border-b border-black pb-1 mb-2">
-                <div className="flex justify-between text-xs font-bold text-black">
-                  <span>ITEM</span>
-                  <span>QTY</span>
-                  <span>PRICE</span>
-                  <span>TOTAL</span>
-                </div>
+              {/* Header row */}
+              <div className="border-b border-black pb-1 mb-1" style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:'0 6px'}}>
+                <span className="text-xs font-bold text-black">ITEM</span>
+                <span className="text-xs font-bold text-black text-center w-8">QTY</span>
+                <span className="text-xs font-bold text-black text-right w-20">PRICE</span>
+                <span className="text-xs font-bold text-black text-right w-20">TOTAL</span>
               </div>
-              {completedSale.items.map((item: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <div className="text-xs text-black">{item.product.name}</div>
-                  <div className="flex justify-between text-xs text-black">
-                    <span></span>
-                    <span>{item.quantity}</span>
-                    <span>{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
-                    <span>{formatCurrencySync(item.unit_price * item.quantity - item.discount, baseCurrency?.symbol || 'UGX', false)}</span>
+              {/* Item rows — one row per item, data aligned under headers */}
+              {completedSale.items.map((item: any, idx: number) => {
+                const itemTotal = item.unit_price * item.quantity - item.discount;
+                return (
+                  <div key={idx} className="border-b border-dashed border-gray-300 py-1" style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:'0 6px', alignItems:'start'}}>
+                    <span className="text-xs text-black leading-tight">{item.product.name}</span>
+                    <span className="text-xs text-black text-center w-8">{item.quantity}</span>
+                    <span className="text-xs text-black text-right w-20">{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
+                    <span className="text-xs text-black text-right w-20">{formatCurrencySync(itemTotal, baseCurrency?.symbol || 'UGX', false)}</span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-black pt-2 mb-4">
               <div className="flex justify-between text-xs text-black mb-1">
                 <span>Subtotal:</span>
-                <span>{formatCurrencySync(completedSale.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
+                <div className="text-right">
+                  <div>{formatCurrencySync(completedSale.subtotal, baseCurrency?.symbol || 'UGX', false)}</div>
+                  {secondaryCurrency && exchangeRate && <div className="text-[10px] text-gray-500">{formatCurrencySync(Math.round(completedSale.subtotal * exchangeRate), secondaryCurrency.symbol, false)}</div>}
+                </div>
               </div>
               {completedSale.discountAmount > 0 && (
                 <div className="flex justify-between text-xs text-black mb-1">
@@ -1077,8 +1191,18 @@ export default function POSMain() {
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
                 <span className="text-black">TOTAL:</span>
-                <span className="text-black">{formatCurrencySync(completedSale.total, baseCurrency?.symbol || 'UGX', false)}</span>
+                <div className="text-right">
+                  <div className="text-black">{formatCurrencySync(completedSale.total, baseCurrency?.symbol || 'UGX', false)}</div>
+                  {secondaryCurrency && exchangeRate && (
+                    <div className="text-xs font-normal text-gray-600">{formatCurrencySync(Math.round(completedSale.total * exchangeRate), secondaryCurrency.symbol, false)}</div>
+                  )}
+                </div>
               </div>
+              {secondaryCurrency && exchangeRate && (
+                <div className="text-[10px] text-black mt-1 border border-black/30 px-2 py-1">
+                  Rate: 1 {baseCurrency?.code || 'BASE'} = {exchangeRate.toFixed(4)} {secondaryCurrency.code}
+                </div>
+              )}
               <div className="flex justify-between text-xs text-black mt-3">
                 <span>Payment:</span>
                 <span>{completedSale.paymentTypeName}</span>
@@ -1090,20 +1214,18 @@ export default function POSMain() {
               <p>*** Please come again ***</p>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => window.print()}
-                className="flex-1 px-4 py-2 bg-gray-800 text-white hover:bg-gray-700"
-              >
-                Print Receipt
-              </button>
-              <button
-                onClick={() => setShowReceipt(false)}
-                className="flex-1 px-4 py-2 bg-admin-success text-white hover:opacity-90"
-              >
-                New Sale
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setShowReceipt(false);
+                setCart([]);
+                setCartDiscount(0);
+                setCustomerName('');
+                setAppliedPromotion(null);
+              }}
+              className="w-full px-4 py-2 bg-admin-success text-white hover:opacity-90 text-sm font-semibold"
+            >
+              New Sale
+            </button>
           </div>
         </div>
       )}

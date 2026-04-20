@@ -209,10 +209,8 @@ export async function autoSeed() {
   const hasBaseCurrency = existingBase.rows.length > 0;
 
   const currencies = [
-    { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX', is_base: !hasBaseCurrency, exchange_rate: 1.0 },
-    { code: 'USD', name: 'US Dollar', symbol: '$', is_base: false, exchange_rate: 0.00027 },
-    { code: 'EUR', name: 'Euro', symbol: '€', is_base: false, exchange_rate: 0.00025 },
-    { code: 'GBP', name: 'British Pound', symbol: '£', is_base: false, exchange_rate: 0.00021 },
+    { code: 'SSP', name: 'South Sudanese Pound', symbol: 'SSP', is_base: !hasBaseCurrency, exchange_rate: 1.0 },
+    { code: 'USD', name: 'US Dollar', symbol: '$', is_base: false, exchange_rate: 0.00014 },
   ];
 
   for (const currency of currencies) {

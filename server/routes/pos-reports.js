@@ -306,11 +306,34 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
        ORDER BY total_sales DESC`,
       params
     );
-    
+
+    // Per-currency breakdown — each transaction uses its own snapshotted rate
+    // base_total = total_amount (always stored in base currency)
+    // display_total = total_amount * exchange_rate_used (amount customer paid in their currency)
+    const currencyBreakdown = await pool.query(
+      `SELECT
+         c.code as currency_code,
+         c.symbol as currency_symbol,
+         c.is_base,
+         COUNT(s.id) as transaction_count,
+         COALESCE(SUM(s.total_amount), 0) as base_total,
+         COALESCE(SUM(ROUND(s.total_amount * COALESCE(s.exchange_rate_used, 1))), 0) as display_total,
+         MIN(s.exchange_rate_used) as rate_min,
+         MAX(s.exchange_rate_used) as rate_max
+       FROM pos_sales s
+       JOIN currencies c ON c.id = COALESCE(s.sale_currency_id,
+         (SELECT id FROM currencies WHERE is_base = TRUE LIMIT 1))
+       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       GROUP BY c.id, c.code, c.symbol, c.is_base
+       ORDER BY base_total DESC`,
+      params
+    );
+
     res.json({
       date: targetDate,
       sales_summary: salesSummary.rows[0],
       payment_breakdown: paymentBreakdown.rows,
+      currency_breakdown: currencyBreakdown.rows,
       top_products: topProducts.rows,
       voided_sales: voidedSales.rows[0],
       refund_summary: refundBreakdown.rows[0],

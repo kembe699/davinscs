@@ -15,10 +15,12 @@ router.get("/", requireAuth, async (req, res) => {
         fc.symbol as from_currency_symbol,
         tc.code as to_currency_code,
         tc.name as to_currency_name,
-        tc.symbol as to_currency_symbol
+        tc.symbol as to_currency_symbol,
+        u.email as created_by_email
       FROM exchange_rates er
       JOIN currencies fc ON er.from_currency_id = fc.id
       JOIN currencies tc ON er.to_currency_id = tc.id
+      LEFT JOIN users u ON er.created_by = u.id
       ORDER BY er.effective_date DESC, er.created_at DESC
     `);
     res.json(rows);
@@ -115,6 +117,13 @@ router.post("/", requireAuth, async (req, res) => {
     if (parseFloat(rate) <= 0) {
       return res.status(400).json({ error: "Rate must be positive" });
     }
+
+    // Effective date must not be in the future
+    const today = new Date().toISOString().split('T')[0];
+    const effDate = effective_date || today;
+    if (effDate > today) {
+      return res.status(400).json({ error: "Effective date cannot be in the future" });
+    }
     
     // Check if expiry date is after effective date
     if (expiry_date && effective_date && new Date(expiry_date) <= new Date(effective_date)) {
@@ -125,6 +134,11 @@ router.post("/", requireAuth, async (req, res) => {
       INSERT INTO exchange_rates (
         from_currency_id, to_currency_id, rate, effective_date, expiry_date, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (from_currency_id, to_currency_id, effective_date)
+      DO UPDATE SET
+        rate       = EXCLUDED.rate,
+        expiry_date = EXCLUDED.expiry_date,
+        updated_at  = NOW()
       RETURNING *
     `, [
       from_currency_id,
@@ -138,9 +152,6 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("Error creating exchange rate:", err);
-    if (err.code === "23505") {
-      return res.status(409).json({ error: "Exchange rate already exists for this date" });
-    }
     res.status(500).json({ error: "Failed to create exchange rate" });
   }
 });
@@ -150,7 +161,7 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { rate, effective_date, expiry_date, is_active } = req.body;
-    
+
     if (rate !== undefined && parseFloat(rate) <= 0) {
       return res.status(400).json({ error: "Rate must be positive" });
     }
@@ -187,7 +198,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const { rowCount } = await pool.query(
       "DELETE FROM exchange_rates WHERE id = $1",
       [id]

@@ -376,6 +376,7 @@ export type ApiExchangeRate = {
   to_currency_code?: string;
   to_currency_name?: string;
   to_currency_symbol?: string;
+  created_by_email?: string;
 };
 
 // Report Types

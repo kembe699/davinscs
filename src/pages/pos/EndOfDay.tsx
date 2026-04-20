@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 import {
   ArrowLeft, Printer, RefreshCw, Lock, AlertCircle,
-  ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, Package, Users,
+  ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, Package, Users, Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api, CashDrawerSession } from "@/lib/api";

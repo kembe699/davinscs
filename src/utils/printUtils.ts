@@ -104,32 +104,38 @@ export function printDocument(title: string, bodyHTML: string): void {
   }, 300);
 }
 
-/** Download as PDF using jsPDF — no new tab required */
-export async function downloadDocument(filename: string, bodyHTML: string): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-  const cssForRender = SHARED_PRINT_CSS
-    .replace(/@page[^{]*\{[^}]*\}/g, '')
-    .replace(/@media print\s*\{[^}]*\}/g, '');
+/** Download as PDF — opens a print-ready window and triggers the browser print dialog.
+ *  The user clicks "Save as PDF" in the dialog (works in all modern browsers).
+ *  This replaces the broken jsPDF/html2canvas approach which produced empty files
+ *  and caused page colour changes due to html2canvas DOM manipulation. */
+export function downloadDocument(filename: string, bodyHTML: string): void {
+  const html = buildFullHTML(filename, bodyHTML);
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Allow pop-ups to download this document as PDF.');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => { win.print(); }, 400);
+}
 
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;padding:40px 50px;box-sizing:border-box;';
-  container.innerHTML = `<style>${cssForRender}</style>${bodyHTML}`;
-  document.body.appendChild(container);
-
-  const doc = new jsPDF({ format: 'a4', unit: 'pt', orientation: 'portrait' });
-
-  await new Promise<void>((resolve) => {
-    doc.html(container, {
-      callback: (d) => { d.save(`${filename}.pdf`); resolve(); },
-      x: 20,
-      y: 20,
-      width: 555,
-      windowWidth: 794,
-      autoPaging: 'slice',
-    });
-  });
-
-  document.body.removeChild(container);
+/** Print a thermal (80mm) receipt — uses NO shared A4 CSS so the caller's
+ *  @page { size: 80mm auto } rule is the only one in the document. */
+export function printThermal(title: string, bodyHTML: string): void {
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHTML}</body></html>`;
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;left:0;top:0;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument!;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  iframe.contentWindow!.focus();
+  setTimeout(() => {
+    iframe.contentWindow!.print();
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
+  }, 300);
 }
 
 /** @deprecated use printDocument instead */

@@ -17,7 +17,7 @@ function generateSaleNumber() {
 
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
-  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id } = req.body;
+  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id } = req.body;
   const user_id = req.user.id;
   
   if (!items || items.length === 0) {
@@ -40,7 +40,13 @@ router.post("/sales", requireAuth, async (req, res) => {
     );
     
     const session_id = sessionResult.rows[0]?.id || null;
-    
+
+    // Require an open cash session to sell
+    if (!session_id) {
+      client.release();
+      return res.status(403).json({ error: "No open cash drawer session. Please open your session in Cash Management before making a sale." });
+    }
+
     // Calculate totals
     let subtotal = 0;
     let tax_amount = 0;
@@ -104,6 +110,38 @@ router.post("/sales", requireAuth, async (req, res) => {
     const total_amount = subtotal + tax_amount - total_discount;
     const sale_number = generateSaleNumber();
     
+    // ── Currency snapshot ──────────────────────────────────────────────
+    // Resolve the base currency and snapshot the exchange rate at moment of sale.
+    // If a foreign sale_currency_id is provided, look up its active rate.
+    // If no rate exists for a non-base currency, the sale is blocked.
+    const baseCurrResult = await client.query(
+      "SELECT id FROM currencies WHERE is_base = TRUE LIMIT 1"
+    );
+    const baseCurrId = baseCurrResult.rows[0]?.id || null;
+
+    let resolved_currency_id = sale_currency_id || baseCurrId;
+    let resolved_exchange_rate = 1.0;
+
+    if (resolved_currency_id && baseCurrId && resolved_currency_id !== baseCurrId) {
+      // Foreign currency sale — must have a rate on record for today
+      const rateResult = await client.query(`
+        SELECT rate FROM exchange_rates
+        WHERE from_currency_id = $1 AND to_currency_id = $2
+          AND is_active = TRUE
+          AND effective_date <= CURRENT_DATE
+          AND (expiry_date IS NULL OR expiry_date >= CURRENT_DATE)
+        ORDER BY effective_date DESC LIMIT 1`,
+        [baseCurrId, resolved_currency_id]
+      );
+      if (!rateResult.rows[0]) {
+        await client.query("ROLLBACK");
+        return res.status(422).json({
+          error: "No exchange rate configured for the selected currency. Sale blocked — please add a rate in Currency Management first."
+        });
+      }
+      resolved_exchange_rate = parseFloat(rateResult.rows[0].rate);
+    }
+
     // Look up promotion name if a promotion was applied
     let promo_name = null;
     let resolved_promotion_id = promotion_id || null;
@@ -119,11 +157,11 @@ router.post("/sales", requireAuth, async (req, res) => {
     const saleResult = await client.query(
       `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, price_list_id, subtotal, tax_amount, 
                               discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes,
-                              promotion_id, promotion_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+                              promotion_id, promotion_name, sale_currency_id, exchange_rate_used)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
       [sale_number, customer_id, customer_name, user_id, session_id, price_list_id || null, subtotal, tax_amount, total_discount, 
        total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes,
-       resolved_promotion_id, promo_name]
+       resolved_promotion_id, promo_name, resolved_currency_id, resolved_exchange_rate]
     );
     
     const sale = saleResult.rows[0];
@@ -247,7 +285,8 @@ router.post("/sales", requireAuth, async (req, res) => {
 // Get all sales
 router.get("/sales", requireAuth, async (req, res) => {
   const { start_date, end_date, customer_id, payment_status, sale_type } = req.query;
-  
+  const isAdmin = req.user.role === 'admin';
+
   try {
     let query = `
       SELECT s.*, c.name as customer_name, u.email as user_email, pt.name as payment_type_name
@@ -259,7 +298,14 @@ router.get("/sales", requireAuth, async (req, res) => {
     `;
     const params = [];
     let paramCount = 1;
-    
+
+    // Non-admins only see their own sales
+    if (!isAdmin) {
+      query += ` AND s.user_id = $${paramCount}`;
+      params.push(req.user.id);
+      paramCount++;
+    }
+
     if (start_date) {
       query += ` AND s.created_at >= $${paramCount}`;
       params.push(start_date);
@@ -490,13 +536,15 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     const refund_number = `REF-${Date.now().toString().slice(-6)}-${sale.sale_number}`;
 
     // Create refund sale record (negative amounts)
+    // Carry over the original sale's currency and rate snapshot — never recalculate
     const refundSaleResult = await client.query(
       `INSERT INTO pos_sales
         (sale_number, customer_id, customer_name, user_id, session_id,
          subtotal, tax_amount, discount_amount, total_amount,
          payment_type_id, payment_status, sale_type, notes,
-         original_sale_id, refund_method, refund_reason)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'refunded','refund',$11,$12,$13,$14)
+         original_sale_id, refund_method, refund_reason,
+         sale_currency_id, exchange_rate_used)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'refunded','refund',$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
         refund_number, sale.customer_id, sale.customer_name, user_id, sale.session_id,
@@ -506,6 +554,8 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
         parseInt(id),
         refund_method || sale.payment_type_id,
         reason || null,
+        sale.sale_currency_id,      // immutable: use original sale's currency
+        sale.exchange_rate_used,    // immutable: use original sale's rate snapshot
       ]
     );
     const refundSaleId = refundSaleResult.rows[0].id;

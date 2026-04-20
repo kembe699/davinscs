@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiCurrency, ApiExchangeRate } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
-import { Plus, Globe, Trash2, Check, Edit2, X, ArrowRight } from "lucide-react";
+import { Plus, Globe, Trash2, Check, Edit2, X, ArrowRight, Lock, Unlock } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 export default function CurrenciesEnhanced() {
@@ -42,6 +42,15 @@ export default function CurrenciesEnhanced() {
   const [convertResult, setConvertResult] = useState<any>(null);
 
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'currency' | 'rate', id: number } | null>(null);
+  const [unlockedRates, setUnlockedRates] = useState<Set<number>>(new Set());
+
+  const toggleUnlock = (id: number) => {
+    setUnlockedRates(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -587,6 +596,7 @@ export default function CurrenciesEnhanced() {
                   <input
                     type="date"
                     value={rateForm.effective_date}
+                    max={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setRateForm({ ...rateForm, effective_date: e.target.value })}
                     className="field-input"
                   />
@@ -636,73 +646,101 @@ export default function CurrenciesEnhanced() {
                     <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Effective Date</th>
                     <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Expiry Date</th>
                     <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Status</th>
+                    <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Set By</th>
                     <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
+                      <td colSpan={8} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
                         Loading…
                       </td>
                     </tr>
                   ) : exchangeRates.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                         No exchange rates found. Add your first rate above.
                       </td>
                     </tr>
                   ) : (
-                    exchangeRates.map((rate) => (
-                      <tr key={rate.id} className="hover:bg-chassis/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className="font-mono-tech font-bold text-foreground">{rate.from_currency_code}</span>
-                          <span className="text-xs text-muted-foreground ml-2">{rate.from_currency_name}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-mono-tech font-bold text-foreground">{rate.to_currency_code}</span>
-                          <span className="text-xs text-muted-foreground ml-2">{rate.to_currency_name}</span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono-tech text-foreground">
-                          {Number(rate.rate).toFixed(6)}
-                        </td>
-                        <td className="px-4 py-3 text-center font-mono-tech text-xs text-foreground">
-                          {new Date(rate.effective_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-center font-mono-tech text-xs text-foreground">
-                          {rate.expiry_date ? new Date(rate.expiry_date).toLocaleDateString() : "No expiry"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border ${
-                            rate.is_active
-                              ? "border-green-500/30 text-green-500 bg-green-500/5"
-                              : "border-red-500/30 text-red-500 bg-red-500/5"
-                          }`}>
-                            {rate.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => startEditRate(rate)}
-                              disabled={saving}
-                              className="text-primary hover:text-primary/80 disabled:opacity-50"
-                              title="Edit rate"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete({ type: 'rate', id: rate.id })}
-                              disabled={saving}
-                              className="text-red-500 hover:text-red-400 disabled:opacity-50"
-                              title="Delete rate"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    exchangeRates.map((rate) => {
+                      const today = new Date().toISOString().split('T')[0];
+                      const effDate = rate.effective_date.split('T')[0];
+                      const isPast = effDate <= today;
+                      return (
+                        <tr key={rate.id} className="hover:bg-chassis/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <span className="font-mono-tech font-bold text-foreground">{rate.from_currency_code}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{rate.from_currency_name}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-mono-tech font-bold text-foreground">{rate.to_currency_code}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{rate.to_currency_name}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono-tech text-foreground">
+                            {Number(rate.rate).toFixed(6)}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono-tech text-xs text-foreground">
+                            {new Date(rate.effective_date).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono-tech text-xs text-foreground">
+                            {rate.expiry_date ? new Date(rate.expiry_date).toLocaleDateString() : "No expiry"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border ${
+                              rate.is_active
+                                ? "border-green-500/30 text-green-500 bg-green-500/5"
+                                : "border-red-500/30 text-red-500 bg-red-500/5"
+                            }`}>
+                              {rate.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-mono-tech text-[10px] text-muted-foreground">
+                            {rate.created_by_email || <span className="opacity-40">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isPast && !unlockedRates.has(rate.id) ? (
+                              <button
+                                onClick={() => toggleUnlock(rate.id)}
+                                className="flex items-center gap-1 font-mono-tech text-[9px] text-muted-foreground/60 uppercase tracking-widest px-2 py-1 border border-border-subtle/40 hover:border-yellow-500/60 hover:text-yellow-500 transition-colors"
+                                title="Unlock to edit or delete"
+                              >
+                                <Lock size={10} /> Locked
+                              </button>
+                            ) : (
+                              <div className="flex items-center justify-center gap-2">
+                                {isPast && (
+                                  <button
+                                    onClick={() => toggleUnlock(rate.id)}
+                                    className="text-yellow-500 hover:text-yellow-400"
+                                    title="Re-lock"
+                                  >
+                                    <Unlock size={12} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => startEditRate(rate)}
+                                  disabled={saving}
+                                  className="text-primary hover:text-primary/80 disabled:opacity-50"
+                                  title="Edit rate"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelete({ type: 'rate', id: rate.id })}
+                                  disabled={saving}
+                                  className="text-red-500 hover:text-red-400 disabled:opacity-50"
+                                  title="Delete rate"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
