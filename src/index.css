@@ -88,6 +88,37 @@
   background: linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%) !important;
   filter: brightness(0.88);
 }
+
+/* ── Button / anchor overrides: white bg, black text ──────────── */
+button.bg-primary,
+a.bg-primary {
+  background: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+button.bg-primary:hover,
+a.bg-primary:hover,
+button.hover\:bg-primary\/90:hover,
+a.hover\:bg-primary\/90:hover {
+  background: #f3f3f3 !important;
+  filter: none !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+button.bg-foreground,
+a.bg-foreground {
+  background: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+button.bg-foreground:hover,
+a.bg-foreground:hover,
+button.hover\:bg-primary:hover,
+a.hover\:bg-primary:hover {
+  background: #f3f3f3 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
 .bg-primary\/10 {
   background: rgba(0, 74, 153, 0.1) !important;
 }

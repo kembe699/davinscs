@@ -13,10 +13,15 @@ import { formatCurrencySync } from "@/utils/currency";
 
 const ProductDetail = () => {
   const { baseCurrency } = useCurrency();
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const location = useLocation();
-  const category = location.pathname.split("/")[1] as Category;
   const navigate = useNavigate();
+
+  const productSlug = slug || id || "";
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  const rawCategory = pathSegments[0] as Category;
+  const category = rawCategory === "product" ? undefined : rawCategory;
+
   const [product, setProduct] = useState<ApiProduct | null>(null);
   const [related, setRelated] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,19 +30,19 @@ const ProductDetail = () => {
   const [cartMessage, setCartMessage] = useState("");
 
   useEffect(() => {
-    if (!id) return;
+    if (!productSlug) return;
     setLoading(true);
-    Promise.all([
-      api.products.get(id),
-      category ? api.products.list(category) : Promise.resolve([]),
-    ])
-      .then(([p, all]) => {
+    api.products.get(productSlug)
+      .then(p => {
         setProduct(p);
-        setRelated((all as ApiProduct[]).filter((x) => x.slug !== p.slug).slice(0, 4));
+        return p.category ? api.products.list(p.category) : Promise.resolve([] as ApiProduct[]);
+      })
+      .then(all => {
+        setRelated((all as ApiProduct[]).filter(x => x.slug !== productSlug).slice(0, 4));
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
-  }, [id, category]);
+  }, [productSlug]);
 
   if (loading) {
     return (
@@ -53,7 +58,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product || !category) {
+  if (!product) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
@@ -73,7 +78,8 @@ const ProductDetail = () => {
     );
   }
 
-  const meta = categoryMeta[category];
+  const productCategory = (product?.category || category) as Category | undefined;
+  const meta = productCategory ? categoryMeta[productCategory] : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,14 +94,18 @@ const ProductDetail = () => {
           >
             <ArrowLeft size={12} /> Back
           </button>
-          <span className="text-border-subtle">|</span>
-          <Link
-            to={`/${category}`}
-            className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
-          >
-            {meta.title}
-          </Link>
-          <span className="text-muted-foreground font-mono-tech text-[10px]">/</span>
+          {productCategory && (
+            <>
+              <span className="text-border-subtle">|</span>
+              <Link
+                to={`/${productCategory}`}
+                className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
+              >
+                {meta?.title || productCategory}
+              </Link>
+              <span className="text-muted-foreground font-mono-tech text-[10px]">/</span>
+            </>
+          )}
           <span className="font-mono-tech text-[10px] text-foreground uppercase tracking-widest truncate max-w-[30ch]">
             {product.name}
           </span>
@@ -277,15 +287,17 @@ const ProductDetail = () => {
                   You May Also Like
                 </p>
                 <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                  Related {meta.title}
+                  Related {meta?.title || productCategory || "Products"}
                 </h2>
               </div>
-              <Link
-                to={`/${category}`}
-                className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest hidden sm:block"
-              >
-                View All →
-              </Link>
+              {productCategory && (
+                <Link
+                  to={`/${productCategory}`}
+                  className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest hidden sm:block"
+                >
+                  View All →
+                </Link>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
               {related.map((p) => (

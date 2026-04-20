@@ -1,69 +1,24 @@
-import { Link } from "react-router-dom";
-import heroCamera from "@/assets/hero-camera.jpg";
-import podcastMic from "@/assets/podcast-mic.jpg";
-import teleprompter from "@/assets/teleprompter.jpg";
-import studioLight from "@/assets/studio-light.jpg";
-import cineLens from "@/assets/cine-lens.jpg";
-import fieldMonitor from "@/assets/field-monitor.jpg";
-
-const categories = [
-  {
-    id: "cameras",
-    to: "/cameras",
-    module: "MODULE_01",
-    title: "Cameras & Cinema",
-    description: "From mirrorless hybrids to full-frame cinema rigs. 4K, 6K, 8K — every resolution covered.",
-    tag: "PRO_IMAGING",
-    image: heroCamera,
-  },
-  {
-    id: "microphones",
-    to: "/microphones",
-    module: "MODULE_02",
-    title: "Microphones & Audio",
-    description: "XLR condensers, wireless lavs, shotgun mics, and podcast-ready bundles.",
-    tag: "ZERO_LATENCY",
-    image: podcastMic,
-  },
-  {
-    id: "teleprompters",
-    to: "/teleprompters",
-    module: "MODULE_03",
-    title: "Teleprompters",
-    description: "Professional teleprompter systems for live broadcasts, YouTube, and corporate productions.",
-    tag: "SCRIPT_FLOW",
-    image: teleprompter,
-  },
-  {
-    id: "lighting",
-    to: "/lighting",
-    module: "MODULE_04",
-    title: "Studio Lighting",
-    description: "LED panels, COB lights, ring lights, softboxes, and full studio kits.",
-    tag: "HIGH_CRI",
-    image: studioLight,
-  },
-  {
-    id: "lenses",
-    to: "/lenses",
-    module: "MODULE_05",
-    title: "Lenses & Optics",
-    description: "Cine primes, anamorphic glass, zoom lenses, and vintage rehoused optics.",
-    tag: "OPTICAL_PRECISION",
-    image: cineLens,
-  },
-  {
-    id: "support",
-    to: "/support",
-    module: "MODULE_06",
-    title: "Support & Info",
-    description: "Expert advice, shipping info, returns, warranty, and contact options — all in one place.",
-    tag: "FIELD_READY",
-    image: fieldMonitor,
-  },
-];
+import { useEffect, useState } from "react";
+import { api, ApiCategory } from "@/lib/api";
 
 const CategoryGrid = () => {
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+
+  useEffect(() => {
+    api.categories.list().then(setCategories).catch(() => {});
+  }, []);
+
+  const handleClick = (slug: string) => {
+    const el = document.getElementById("shop");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+      const event = new CustomEvent("storefront:category", { detail: slug });
+      window.dispatchEvent(event);
+    }
+  };
+
+  if (categories.length === 0) return null;
+
   return (
     <section id="categories" className="max-w-[1440px] mx-auto px-6 lg:px-8 py-16 lg:py-24">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 lg:mb-16 gap-4">
@@ -76,43 +31,48 @@ const CategoryGrid = () => {
           </p>
         </div>
         <div className="font-mono-tech text-sm text-muted-foreground">
-          TOTAL_ITEMS: 2,400+
+          TOTAL_ITEMS: {categories.length} CATEGORIES
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border-subtle border border-border-subtle">
-        {categories.map((cat) => (
-          <Link
+        {categories.map((cat, i) => (
+          <button
             key={cat.id}
-            to={cat.to}
-            className="bg-chassis p-6 lg:p-8 group hover:bg-grip transition-colors"
+            type="button"
+            onClick={() => handleClick(cat.slug)}
+            className="bg-chassis p-6 lg:p-8 group hover:bg-grip transition-colors text-left"
           >
             <div className="aspect-square bg-grip mb-6 lg:mb-8 relative overflow-hidden">
-              <img
-                src={cat.image}
-                alt={cat.title}
-                loading="lazy"
-                width={600}
-                height={600}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
-              />
+              {cat.image_url ? (
+                <img
+                  src={cat.image_url || "/placeholder.svg"}
+                  alt={cat.name}
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="font-mono-tech text-4xl text-primary/20 font-black">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </div>
+              )}
               <div className="absolute top-4 left-4">
                 <span className="font-mono-tech text-[10px] bg-chassis/80 px-2 py-1 text-foreground">
-                  {cat.module}
+                  MODULE_{String(i + 1).padStart(2, "0")}
                 </span>
               </div>
             </div>
             <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors text-foreground">
-              {cat.title}
+              {cat.name}
             </h3>
-            <p className="text-muted-foreground text-sm leading-relaxed mb-6 lg:mb-8">
-              {cat.description}
-            </p>
             <div className="flex items-center justify-between pt-6 border-t border-border-subtle">
-              <span className="font-mono-tech text-xs text-primary tracking-tighter">{cat.tag}</span>
+              <span className="font-mono-tech text-xs text-primary tracking-tighter uppercase">{cat.slug}</span>
               <span className="text-muted-foreground group-hover:text-primary transition-colors">→</span>
             </div>
-          </Link>
+          </button>
         ))}
       </div>
     </section>

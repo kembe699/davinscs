@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import MarqueeBanner from "@/components/MarqueeBanner";
-import CategoryGrid from "@/components/CategoryGrid";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 import LayoutMagazine from "@/pages/home/LayoutMagazine";
@@ -10,13 +9,14 @@ import LayoutShowcase from "@/pages/home/LayoutShowcase";
 import LayoutBold from "@/pages/home/LayoutBold";
 import LayoutBoutique from "@/pages/home/LayoutBoutique";
 import { useLayout } from "@/contexts/LayoutContext";
+import StorefrontShop from "@/components/StorefrontShop";
 
 const LayoutTechGrid = () => (
   <div className="min-h-screen bg-background">
     <Navbar />
     <HeroSection />
     <MarqueeBanner />
-    <CategoryGrid />
+    <StorefrontShop />
     <AboutSection />
     <MarqueeBanner />
     <Footer />

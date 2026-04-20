@@ -553,6 +553,32 @@ export type Country = {
   created_at: string;
 };
 
+export type StorefrontSettings = {
+  hero_image?: string;
+  about_image?: string;
+  hero_tagline?: string;
+  hero_heading_1?: string;
+  hero_heading_2?: string;
+  hero_subtext?: string;
+  hero_brands_count?: string;
+  hero_products_count?: string;
+  hero_badge_1?: string;
+  hero_badge_2?: string;
+  hero_badge_3?: string;
+  about_tagline?: string;
+  about_heading?: string;
+  about_body?: string;
+  about_stat_1_value?: string;
+  about_stat_1_label?: string;
+  about_stat_2_value?: string;
+  about_stat_2_label?: string;
+  about_stat_3_value?: string;
+  about_stat_3_label?: string;
+  ticker_items?: string[];
+  ticker_bg?: string;
+  ticker_text_color?: string;
+};
+
 export type CompanySettings = {
   name: string;
   logo: string;
@@ -570,6 +596,7 @@ export type CompanySettings = {
   brand_color_start: string;
   brand_color_mid: string;
   brand_color_end: string;
+  storefront_settings: StorefrontSettings;
 };
 
 export type POSSale = {

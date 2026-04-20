@@ -4,9 +4,11 @@ import heroCamera from "@/assets/hero-camera.jpg";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { useLayout } from "@/contexts/LayoutContext";
 
 const HeroSection = () => {
   const { baseCurrency } = useCurrency();
+  const { storefrontSettings: sf } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   useEffect(() => {
@@ -24,32 +26,32 @@ const HeroSection = () => {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-2 py-1 border border-primary/30 bg-primary/5">
               <span className="font-mono-tech text-[10px] text-primary font-bold uppercase tracking-widest">
-                Your Vision / Our Gear
+                {sf.hero_tagline || "Your Vision / Our Gear"}
               </span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-light leading-[0.9] tracking-tighter text-foreground">
-              CAPTURE{" "}
+              {sf.hero_heading_1 || "CAPTURE"}{" "}
               <br />
-              <span className="font-bold text-primary">EVERYTHING</span>
+              <span className="font-bold text-primary">{sf.hero_heading_2 || "EVERYTHING"}</span>
             </h1>
             <p className="text-muted-foreground max-w-[30ch] text-sm leading-relaxed">
-              Professional cameras, podcast setups, teleprompters, microphones, and studio lighting — all under one roof.
+              {sf.hero_subtext || "Professional cameras, podcast setups, teleprompters, microphones, and studio lighting — all under one roof."}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 border-t border-border-subtle pt-8">
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Brands</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">50+</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_brands_count || "50+"}</p>
             </div>
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Products</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">2,400+</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_products_count || "2,400+"}</p>
             </div>
           </div>
 
           <a
-            href="#categories"
+            href="#shop"
             className="group relative w-full h-14 bg-foreground text-background font-bold uppercase tracking-widest text-sm flex items-center justify-center overflow-hidden transition-all hover:bg-primary"
           >
             <span className="relative z-10">Browse Equipment</span>
@@ -64,7 +66,7 @@ const HeroSection = () => {
             <div className="absolute bottom-4 left-4 size-8 border-b border-l border-primary/40 z-10" />
             <div className="absolute bottom-4 right-4 size-8 border-b border-r border-primary/40 z-10" />
             <img
-              src={heroCamera}
+              src={sf.hero_image || heroCamera}
               alt="Professional cinema camera with orange accents"
               className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
               width={1000}
@@ -103,13 +105,14 @@ const HeroSection = () => {
                 {featured.map((p) => (
                   <Link
                     key={p.id}
-                    to={`/${p.category}/${p.slug}`}
+                    to={`/product/${p.slug}`}
                     className="flex gap-4 items-start group"
                   >
                     <div className="size-16 shrink-0 bg-chassis border border-border-subtle overflow-hidden">
                       <img
-                        src={p.image_url}
+                        src={p.image_url || "/placeholder.svg"}
                         loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
                         className="size-full object-cover group-hover:scale-110 transition-transform duration-500"
                         alt={p.name}
                       />
@@ -129,9 +132,16 @@ const HeroSection = () => {
 
           <div className="flex-1 border-l border-border-subtle pl-6 flex flex-col justify-end">
             <div className="font-mono-tech text-[10px] text-muted-foreground space-y-2 uppercase leading-relaxed">
-              <p>[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde &amp; more.</p>
-              <p>[SHIP] Same-day shipping on in-stock items.</p>
-              <p>[SUPPORT] Expert advice from working professionals.</p>
+              {sf.hero_badge_1 && <p>{sf.hero_badge_1}</p>}
+              {sf.hero_badge_2 && <p>{sf.hero_badge_2}</p>}
+              {sf.hero_badge_3 && <p>{sf.hero_badge_3}</p>}
+              {!sf.hero_badge_1 && !sf.hero_badge_2 && !sf.hero_badge_3 && (
+                <>
+                  <p>[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde &amp; more.</p>
+                  <p>[SHIP] Same-day shipping on in-stock items.</p>
+                  <p>[SUPPORT] Expert advice from working professionals.</p>
+                </>
+              )}
             </div>
           </div>
         </div>

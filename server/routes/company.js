@@ -40,7 +40,8 @@ router.get("/", async (req, res) => {
         description: rows[0].receipt_footer || "",
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
-        brand_color_end: rows[0].brand_color_end || "#32CD32"
+        brand_color_end: rows[0].brand_color_end || "#32CD32",
+        storefront_settings: rows[0].storefront_settings || {}
       };
       
       console.log('GET company - response logo length:', response.logo ? response.logo.length : 0);
@@ -57,7 +58,7 @@ router.get("/", async (req, res) => {
 
 // Create or update company settings
 router.post("/", requireAuth, async (req, res) => {
-  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, site_layout, description, brand_color_start, brand_color_mid, brand_color_end } = req.body;
+  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, site_layout, description, brand_color_start, brand_color_mid, brand_color_end, storefront_settings } = req.body;
   
   console.log('Received company data:', { 
     name, 
@@ -93,9 +94,10 @@ router.post("/", requireAuth, async (req, res) => {
              postal_code = $9, website = $10, receipt_footer = $11,
              whatsapp = $12, site_layout = $13,
              brand_color_start = $14, brand_color_mid = $15, brand_color_end = $16,
+             storefront_settings = $17,
              updated_at = NOW()
-         WHERE id = $17 RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', existing.rows[0].id]
+         WHERE id = $18 RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', JSON.stringify(storefront_settings || {}), existing.rows[0].id]
       );
       console.log('Updated successfully:', rows[0]);
       const response = {
@@ -114,7 +116,8 @@ router.post("/", requireAuth, async (req, res) => {
         description: rows[0].receipt_footer,
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
-        brand_color_end: rows[0].brand_color_end || "#32CD32"
+        brand_color_end: rows[0].brand_color_end || "#32CD32",
+        storefront_settings: rows[0].storefront_settings || {}
       };
       console.log('Sending response:', response);
       res.json(response);
@@ -122,9 +125,9 @@ router.post("/", requireAuth, async (req, res) => {
       // Create new
       console.log('Creating new company settings...');
       const { rows } = await pool.query(
-        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, site_layout, currency, brand_color_start, brand_color_mid, brand_color_end) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', 'UGX', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32']
+        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, site_layout, currency, brand_color_start, brand_color_mid, brand_color_end, storefront_settings) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', 'UGX', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', JSON.stringify(storefront_settings || {})]
       );
       console.log('Created successfully:', rows[0]);
       const response = {
@@ -143,7 +146,8 @@ router.post("/", requireAuth, async (req, res) => {
         description: rows[0].receipt_footer,
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
-        brand_color_end: rows[0].brand_color_end || "#32CD32"
+        brand_color_end: rows[0].brand_color_end || "#32CD32",
+        storefront_settings: rows[0].storefront_settings || {}
       };
       console.log('Sending response:', response);
       res.json(response);

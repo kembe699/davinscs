@@ -13,6 +13,7 @@ import MicrophonesPage from "./pages/categories/Microphones.tsx";
 import TelepromptersPage from "./pages/categories/Teleprompters.tsx";
 import LightingPage from "./pages/categories/Lighting.tsx";
 import ProductDetail from "./pages/ProductDetail.tsx";
+import DynamicCategoryPage from "./pages/categories/DynamicCategoryPage.tsx";
 import Contact from "./pages/Contact.tsx";
 import Support from "./pages/Support.tsx";
 import Shipping from "./pages/Shipping.tsx";
@@ -119,6 +120,10 @@ const App = () => (
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
+            {/* Generic product detail (for StorefrontShop links) */}
+            <Route path="/product/:slug" element={<ProductDetail />} />
+            {/* Dynamic category catch-all — handles any slug from DB */}
+            <Route path="/:slug" element={<DynamicCategoryPage />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>

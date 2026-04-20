@@ -12,14 +12,15 @@ const ProductCard = ({ product }: Props) => {
   const { baseCurrency } = useCurrency();
   return (
     <Link
-      to={`/${product.category}/${product.slug}`}
+      to={`/product/${product.slug}`}
       className="bg-chassis border border-border-subtle group flex flex-col hover:border-primary/40 transition-colors"
     >
       <div className="aspect-square bg-grip relative overflow-hidden">
         <img
-          src={product.image_url}
+          src={product.image_url || "/placeholder.svg"}
           alt={product.name}
           loading="lazy"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-70"
         />
         <div className="absolute top-3 left-3">

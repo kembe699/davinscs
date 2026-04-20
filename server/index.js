@@ -509,6 +509,11 @@ async function migrate() {
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN storefront_settings JSONB DEFAULT '{}';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
     END $$;
 
     CREATE TABLE IF NOT EXISTS audit_logs (
