@@ -136,12 +136,14 @@ describe("GET /api/reports/income-statement", () => {
     expect(Array.isArray(body.expenses)).toBe(true);
   });
 
-  it("net_income = total_revenue - total_expenses", async () => {
+  it("net_income = gross_profit - total_expenses (COGS deducted first)", async () => {
     const { body } = await apiGet(
       `/api/reports/income-statement?start_date=${yearStart}&end_date=${today}`,
       token
     );
-    const expected = Number(body.total_revenue) - Number(body.total_expenses);
+    // gross_profit = total_revenue - cogs; net_income = gross_profit - total_expenses
+    const grossProfit = Number(body.gross_profit ?? (Number(body.total_revenue) - Number(body.cogs ?? 0)));
+    const expected = grossProfit - Number(body.total_expenses);
     expect(Number(body.net_income)).toBeCloseTo(expected, 0);
   });
 

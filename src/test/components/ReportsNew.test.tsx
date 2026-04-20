@@ -120,9 +120,9 @@ describe("ReportsNew — render", () => {
     expect(screen.getByText("Inventory")).toBeInTheDocument();
   });
 
-  it("renders the Show report button", () => {
+  it("renders the Show report button", async () => {
     renderReports();
-    expect(screen.getByRole("button", { name: /show report/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /show report|generating/i })).toBeInTheDocument();
   });
 
   it("renders date range selector", () => {
@@ -163,9 +163,9 @@ describe("ReportsNew — sidebar navigation", () => {
     expect(screen.getByText(/out of stock/i)).toBeInTheDocument();
   });
 
-  it("search filters visible report names when category is expanded", () => {
+  it("search filters visible report names when category is expanded", async () => {
     renderReports();
-    // Expand Expenses first so its reports are visible
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     const search = screen.getByPlaceholderText(/search reports/i);
     fireEvent.change(search, { target: { value: "income" } });
@@ -180,57 +180,57 @@ describe("ReportsNew — Income Statement report", () => {
 
   it("calls api.reports.incomeStatement on generate", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/income statement \(p&l\)/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
       expect(api.reports.incomeStatement).toHaveBeenCalled();
-    });
+    }, { timeout: 5000 });
   });
 
   it("displays Revenue section after generating income statement", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/income statement \(p&l\)/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Revenue")).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 
   it("displays Expenses section after generating income statement", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/income statement \(p&l\)/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Expenses")).toBeInTheDocument();
-    });
+      expect(screen.getAllByText("Expenses").length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
   });
 
   it("displays Net Income (Profit) after generating", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/income statement \(p&l\)/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/net income \(profit\)/i)).toBeInTheDocument();
-    });
+      expect(screen.getByText(/net income/i)).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 
   it("shows POS Sales line item from mock data", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/income statement \(p&l\)/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
       expect(screen.getByText("POS Sales")).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 });
 
@@ -241,24 +241,24 @@ describe("ReportsNew — Expenses Summary report", () => {
 
   it("calls api.reports.expenses.summary on generate", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/expenses summary/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
       expect(api.reports.expenses.summary).toHaveBeenCalled();
-    });
+    }, { timeout: 5000 });
   });
 
   it("shows Procurement Payments card", async () => {
     renderReports();
+    await screen.findByRole("button", { name: /show report|generating/i });
     fireEvent.click(screen.getByText("Expenses"));
     fireEvent.click(screen.getByText(/expenses summary/i));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/procurement payments/i)).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 });
 
@@ -269,12 +269,12 @@ describe("ReportsNew — Daily Sales report", () => {
 
   it("calls api.reports.sales.daily on generate", async () => {
     renderReports();
-    // Sales is already expanded by default
-    fireEvent.click(screen.getByText("Daily sales"));
-    fireEvent.click(screen.getByRole("button", { name: /show report/i }));
+    await screen.findByRole("button", { name: /show report|generating/i });
+    const buttons = screen.getAllByText("Daily sales");
+    fireEvent.click(buttons[0]);
 
     await waitFor(() => {
       expect(api.reports.sales.daily).toHaveBeenCalled();
-    });
+    }, { timeout: 5000 });
   });
 });

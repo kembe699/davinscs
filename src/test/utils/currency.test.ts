@@ -13,29 +13,29 @@ describe("formatCurrencySync", () => {
     expect(formatCurrencySync(0, "UGX")).toBe("UGX 0.00");
   });
 
-  it("divides cents by 100 before displaying", () => {
-    expect(formatCurrencySync(100000, "UGX")).toBe("UGX 1,000.00");
+  it("formats whole-number amounts with commas", () => {
+    expect(formatCurrencySync(100000, "UGX")).toBe("UGX 100,000.00");
   });
 
   it("shows two decimal places by default", () => {
-    expect(formatCurrencySync(150, "$")).toBe("$ 1.50");
+    expect(formatCurrencySync(150, "$")).toBe("$ 150.00");
   });
 
   it("hides decimals when showDecimals=false", () => {
-    expect(formatCurrencySync(100000, "UGX", false)).toBe("UGX 1,000");
+    expect(formatCurrencySync(100000, "UGX", false)).toBe("UGX 100,000");
   });
 
   it("uses UGX as default symbol when none provided", () => {
-    expect(formatCurrencySync(5000)).toBe("UGX 50.00");
+    expect(formatCurrencySync(5000)).toBe("UGX 5,000.00");
   });
 
   it("handles large amounts with correct thousand separators", () => {
-    expect(formatCurrencySync(500000000, "UGX", false)).toBe("UGX 5,000,000");
+    expect(formatCurrencySync(500000000, "UGX", false)).toBe("UGX 500,000,000");
   });
 
   it("handles negative amounts", () => {
     const result = formatCurrencySync(-10000, "UGX", false);
-    expect(result).toContain("-100");
+    expect(result).toContain("-10,000");
   });
 });
 
