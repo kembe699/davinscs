@@ -145,6 +145,7 @@ async function migrate() {
       in_stock BOOLEAN DEFAULT TRUE,
       is_featured BOOLEAN DEFAULT FALSE,
       category VARCHAR(100) NOT NULL,
+      uom VARCHAR(50) DEFAULT 'pcs',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -154,6 +155,7 @@ async function migrate() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level INTEGER DEFAULT 10;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price INTEGER DEFAULT 0;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS uom VARCHAR(50) DEFAULT 'pcs';
     CREATE TABLE IF NOT EXISTS password_resets (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) NOT NULL,

@@ -7,11 +7,35 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 
 type Spec = { label: string; value: string };
 
+const UOM_OPTIONS = [
+  { value: "pcs",    label: "Piece (pcs)" },
+  { value: "box",    label: "Box" },
+  { value: "pack",   label: "Pack" },
+  { value: "dozen",  label: "Dozen" },
+  { value: "strip",  label: "Strip" },
+  { value: "tabs",   label: "Tablets (tabs)" },
+  { value: "caps",   label: "Capsules (caps)" },
+  { value: "bottle", label: "Bottle" },
+  { value: "sachet", label: "Sachet" },
+  { value: "kg",     label: "Kilogram (kg)" },
+  { value: "g",      label: "Gram (g)" },
+  { value: "L",      label: "Litre (L)" },
+  { value: "ml",     label: "Millilitre (ml)" },
+  { value: "m",      label: "Metre (m)" },
+  { value: "roll",   label: "Roll" },
+  { value: "pair",   label: "Pair" },
+  { value: "set",    label: "Set" },
+  { value: "carton", label: "Carton" },
+  { value: "tray",   label: "Tray" },
+  { value: "tin",    label: "Tin" },
+  { value: "bag",    label: "Bag" },
+];
+
 const empty = {
   slug: "", name: "", brand: "", price: 0, cost_price: 0, tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "",
   barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: 0, reorder_level: 0,
-  expense_account_id: 0,
+  expense_account_id: 0, uom: "pcs",
 };
 
 type Account = { id: number; code: string; name: string; account_type: string };
@@ -68,6 +92,7 @@ export default function ProductForm() {
           product_type: (p as any).product_type || "product",
           quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
           expense_account_id: (p as any).expense_account_id || 0,
+          uom: (p as any).uom || "pcs",
         });
         if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
@@ -165,7 +190,7 @@ export default function ProductForm() {
                         set("name", e.target.value);
                         if (!isEdit) set("slug", autoSlug(e.target.value));
                       }}
-                      placeholder="Sony FX3 Full-Frame Cinema Camera"
+                      placeholder="e.g. Paracetamol 500mg"
                       className="field-input"
                     />
                   </div>
@@ -174,7 +199,7 @@ export default function ProductForm() {
                     <input
                       required type="text" value={form.slug}
                       onChange={(e) => set("slug", e.target.value)}
-                      placeholder="sony-fx3"
+                      placeholder="e.g. paracetamol-500mg"
                       className="field-input"
                     />
                   </div>
@@ -183,7 +208,7 @@ export default function ProductForm() {
                     <input
                       required type="text" value={form.brand}
                       onChange={(e) => set("brand", e.target.value)}
-                      placeholder="Sony"
+                      placeholder="e.g. Pfizer / Generic"
                       className="field-input"
                     />
                   </div>
@@ -211,7 +236,7 @@ export default function ProductForm() {
                   <textarea
                     rows={3} value={form.description}
                     onChange={(e) => set("description", e.target.value)}
-                    placeholder="A compact full-frame cinema camera…"
+                    placeholder="Brief product description…"
                     className="field-input resize-none"
                   />
                 </div>
@@ -367,13 +392,13 @@ export default function ProductForm() {
                 {form.specs.map((spec, i) => (
                   <div key={i} className="flex gap-3 items-center">
                     <input
-                      type="text" placeholder="Label (e.g. Sensor)"
+                      type="text" placeholder="Label (e.g. Weight)"
                       value={spec.label}
                       onChange={(e) => updateSpec(i, "label", e.target.value)}
                       className="field-input flex-1"
                     />
                     <input
-                      type="text" placeholder="Value (e.g. Full-Frame CMOS)"
+                      type="text" placeholder="Value (e.g. 500g)"
                       value={spec.value}
                       onChange={(e) => updateSpec(i, "value", e.target.value)}
                       className="field-input flex-1"
@@ -390,6 +415,19 @@ export default function ProductForm() {
                 <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
                 
                 <div className="space-y-5">
+                  <div>
+                    <label className="field-label">Unit of Measure (UOM)</label>
+                    <select
+                      value={(form as any).uom}
+                      onChange={(e) => set("uom", e.target.value)}
+                      className="field-input appearance-none"
+                    >
+                      {UOM_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">How this product is sold / counted</p>
+                  </div>
                   <div>
                     <label className="field-label">Current Stock</label>
                     <input
@@ -422,7 +460,7 @@ export default function ProductForm() {
                   <input
                     type="text" value={form.image_url}
                     onChange={(e) => set("image_url", e.target.value)}
-                    placeholder="/products/sony-fx3.jpg"
+                    placeholder="https://example.com/image.jpg"
                     className="field-input"
                   />
                   {form.image_url && (
