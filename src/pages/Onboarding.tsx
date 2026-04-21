@@ -41,6 +41,7 @@ interface FormData {
 // Common secondary currencies
 const CURRENCY_OPTIONS = [
   { code: "", name: "None (USD only)", symbol: "" },
+  { code: "SSP", name: "South Sudanese Pound (SSP)", symbol: "SSP" },
   { code: "UGX", name: "Ugandan Shilling (UGX)", symbol: "UGX" },
   { code: "KES", name: "Kenyan Shilling (KES)", symbol: "KES" },
   { code: "TZS", name: "Tanzanian Shilling (TZS)", symbol: "TZS" },
@@ -104,7 +105,7 @@ export default function Onboarding() {
     tagline: "",
     address: "",
     city: "",
-    country: "Uganda",
+    country: "South Sudan",
     phone: "",
     email: "",
     website: "",
@@ -310,14 +311,14 @@ export default function Onboarding() {
                     onChange={(e) => set("tagline", e.target.value)}
                   />
                 </div>
-                <Field icon={Phone} label="Phone" placeholder="+256 700 000000" value={form.phone} onChange={(v) => set("phone", v)} />
+                <Field icon={Phone} label="Phone" placeholder="+211 92 000 0000" value={form.phone} onChange={(v) => set("phone", v)} />
                 <Field icon={Mail} label="Email" placeholder="info@yourbusiness.com" value={form.email} onChange={(v) => set("email", v)} />
                 <Field icon={MapPin} label="Address" placeholder="Street address" value={form.address} onChange={(v) => set("address", v)} />
-                <Field icon={MapPin} label="City" placeholder="Kampala" value={form.city} onChange={(v) => set("city", v)} />
-                <Field icon={Globe} label="Country" placeholder="Uganda" value={form.country} onChange={(v) => set("country", v)} />
+                <Field icon={MapPin} label="City" placeholder="Juba" value={form.city} onChange={(v) => set("city", v)} />
+                <Field icon={Globe} label="Country" placeholder="South Sudan" value={form.country} onChange={(v) => set("country", v)} />
                 <Field icon={Globe} label="Website" placeholder="https://yourbusiness.com" value={form.website} onChange={(v) => set("website", v)} />
                 <Field icon={Hash} label="Tax / TIN Number" placeholder="Optional" value={form.tax_id} onChange={(v) => set("tax_id", v)} />
-                <Field icon={Phone} label="WhatsApp" placeholder="+256 700 000000" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
+                <Field icon={Phone} label="WhatsApp" placeholder="+211 92 000 0000" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
               </div>
 
               {/* Currency */}
@@ -467,7 +468,7 @@ export default function Onboarding() {
                   <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-9 pr-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="e.g. David Kato"
+                    placeholder="e.g. James Deng"
                     value={form.admin_name}
                     onChange={(e) => set("admin_name", e.target.value)}
                   />

@@ -1105,7 +1105,7 @@ export default function POSMain() {
                       type="text"
                       value={creditCustomerPhone}
                       onChange={e => setCreditCustomerPhone(e.target.value)}
-                      placeholder="+256..."
+                      placeholder="+211..."
                       className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
                     />
                   </div>
@@ -1164,10 +1164,10 @@ export default function POSMain() {
                   <img src={companyData.logo} alt={companyData.name} className="h-14 w-auto object-contain flex-shrink-0" />
                 )}
                 <div className="flex-1">
-                  <h2 className="text-sm font-bold text-black uppercase leading-tight">{companyData?.name || "Davin's Camera Store"}</h2>
+                  <h2 className="text-sm font-bold text-black uppercase leading-tight">{companyData?.name || "FlippedPos"}</h2>
                   {companyData?.address && <p className="text-xs text-black">{companyData.address}</p>}
                   {companyData?.city && <p className="text-xs text-black">{companyData.city}{companyData.country ? `, ${companyData.country}` : ''}</p>}
-                  <p className="text-xs text-black">Tel: {companyData?.phone || "+256-XXX-XXXXXX"}</p>
+                  <p className="text-xs text-black">Tel: {companyData?.phone || "+211-XXX-XXXXXX"}</p>
                   {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
                   {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
                 </div>

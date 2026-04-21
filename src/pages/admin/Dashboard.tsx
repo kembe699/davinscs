@@ -7,8 +7,6 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 
-const CATEGORIES = ["cameras", "lenses", "microphones", "teleprompters", "lighting"];
-
 function compactNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + "K";
@@ -92,11 +90,6 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
-  const categoryCounts = CATEGORIES.map((c) => ({
-    name: c,
-    count: products.filter((p) => p.category === c).length,
-  }));
 
   return (
     <AdminLayout>
@@ -268,23 +261,8 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Category breakdown */}
-              <div className="border border-border-subtle bg-chassis">
-                <div className="px-6 py-4 border-b border-border-subtle">
-                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Categories</h2>
-                </div>
-                <div className="divide-y divide-border-subtle">
-                  {categoryCounts.map((c) => (
-                    <div key={c.name} className="flex items-center justify-between px-6 py-3">
-                      <span className="text-sm text-foreground capitalize">{c.name}</span>
-                      <span className="font-mono-tech text-xs text-primary">{c.count} products</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Top ordered products */}
-              <div className="border border-border-subtle bg-chassis">
+              {/* Most Ordered */}
+              <div className="border border-border-subtle bg-chassis lg:col-span-2">
                 <div className="px-6 py-4 border-b border-border-subtle">
                   <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Most Ordered</h2>
                 </div>

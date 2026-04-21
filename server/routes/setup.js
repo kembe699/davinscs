@@ -136,6 +136,7 @@ router.post("/complete", async (req, res) => {
 
     // Currency lookup for secondary
     const KNOWN_CURRENCIES = {
+      SSP: { name: "South Sudanese Pound",  symbol: "SSP" },
       UGX: { name: "Ugandan Shilling",      symbol: "UGX" },
       KES: { name: "Kenyan Shilling",        symbol: "KES" },
       TZS: { name: "Tanzanian Shilling",     symbol: "TZS" },
