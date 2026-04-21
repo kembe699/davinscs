@@ -128,8 +128,10 @@ async function migrate() {
       slug VARCHAR(100) UNIQUE NOT NULL,
       name VARCHAR(100) NOT NULL,
       sort_order INTEGER DEFAULT 0,
+      image_url VARCHAR(500) DEFAULT '',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) DEFAULT '';
     CREATE TABLE IF NOT EXISTS products (
       id SERIAL PRIMARY KEY,
       slug VARCHAR(255) UNIQUE NOT NULL,
