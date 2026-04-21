@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flippedpos
+      POSTGRES_PASSWORD: flippedpos123
+      POSTGRES_DB: flippedpos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flippedpos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://flippedpos:flippedpos123@db:5432/flippedpos
+      JWT_SECRET: change-me-to-a-strong-secret-min-32-chars!!
+      APP_URL: http://localhost:3001
+      DB_SSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

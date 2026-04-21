@@ -1,0 +1,6 @@
+@echo off
+title FlippedPos - Stopping...
+echo Stopping FlippedPos...
+docker-compose down
+echo Done. Data is preserved in the Docker volume.
+pause
