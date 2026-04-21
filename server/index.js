@@ -155,6 +155,10 @@ async function migrate() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level INTEGER DEFAULT 10;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price INTEGER DEFAULT 0;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode VARCHAR(255) DEFAULT '';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS expiry_date DATE;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type VARCHAR(50) DEFAULT 'product';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS expense_account_id INTEGER;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS uom VARCHAR(50) DEFAULT 'pcs';
     CREATE TABLE IF NOT EXISTS password_resets (
       id SERIAL PRIMARY KEY,
