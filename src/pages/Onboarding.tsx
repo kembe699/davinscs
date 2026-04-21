@@ -23,6 +23,8 @@ interface FormData {
   website: string;
   tax_id: string;
   whatsapp: string;
+  // Step 2 – Currency
+  secondary_currency: string;
   // Step 3 – Branding
   logo: string;
   brand_color_start: string;
@@ -35,6 +37,26 @@ interface FormData {
   admin_password: string;
   admin_confirm: string;
 }
+
+// Common secondary currencies
+const CURRENCY_OPTIONS = [
+  { code: "", name: "None (USD only)", symbol: "" },
+  { code: "UGX", name: "Ugandan Shilling (UGX)", symbol: "UGX" },
+  { code: "KES", name: "Kenyan Shilling (KES)", symbol: "KES" },
+  { code: "TZS", name: "Tanzanian Shilling (TZS)", symbol: "TZS" },
+  { code: "EUR", name: "Euro (EUR)", symbol: "€" },
+  { code: "GBP", name: "British Pound (GBP)", symbol: "£" },
+  { code: "NGN", name: "Nigerian Naira (NGN)", symbol: "₦" },
+  { code: "ZAR", name: "South African Rand (ZAR)", symbol: "R" },
+  { code: "GHS", name: "Ghanaian Cedi (GHS)", symbol: "GH₵" },
+  { code: "ETB", name: "Ethiopian Birr (ETB)", symbol: "ETB" },
+  { code: "RWF", name: "Rwandan Franc (RWF)", symbol: "RWF" },
+  { code: "ZMW", name: "Zambian Kwacha (ZMW)", symbol: "ZMW" },
+  { code: "XAF", name: "CFA Franc BEAC (XAF)", symbol: "XAF" },
+  { code: "INR", name: "Indian Rupee (INR)", symbol: "₹" },
+  { code: "CNY", name: "Chinese Yuan (CNY)", symbol: "¥" },
+  { code: "AED", name: "UAE Dirham (AED)", symbol: "AED" },
+];
 
 const BUSINESS_TYPES = [
   { id: "retail", label: "Retail Store", icon: Store },
@@ -88,6 +110,7 @@ export default function Onboarding() {
     website: "",
     tax_id: "",
     whatsapp: "",
+    secondary_currency: "",
     logo: "",
     brand_color_start: "#004A99",
     brand_color_mid: "#008B8B",
@@ -164,6 +187,7 @@ export default function Onboarding() {
           brand_color_end: form.brand_color_end,
           site_layout: form.site_layout,
           tagline: form.tagline,
+          secondary_currency: form.secondary_currency || null,
         }),
       });
       const data = await res.json();
@@ -272,7 +296,7 @@ export default function Onboarding() {
                   </label>
                   <input
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="e.g. Davin's Electronics"
+                    placeholder="e.g. FlippedPos"
                     value={form.company_name}
                     onChange={(e) => set("company_name", e.target.value)}
                   />
@@ -294,6 +318,35 @@ export default function Onboarding() {
                 <Field icon={Globe} label="Website" placeholder="https://yourbusiness.com" value={form.website} onChange={(v) => set("website", v)} />
                 <Field icon={Hash} label="Tax / TIN Number" placeholder="Optional" value={form.tax_id} onChange={(v) => set("tax_id", v)} />
                 <Field icon={Phone} label="WhatsApp" placeholder="+256 700 000000" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
+              </div>
+
+              {/* Currency */}
+              <div className="pt-2 border-t border-slate-700">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Currency Settings</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Primary Currency</label>
+                    <div className="w-full bg-slate-600/50 border border-slate-600 rounded-lg px-3 py-2.5 text-slate-300 text-sm flex items-center gap-2">
+                      <span className="text-lg">$</span>
+                      <span>USD — US Dollar</span>
+                      <span className="ml-auto text-xs text-slate-500 bg-slate-700 px-2 py-0.5 rounded">Default</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">USD is the system base currency.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Secondary Currency <span className="text-slate-500 normal-case">(optional)</span></label>
+                    <select
+                      value={form.secondary_currency}
+                      onChange={(e) => set("secondary_currency", e.target.value)}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {CURRENCY_OPTIONS.map(c => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">Can be changed later in Settings → Currencies.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -565,7 +618,7 @@ export default function Onboarding() {
         )}
       </div>
 
-      <p className="mt-6 text-xs text-slate-600">Powered by your new business management system</p>
+      <p className="mt-6 text-xs text-slate-600">Powered by <span className="text-slate-500 font-semibold">FlippedPos</span></p>
     </div>
   );
 }

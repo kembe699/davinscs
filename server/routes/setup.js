@@ -50,6 +50,8 @@ router.post("/complete", async (req, res) => {
       site_layout,
       // Storefront headline (optional quick-set)
       tagline,
+      // Currency
+      secondary_currency,
     } = req.body;
 
     // Validate required fields
@@ -112,7 +114,7 @@ router.post("/complete", async (req, res) => {
           whatsapp || "",
           logo || "",
           site_layout || "tech_grid",
-          "UGX",
+          "USD",
           brand_color_start || "#004A99",
           brand_color_mid || "#008B8B",
           brand_color_end || "#32CD32",
@@ -131,14 +133,45 @@ router.post("/complete", async (req, res) => {
 
     // ── Post-transaction: seed optional reference data (safe to fail) ─────────
     // Uses pool (not client) so no risk of poisoning the committed transaction.
+
+    // Currency lookup for secondary
+    const KNOWN_CURRENCIES = {
+      UGX: { name: "Ugandan Shilling",      symbol: "UGX" },
+      KES: { name: "Kenyan Shilling",        symbol: "KES" },
+      TZS: { name: "Tanzanian Shilling",     symbol: "TZS" },
+      EUR: { name: "Euro",                   symbol: "€"   },
+      GBP: { name: "British Pound",          symbol: "£"   },
+      NGN: { name: "Nigerian Naira",         symbol: "₦"   },
+      ZAR: { name: "South African Rand",     symbol: "R"   },
+      GHS: { name: "Ghanaian Cedi",          symbol: "GH₵" },
+      ETB: { name: "Ethiopian Birr",         symbol: "ETB" },
+      RWF: { name: "Rwandan Franc",          symbol: "RWF" },
+      ZMW: { name: "Zambian Kwacha",         symbol: "ZMW" },
+      XAF: { name: "CFA Franc BEAC",         symbol: "XAF" },
+      INR: { name: "Indian Rupee",           symbol: "₹"   },
+      CNY: { name: "Chinese Yuan",           symbol: "¥"   },
+      AED: { name: "UAE Dirham",             symbol: "AED" },
+    };
+
     try {
       const { rows: currRows } = await pool.query("SELECT COUNT(*) FROM currencies");
       if (parseInt(currRows[0].count) === 0) {
+        // Always seed USD as the base (primary) currency
         await pool.query(
           `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
-           VALUES ('UGX', 'Ugandan Shilling', 'UGX', true, 1.0, true)
+           VALUES ('USD', 'US Dollar', '$', true, 1.0, true)
            ON CONFLICT (code) DO NOTHING`
         );
+        // Seed secondary currency if chosen
+        if (secondary_currency && KNOWN_CURRENCIES[secondary_currency]) {
+          const sc = KNOWN_CURRENCIES[secondary_currency];
+          await pool.query(
+            `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
+             VALUES ($1, $2, $3, false, 1.0, true)
+             ON CONFLICT (code) DO NOTHING`,
+            [secondary_currency, sc.name, sc.symbol]
+          );
+        }
       }
     } catch (_) {}
 

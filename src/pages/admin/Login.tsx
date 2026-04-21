@@ -85,7 +85,7 @@ const Login = () => {
                   required
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="admin@divinsstore.com"
+                  placeholder="admin@flippedpos.com"
                   className="w-full h-11 bg-background border border-border-subtle px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors"
                 />
               </div>
@@ -124,7 +124,7 @@ const Login = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@divinsstore.com"
+                placeholder="admin@flippedpos.com"
                 className="w-full h-11 bg-background border border-border-subtle px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors"
               />
             </div>
