@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { useToast, ToastItem, ToastType } from "@/contexts/ToastContext";
 
@@ -94,7 +94,18 @@ function ToastCard({ toast }: { toast: ToastItem }) {
 }
 
 export default function ToastContainer() {
-  const { toasts } = useToast();
+  const { toasts, toast } = useToast();
+
+  const handleGlobalToast = useCallback((e: Event) => {
+    const { message, type, title } = (e as CustomEvent).detail;
+    toast(message, type ?? "info", title);
+  }, [toast]);
+
+  useEffect(() => {
+    window.addEventListener("global-toast", handleGlobalToast);
+    return () => window.removeEventListener("global-toast", handleGlobalToast);
+  }, [handleGlobalToast]);
+
   return (
     <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
       {toasts.map(t => (

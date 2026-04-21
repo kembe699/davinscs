@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -52,6 +53,7 @@ export default function Quotations() {
   const [detail, setDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -157,14 +159,18 @@ export default function Quotations() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Delete this quotation?")) return;
-    try {
-      await api.quotations.delete(id);
-      setQuotations(qs => qs.filter(q => q.id !== id));
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
-    }
+  const handleDelete = (id: number) => {
+    setPendingConfirm({
+      message: "Delete this quotation? This cannot be undone.",
+      action: async () => {
+        try {
+          await api.quotations.delete(id);
+          setQuotations(qs => qs.filter(q => q.id !== id));
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
+        }
+      },
+    });
   };
 
   const handleStatusChange = async (id: number, status: string) => {
@@ -190,19 +196,23 @@ export default function Quotations() {
     }
   };
 
-  const handleConvert = async (id: number) => {
-    if (!confirm("Convert this quotation to an invoice?")) return;
-    setConverting(true);
-    try {
-      const result = await api.quotations.convert(id);
-      toast(`Invoice created: INV-${String(result.invoice_id).padStart(4, "0")} — find it under Invoices.`, "success", "Invoice Created");
-      setDetail(null);
-      load();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Convert failed", "error", "Error");
-    } finally {
-      setConverting(false);
-    }
+  const handleConvert = (id: number) => {
+    setPendingConfirm({
+      message: "Convert this quotation to an invoice? The quotation status will be updated to 'converted'.",
+      action: async () => {
+        setConverting(true);
+        try {
+          const result = await api.quotations.convert(id);
+          toast(`Invoice created: INV-${String(result.invoice_id).padStart(4, "0")} — find it under Invoices.`, "success", "Invoice Created");
+          setDetail(null);
+          load();
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Convert failed", "error", "Error");
+        } finally {
+          setConverting(false);
+        }
+      },
+    });
   };
 
   const { subtotal, tax, total } = calcTotals(form.items, form.discount_amount);
@@ -596,6 +606,15 @@ export default function Quotations() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Confirm Action"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Confirm"
+        variant="warning"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

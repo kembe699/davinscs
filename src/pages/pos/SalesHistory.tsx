@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, RefreshCw, Printer, Trash2, RotateCcw, CheckCircle } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -26,6 +27,7 @@ export default function SalesHistory() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Refund modal state
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [showRefundModal, setShowRefundModal]   = useState(false);
   const [refundItems, setRefundItems]           = useState<Record<number, { checked: boolean; qty: number }>>({});
   const [refundMethod, setRefundMethod]         = useState("cash");
@@ -199,21 +201,24 @@ export default function SalesHistory() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selectedSale) {
       toast("Please select a sale to delete", "warning", "Nothing Selected");
       return;
     }
-    if (!confirm(`Are you sure you want to delete sale ${selectedSale.sale_number}? This action cannot be undone.`)) return;
-    
-    try {
-      await api.pos.voidSale(selectedSale.id);
-      toast("Sale deleted successfully", "success", "Deleted");
-      loadData();
-      setSelectedSale(null);
-    } catch (err: any) {
-      toast(err.message || "Failed to delete sale", "error", "Error");
-    }
+    setPendingConfirm({
+      message: `Delete sale ${selectedSale.sale_number}? This action cannot be undone.`,
+      action: async () => {
+        try {
+          await api.pos.voidSale(selectedSale.id);
+          toast("Sale deleted successfully", "success", "Deleted");
+          loadData();
+          setSelectedSale(null);
+        } catch (err: any) {
+          toast(err.message || "Failed to delete sale", "error", "Error");
+        }
+      },
+    });
   };
 
   const filteredSales = sales.filter(sale => {
@@ -552,6 +557,14 @@ export default function SalesHistory() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Sale"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </div>
   );
 }

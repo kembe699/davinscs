@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { Search, FileText, Plus, X, Download, Printer, CheckCircle, Clock, AlertCircle, Ban, ChevronRight, DollarSign, Trash2 } from "lucide-react";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { printDocument, downloadDocument } from "@/utils/printUtils";
@@ -62,6 +63,7 @@ export default function Invoices() {
 
   // Create invoice modal
   const [showCreate, setShowCreate] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   useEffect(() => {
     api.company.get().then(setCompanyData).catch(() => {});
@@ -121,13 +123,19 @@ export default function Invoices() {
     }
   };
 
-  const handleVoid = async (id: number) => {
-    if (!confirm("Void this invoice?")) return;
-    await api.invoices.void(id);
-    loadInvoices();
-    if (detail?.id === id) {
-      setDetail({ ...detail, status: "voided" });
-    }
+  const handleVoid = (id: number) => {
+    setPendingConfirm({
+      message: "Void this invoice? This action cannot be undone.",
+      action: async () => {
+        try {
+          await api.invoices.void(id);
+          loadInvoices();
+          if (detail?.id === id) setDetail({ ...detail, status: "voided" });
+        } catch (err: any) {
+          toast(err.message || "Failed to void invoice", "error", "Error");
+        }
+      },
+    });
   };
 
 
@@ -615,6 +623,15 @@ export default function Invoices() {
           onCreated={() => { setShowCreate(false); loadInvoices(); }}
         />
       )}
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Void Invoice"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Void"
+        variant="warning"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

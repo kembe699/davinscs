@@ -3,6 +3,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { Plus, Search, Trash2, Edit2, X, ChevronRight } from "lucide-react";
@@ -27,6 +28,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   const load = async (q?: string) => {
     setLoading(true);
@@ -73,14 +75,18 @@ export default function Customers() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Delete this customer?")) return;
-    try {
-      await api.customers.delete(id);
-      setCustomers(cs => cs.filter(c => c.id !== id));
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
-    }
+  const handleDelete = (id: number) => {
+    setPendingConfirm({
+      message: "Delete this customer? This cannot be undone.",
+      action: async () => {
+        try {
+          await api.customers.delete(id);
+          setCustomers(cs => cs.filter(c => c.id !== id));
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
+        }
+      },
+    });
   };
 
   const filtered = customers.filter(c =>
@@ -211,6 +217,14 @@ export default function Customers() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Customer"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

@@ -3,11 +3,13 @@ import { useToast } from "@/contexts/ToastContext";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, TaxRate } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function TaxRates() {
   const { toast } = useToast();
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -57,14 +59,18 @@ export default function TaxRates() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this tax rate?")) return;
-    try {
-      await api.taxRates.delete(id);
-      loadTaxRates();
-    } catch (err: any) {
-      toast(err.message || "Failed to delete tax rate", "error", "Error");
-    }
+  const handleDelete = (id: number) => {
+    setPendingConfirm({
+      message: "Are you sure you want to delete this tax rate?",
+      action: async () => {
+        try {
+          await api.taxRates.delete(id);
+          loadTaxRates();
+        } catch (err: any) {
+          toast(err.message || "Failed to delete tax rate", "error", "Error");
+        }
+      },
+    });
   };
 
   return (
@@ -197,6 +203,14 @@ export default function TaxRates() {
         </div>
       )}
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Tax Rate"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

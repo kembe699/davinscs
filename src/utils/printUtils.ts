@@ -1,3 +1,5 @@
+import { showGlobalToast } from './toastBridge';
+
 /** Shared print template — matches the invoice PDF style exactly */
 
 export const SHARED_PRINT_CSS = `
@@ -112,7 +114,7 @@ export function downloadDocument(filename: string, bodyHTML: string): void {
   const html = buildFullHTML(filename, bodyHTML);
   const win = window.open('', '_blank');
   if (!win) {
-    alert('Allow pop-ups to download this document as PDF.');
+    showGlobalToast('Please allow pop-ups in your browser to download this document as PDF.', 'warning', 'Pop-up Blocked');
     return;
   }
   win.document.write(html);

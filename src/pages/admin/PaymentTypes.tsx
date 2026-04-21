@@ -3,11 +3,13 @@ import { useToast } from "@/contexts/ToastContext";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, PaymentType } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function PaymentTypes() {
   const { toast } = useToast();
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -57,14 +59,18 @@ export default function PaymentTypes() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this payment type?")) return;
-    try {
-      await api.paymentTypes.delete(id);
-      loadPaymentTypes();
-    } catch (err: any) {
-      toast(err.message || "Failed to delete payment type", "error", "Error");
-    }
+  const handleDelete = (id: number) => {
+    setPendingConfirm({
+      message: "Are you sure you want to delete this payment type?",
+      action: async () => {
+        try {
+          await api.paymentTypes.delete(id);
+          loadPaymentTypes();
+        } catch (err: any) {
+          toast(err.message || "Failed to delete payment type", "error", "Error");
+        }
+      },
+    });
   };
 
   return (
@@ -192,6 +198,14 @@ export default function PaymentTypes() {
         </div>
       )}
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Payment Type"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { api, ApiCustomerOrder } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { ShoppingBag, X, Check, Package, Truck, CheckCircle, XCircle, Edit2, Save } from "lucide-react";
 
 type StatusFilter = "all" | "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
 export default function Orders() {
+  const { toast } = useToast();
   const [orders, setOrders] = useState<ApiCustomerOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ApiCustomerOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updating, setUpdating] = useState(false);
@@ -69,22 +73,24 @@ export default function Orders() {
     }
   };
 
-  const handleUpdateStatus = async (orderId: number, newStatus: string) => {
-    if (!confirm(`Change order status to ${newStatus}?`)) return;
-    
-    setUpdating(true);
-    setError("");
-    try {
-      await api.customerOrders.updateStatus(orderId, newStatus);
-      await loadOrders();
-      if (selectedOrder?.id === orderId) {
-        await handleViewOrder(orderId);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update status");
-    } finally {
-      setUpdating(false);
-    }
+  const handleUpdateStatus = (orderId: number, newStatus: string) => {
+    setPendingConfirm({
+      message: `Change order status to "${newStatus}"?`,
+      action: async () => {
+        setUpdating(true);
+        setError("");
+        try {
+          await api.customerOrders.updateStatus(orderId, newStatus);
+          await loadOrders();
+          if (selectedOrder?.id === orderId) await handleViewOrder(orderId);
+          toast(`Status updated to ${newStatus}`, "success", "Order Updated");
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Failed to update status", "error", "Error");
+        } finally {
+          setUpdating(false);
+        }
+      },
+    });
   };
 
   const handleSaveDetails = async () => {
@@ -104,22 +110,24 @@ export default function Orders() {
     }
   };
 
-  const handleCancelOrder = async (orderId: number) => {
-    if (!confirm("Cancel this order? This will release reserved inventory.")) return;
-    
-    setUpdating(true);
-    setError("");
-    try {
-      await api.customerOrders.cancel(orderId);
-      await loadOrders();
-      if (selectedOrder?.id === orderId) {
-        await handleViewOrder(orderId);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to cancel order");
-    } finally {
-      setUpdating(false);
-    }
+  const handleCancelOrder = (orderId: number) => {
+    setPendingConfirm({
+      message: "Cancel this order? This will release reserved inventory.",
+      action: async () => {
+        setUpdating(true);
+        setError("");
+        try {
+          await api.customerOrders.cancel(orderId);
+          await loadOrders();
+          if (selectedOrder?.id === orderId) await handleViewOrder(orderId);
+          toast("Order cancelled successfully", "success", "Order Cancelled");
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Failed to cancel order", "error", "Error");
+        } finally {
+          setUpdating(false);
+        }
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -474,6 +482,15 @@ export default function Orders() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Confirm Action"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Confirm"
+        variant="warning"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

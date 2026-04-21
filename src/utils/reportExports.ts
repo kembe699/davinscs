@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { SHARED_PRINT_CSS } from './printUtils';
+import { showGlobalToast } from './toastBridge';
 
 export interface CompanyInfo {
   name: string;
@@ -102,7 +103,7 @@ export const exportToPDF = (options: ReportExportOptions) => {
 
   const pdfWindow = window.open('', '_blank');
   if (!pdfWindow) {
-    alert('Please allow pop-ups to export PDF reports');
+    showGlobalToast('Please allow pop-ups in your browser to export PDF reports.', 'warning', 'Pop-up Blocked');
     return;
   }
 
@@ -183,7 +184,7 @@ export const printReport = (options: ReportExportOptions) => {
   // Create a new window for printing
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert('Please allow pop-ups to print reports');
+    showGlobalToast('Please allow pop-ups in your browser to print reports.', 'warning', 'Pop-up Blocked');
     return;
   }
 

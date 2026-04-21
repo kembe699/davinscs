@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download } from "lucide-react";
 
 type Tab = "suppliers" | "purchase-orders" | "grn" | "bills" | "payments";
@@ -17,6 +18,8 @@ export default function ProcurementEnhanced() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
+
   // Supplier form
   const [addingSupplier, setAddingSupplier] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
@@ -162,14 +165,18 @@ export default function ProcurementEnhanced() {
     }
   };
 
-  const handleDeleteSupplier = async (id: number) => {
-    if (!confirm("Delete this supplier?")) return;
-    try {
-      await api.procurement.suppliers.delete(id);
-      await loadSuppliers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
-    }
+  const handleDeleteSupplier = (id: number) => {
+    setPendingConfirm({
+      message: "Delete this supplier? This cannot be undone.",
+      action: async () => {
+        try {
+          await api.procurement.suppliers.delete(id);
+          await loadSuppliers();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Delete failed");
+        }
+      },
+    });
   };
 
   const handleCreatePO = async () => {
@@ -1177,6 +1184,14 @@ export default function ProcurementEnhanced() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Supplier"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

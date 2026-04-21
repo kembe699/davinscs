@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { api, ApiCurrency, ApiProduct, PriceList, PriceListItem } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -37,6 +38,7 @@ export default function PriceLists() {
   const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   const itemMap = useMemo(() => {
     const m = new Map<number, PriceListItem>();
@@ -147,20 +149,24 @@ export default function PriceLists() {
     }
   };
 
-  const deleteScheme = async (id: number) => {
-    if (!confirm("Delete this scheme and all its price overrides?")) return;
-    setSaving(true);
-    setError("");
-    try {
-      await api.priceLists.delete(id);
-      setPriceLists((prev) => prev.filter((p) => p.id !== id));
-      if (selectedSchemeId === id) { setSelectedSchemeId(null); setItems([]); }
-      flash("Scheme deleted");
-    } catch (e: any) {
-      setError(e?.message || "Failed to delete");
-    } finally {
-      setSaving(false);
-    }
+  const deleteScheme = (id: number) => {
+    setPendingConfirm({
+      message: "Delete this scheme and all its price overrides? This cannot be undone.",
+      action: async () => {
+        setSaving(true);
+        setError("");
+        try {
+          await api.priceLists.delete(id);
+          setPriceLists((prev) => prev.filter((p) => p.id !== id));
+          if (selectedSchemeId === id) { setSelectedSchemeId(null); setItems([]); }
+          flash("Scheme deleted");
+        } catch (e: any) {
+          setError(e?.message || "Failed to delete");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   // ── Price overrides ──────────────────────────────────────────────────────
@@ -670,6 +676,14 @@ export default function PriceLists() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Scheme"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }

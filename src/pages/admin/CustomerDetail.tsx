@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -41,6 +42,7 @@ export default function CustomerDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -82,14 +84,18 @@ export default function CustomerDetail() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm(`Delete customer "${data?.customer?.name}"? This cannot be undone.`)) return;
-    try {
-      await api.customers.delete(Number(id));
-      navigate("/admin/customers");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
-    }
+  const handleDelete = () => {
+    setPendingConfirm({
+      message: `Delete customer "${data?.customer?.name}"? This cannot be undone.`,
+      action: async () => {
+        try {
+          await api.customers.delete(Number(id));
+          navigate("/admin/customers");
+        } catch (err) {
+          toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
+        }
+      },
+    });
   };
 
   const createQuotation = () => {
@@ -383,6 +389,14 @@ export default function CustomerDetail() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title="Delete Customer"
+        message={pendingConfirm?.message || ""}
+        confirmLabel="Delete"
+        onConfirm={() => pendingConfirm?.action()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </AdminLayout>
   );
 }
