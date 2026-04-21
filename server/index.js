@@ -39,6 +39,7 @@ import rolesRoutes from "./routes/roles.js";
 import auditLogsRoutes from "./routes/audit-logs.js";
 import customersRoutes from "./routes/customers.js";
 import quotationsRoutes, { migrateQuotations } from "./routes/quotations.js";
+import setupRoutes from "./routes/setup.js";
 
 dotenv.config();
 
@@ -102,6 +103,7 @@ app.use("/api/roles", rolesRoutes);
 app.use("/api/audit-logs", auditLogsRoutes);
 app.use("/api/customers", customersRoutes);
 app.use("/api/quotations", quotationsRoutes);
+app.use("/api/setup", setupRoutes);
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
@@ -796,6 +798,7 @@ async function migrate() {
     );
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id);
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_address TEXT;
     ALTER TABLE invoices ADD COLUMN IF NOT EXISTS balance INTEGER DEFAULT 0;

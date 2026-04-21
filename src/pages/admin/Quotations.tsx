@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -31,6 +32,7 @@ function calcTotals(items: ReturnType<typeof emptyItem>[], discount: number) {
 }
 
 export default function Quotations() {
+  const { toast } = useToast();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
 
@@ -131,7 +133,7 @@ export default function Quotations() {
       setShowForm(true);
       setError("");
     } catch {
-      alert("Failed to load quotation");
+      toast("Failed to load quotation", "error", "Error");
     }
   };
 
@@ -161,7 +163,7 @@ export default function Quotations() {
       await api.quotations.delete(id);
       setQuotations(qs => qs.filter(q => q.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
     }
   };
 
@@ -171,7 +173,7 @@ export default function Quotations() {
       setQuotations(qs => qs.map(q => q.id === id ? { ...q, status: updated.status } : q));
       if (detail?.id === id) setDetail((d: any) => ({ ...d, status: updated.status }));
     } catch {
-      alert("Failed to update status");
+      toast("Failed to update status", "error", "Error");
     }
   };
 
@@ -182,7 +184,7 @@ export default function Quotations() {
       const data = await api.quotations.get(id);
       setDetail(data);
     } catch {
-      alert("Failed to load quotation");
+      toast("Failed to load quotation", "error", "Error");
     } finally {
       setDetailLoading(false);
     }
@@ -193,11 +195,11 @@ export default function Quotations() {
     setConverting(true);
     try {
       const result = await api.quotations.convert(id);
-      alert(`Invoice created: INV-${String(result.invoice_id).padStart(4, "0")} — find it under Invoices.`);
+      toast(`Invoice created: INV-${String(result.invoice_id).padStart(4, "0")} — find it under Invoices.`, "success", "Invoice Created");
       setDetail(null);
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Convert failed");
+      toast(err instanceof Error ? err.message : "Convert failed", "error", "Error");
     } finally {
       setConverting(false);
     }

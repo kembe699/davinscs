@@ -3,14 +3,15 @@ import { Link } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
-import heroCamera from "@/assets/hero-camera.jpg";
 import Navbar from "@/components/Navbar";
+import { useLayout } from "@/contexts/LayoutContext";
 import MarqueeBanner from "@/components/MarqueeBanner";
 import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 
 export default function LayoutMagazine() {
   const { baseCurrency } = useCurrency();
+  const { storefrontSettings: sf } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   useEffect(() => {
@@ -27,31 +28,36 @@ export default function LayoutMagazine() {
         <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-2 min-h-[85vh]">
           {/* Left — big image */}
           <div className="relative overflow-hidden">
-            <img src={heroCamera} alt="hero" className="w-full h-full object-cover min-h-[50vh] lg:min-h-[85vh]" />
+            <img src={sf.hero_image || "/placeholder.svg"} alt="hero" className="w-full h-full object-cover min-h-[50vh] lg:min-h-[85vh]" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/60" />
-            <div className="absolute bottom-8 left-8">
-              <span className="font-mono-tech text-[10px] text-primary tracking-widest bg-background/80 px-3 py-1.5">
-                ISSUE_2026 / PREMIUM GEAR
-              </span>
-            </div>
+            {sf.hero_badge_3 && (
+              <div className="absolute bottom-8 left-8">
+                <span className="font-mono-tech text-[10px] text-primary tracking-widest bg-background/80 px-3 py-1.5">
+                  {sf.hero_badge_3}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right — editorial stack */}
           <div className="px-8 lg:px-12 py-12 flex flex-col justify-between border-l border-border-subtle">
             <div>
-              <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-6">
-                The Creator's Source
-              </p>
+              {sf.hero_tagline && (
+                <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-6">
+                  {sf.hero_tagline}
+                </p>
+              )}
               <h1 className="text-5xl lg:text-7xl font-bold leading-[0.85] tracking-tighter text-foreground mb-6">
-                PROFESSIONAL
-                <br />
-                <span className="text-primary">MEDIA</span>
-                <br />
-                GEAR
+                {sf.hero_heading_1 || ""}
+                {sf.hero_heading_2 && (
+                  <><br /><span className="text-primary">{sf.hero_heading_2}</span></>
+                )}
               </h1>
-              <p className="text-muted-foreground text-sm leading-relaxed max-w-[40ch] mb-8">
-                Every tool a filmmaker, podcaster, or creator needs — curated, tested, and ready to ship.
-              </p>
+              {sf.hero_subtext && (
+                <p className="text-muted-foreground text-sm leading-relaxed max-w-[40ch] mb-8">
+                  {sf.hero_subtext}
+                </p>
+              )}
               <a href="#shop" className="inline-flex items-center gap-4 h-14 px-8 bg-primary text-background font-bold uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors">
                 Browse Catalogue →
               </a>

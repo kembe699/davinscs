@@ -14,6 +14,30 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* ── Admin theme tokens ─────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --admin-bg: #1a1a1a;
+  --admin-surface: #2d2d2d;
+  --admin-border: #404040;
+  --admin-text: #ffffff;
+  --admin-text-secondary: #b0b0b0;
+  --admin-accent: #ffffff;
+  --admin-success: #4caf50;
+  --admin-danger: #f44336;
+}
+
+[data-theme="light"] {
+  --admin-bg: #f0f2f5;
+  --admin-surface: #ffffff;
+  --admin-border: #d1d5db;
+  --admin-text: #111827;
+  --admin-text-secondary: #6b7280;
+  --admin-accent: #111827;
+  --admin-success: #16a34a;
+  --admin-danger: #dc2626;
+}
+
 @layer base {
   :root {
     --background: 0 0% 4%;
@@ -65,11 +89,36 @@
     --brand-mid: #008B8B;
     --brand-end: #32CD32;
   }
+
+  [data-theme="light"] {
+    --background: 0 0% 97%;
+    --foreground: 220 14% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 10%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 14% 10%;
+    --muted: 220 14% 90%;
+    --muted-foreground: 220 8% 42%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --sidebar-background: 220 14% 95%;
+    --sidebar-foreground: 220 14% 10%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-accent-foreground: 220 14% 10%;
+    --sidebar-border: 220 13% 88%;
+    --border-subtle: 220 13% 88%;
+    --chassis: 0 0% 97%;
+    --grip: 0 0% 100%;
+    --metal: 220 14% 10%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
   }
 
   body {

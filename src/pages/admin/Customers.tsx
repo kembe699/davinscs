@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
@@ -12,6 +13,7 @@ const emptyForm = {
 };
 
 export default function Customers() {
+  const { toast } = useToast();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
   const navigate = useNavigate();
@@ -77,7 +79,7 @@ export default function Customers() {
       await api.customers.delete(id);
       setCustomers(cs => cs.filter(c => c.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
     }
   };
 

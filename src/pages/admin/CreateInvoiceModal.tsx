@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Search, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useToast } from "@/contexts/ToastContext";
 function fmt(n: number | string, sym = "UGX") {
   return `${sym} ${Math.round(parseFloat(String(n))).toLocaleString("en-US")}`;
 }
@@ -10,6 +11,7 @@ type Props = { onClose: () => void; onCreated: () => void };
 
 export default function CreateInvoiceModal({ onClose, onCreated }: Props) {
   const { baseCurrency } = useCurrency();
+  const { toast } = useToast();
   const sym = baseCurrency?.symbol || "UGX";
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -38,8 +40,8 @@ export default function CreateInvoiceModal({ onClose, onCreated }: Props) {
   const sub=items.reduce((s,it)=>s+it.quantity*it.unit_price-it.discount_amount,0);
   const tot=sub-form.discount_amount;
   const handleSave = async () => {
-    if (!form.customer_name.trim()) { alert('Customer name is required'); return; }
-    if (!items.length) { alert('Add at least one item'); return; }
+    if (!form.customer_name.trim()) { toast('Customer name is required', 'warning', 'Required'); return; }
+    if (!items.length) { toast('Add at least one item', 'warning', 'Required'); return; }
     setSaving(true);
     try {
       await api.invoices.create({
@@ -54,7 +56,7 @@ export default function CreateInvoiceModal({ onClose, onCreated }: Props) {
         items,
       });
       onCreated();
-    } catch(e:any) { alert(e.message||'Failed'); }
+    } catch(e:any) { toast(e.message||'Failed', 'error', 'Error'); }
     finally { setSaving(false); }
   };
   const filtered = q.trim() ? products.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())||(p.barcode||'').includes(q)).slice(0,12) : [];

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import heroCamera from "@/assets/hero-camera.jpg";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -8,7 +7,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 
 const HeroSection = () => {
   const { baseCurrency } = useCurrency();
-  const { storefrontSettings: sf } = useLayout();
+  const { storefrontSettings: sf, companyName } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   useEffect(() => {
@@ -26,27 +25,27 @@ const HeroSection = () => {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-2 py-1 border border-primary/30 bg-primary/5">
               <span className="font-mono-tech text-[10px] text-primary font-bold uppercase tracking-widest">
-                {sf.hero_tagline || "Your Vision / Our Gear"}
+                {sf.hero_tagline || ""}
               </span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-light leading-[0.9] tracking-tighter text-foreground">
-              {sf.hero_heading_1 || "CAPTURE"}{" "}
+              {sf.hero_heading_1 || ""}{" "}
               <br />
-              <span className="font-bold text-primary">{sf.hero_heading_2 || "EVERYTHING"}</span>
+              <span className="font-bold text-primary">{sf.hero_heading_2 || ""}</span>
             </h1>
             <p className="text-muted-foreground max-w-[30ch] text-sm leading-relaxed">
-              {sf.hero_subtext || "Professional cameras, podcast setups, teleprompters, microphones, and studio lighting — all under one roof."}
+              {sf.hero_subtext || ""}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 border-t border-border-subtle pt-8">
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Brands</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_brands_count || "50+"}</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_brands_count || ""}</p>
             </div>
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Products</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_products_count || "2,400+"}</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_products_count || ""}</p>
             </div>
           </div>
 
@@ -66,7 +65,7 @@ const HeroSection = () => {
             <div className="absolute bottom-4 left-4 size-8 border-b border-l border-primary/40 z-10" />
             <div className="absolute bottom-4 right-4 size-8 border-b border-r border-primary/40 z-10" />
             <img
-              src={sf.hero_image || heroCamera}
+              src={sf.hero_image || "/placeholder.svg"}
               alt="Professional cinema camera with orange accents"
               className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
               width={1000}
@@ -75,9 +74,7 @@ const HeroSection = () => {
             <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-chassis to-transparent">
               <div className="flex justify-between items-end">
                 <div className="font-mono-tech text-[10px] text-muted-foreground">
-                  DAVIN'S CAMERA STORE
-                  <br />
-                  EST. 2018
+                  {companyName || ""}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-primary" />
@@ -135,13 +132,6 @@ const HeroSection = () => {
               {sf.hero_badge_1 && <p>{sf.hero_badge_1}</p>}
               {sf.hero_badge_2 && <p>{sf.hero_badge_2}</p>}
               {sf.hero_badge_3 && <p>{sf.hero_badge_3}</p>}
-              {!sf.hero_badge_1 && !sf.hero_badge_2 && !sf.hero_badge_3 && (
-                <>
-                  <p>[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde &amp; more.</p>
-                  <p>[SHIP] Same-day shipping on in-stock items.</p>
-                  <p>[SUPPORT] Expert advice from working professionals.</p>
-                </>
-              )}
             </div>
           </div>
         </div>

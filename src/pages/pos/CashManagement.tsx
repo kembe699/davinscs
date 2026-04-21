@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { ArrowLeft, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -7,6 +8,7 @@ import { formatCurrencySync } from "@/utils/currency";
 import { CashDrawerSession } from "@/lib/api";
 
 export default function CashManagement() {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const [currentSession, setCurrentSession] = useState<CashDrawerSession | null>(null);
@@ -51,7 +53,7 @@ export default function CashManagement() {
       setOpeningCash(0);
       await loadData();
     } catch (err: any) {
-      alert(err.message || "Failed to open session");
+      toast(err.message || "Failed to open session", "error", "Error");
     } finally {
       setSessionLoading(false);
     }
@@ -65,7 +67,7 @@ export default function CashManagement() {
       setClosingCash(0);
       await loadData();
     } catch (err: any) {
-      alert(err.message || "Failed to close session");
+      toast(err.message || "Failed to close session", "error", "Error");
     } finally {
       setSessionLoading(false);
     }
@@ -79,7 +81,7 @@ export default function CashManagement() {
       setReason("");
       await loadData();
     } catch (err: any) {
-      alert(err.message || "Failed to record cash in");
+      toast(err.message || "Failed to record cash in", "error", "Error");
     }
   };
 
@@ -91,7 +93,7 @@ export default function CashManagement() {
       setReason("");
       await loadData();
     } catch (err: any) {
-      alert(err.message || "Failed to record cash out");
+      toast(err.message || "Failed to record cash out", "error", "Error");
     }
   };
 

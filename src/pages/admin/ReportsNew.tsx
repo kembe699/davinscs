@@ -6,6 +6,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { exportToExcel, exportToPDF, printReport, CompanyInfo } from "@/utils/reportExports";
 import ReportTable from "@/components/ReportTable";
+import { useToast } from "@/contexts/ToastContext";
 
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics" | "invoices";
 type ReportType = 
@@ -18,6 +19,7 @@ type ReportType =
 type DatePreset = "today" | "yesterday" | "this-week" | "last-week" | "this-month" | "last-month" | "this-year" | "custom";
 
 export default function ReportsNew() {
+  const { toast } = useToast();
   const { baseCurrency } = useCurrency();
   const [selectedReport, setSelectedReport] = useState<ReportType>("daily-sales");
   const [expandedCategories, setExpandedCategories] = useState<Set<ReportCategory>>(new Set(["sales"]));
@@ -444,7 +446,7 @@ export default function ReportsNew() {
 
   const handlePrint = () => {
     if (!reportData) {
-      alert("Please generate a report first");
+      toast("Please generate a report first", "warning", "No Report");
       return;
     }
 
@@ -460,7 +462,7 @@ export default function ReportsNew() {
 
   const handleExportExcel = () => {
     if (!reportData) {
-      alert("Please generate a report first");
+      toast("Please generate a report first", "warning", "No Report");
       return;
     }
 
@@ -475,7 +477,7 @@ export default function ReportsNew() {
 
   const handleExportPDF = () => {
     if (!reportData) {
-      alert("Please generate a report first");
+      toast("Please generate a report first", "warning", "No Report");
       return;
     }
 

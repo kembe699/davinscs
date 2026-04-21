@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
@@ -27,6 +28,7 @@ const STATUS_STYLE: Record<string, string> = {
 type Tab = "orders" | "pos" | "invoices";
 
 export default function CustomerDetail() {
+  const { toast } = useToast();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
@@ -86,7 +88,7 @@ export default function CustomerDetail() {
       await api.customers.delete(Number(id));
       navigate("/admin/customers");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
     }
   };
 

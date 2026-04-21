@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, TaxRate } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 
 export default function TaxRates() {
+  const { toast } = useToast();
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -40,7 +42,7 @@ export default function TaxRates() {
       setFormData({ name: "", rate: 0, is_active: true, is_default: false });
       loadTaxRates();
     } catch (err: any) {
-      alert(err.message || "Failed to save tax rate");
+      toast(err.message || "Failed to save tax rate", "error", "Error");
     }
   };
 
@@ -61,7 +63,7 @@ export default function TaxRates() {
       await api.taxRates.delete(id);
       loadTaxRates();
     } catch (err: any) {
-      alert(err.message || "Failed to delete tax rate");
+      toast(err.message || "Failed to delete tax rate", "error", "Error");
     }
   };
 

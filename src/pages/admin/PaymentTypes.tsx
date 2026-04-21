@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { api, PaymentType } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 
 export default function PaymentTypes() {
+  const { toast } = useToast();
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -40,7 +42,7 @@ export default function PaymentTypes() {
       setFormData({ name: "", code: "", is_active: true, sort_order: 0 });
       loadPaymentTypes();
     } catch (err: any) {
-      alert(err.message || "Failed to save payment type");
+      toast(err.message || "Failed to save payment type", "error", "Error");
     }
   };
 
@@ -61,7 +63,7 @@ export default function PaymentTypes() {
       await api.paymentTypes.delete(id);
       loadPaymentTypes();
     } catch (err: any) {
-      alert(err.message || "Failed to delete payment type");
+      toast(err.message || "Failed to delete payment type", "error", "Error");
     }
   };
 

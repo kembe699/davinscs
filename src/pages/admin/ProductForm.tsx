@@ -9,9 +9,9 @@ type Spec = { label: string; value: string };
 
 const empty = {
   slug: "", name: "", brand: "", price: 0, cost_price: 0, tag: "", description: "",
-  specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "cameras",
+  specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "",
   barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: 0, reorder_level: 0,
-  expense_account_id: 9,
+  expense_account_id: 0,
 };
 
 type Account = { id: number; code: string; name: string; account_type: string };
@@ -31,7 +31,12 @@ export default function ProductForm() {
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   useEffect(() => {
-    api.categories.list().then(setCategories).catch(() => {});
+    api.categories.list().then((cats) => {
+      setCategories(cats);
+      if (!isEdit && cats.length > 0) {
+        setForm((f) => f.category === "" ? { ...f, category: cats[0].slug } : f);
+      }
+    }).catch(() => {});
     fetch("/api/accounting/accounts", {
       headers: { Authorization: `Bearer ${localStorage.getItem("cms_token")}` },
     })
@@ -62,7 +67,7 @@ export default function ProductForm() {
           expiry_date: expiryDate,
           product_type: (p as any).product_type || "product",
           quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
-          expense_account_id: (p as any).expense_account_id || 9,
+          expense_account_id: (p as any).expense_account_id || 0,
         });
         if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
@@ -188,15 +193,15 @@ export default function ProductForm() {
                       required value={form.category}
                       onChange={(e) => set("category", e.target.value)}
                       className="field-input appearance-none"
+                      disabled={categories.length === 0}
                     >
-                      {categories.length > 0
-                        ? categories.map((c) => (
-                            <option key={c.id} value={c.slug}>{c.name}</option>
-                          ))
-                        : ["cameras","lenses","microphones","teleprompters","lighting"].map((c) => (
-                            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                          ))
-                      }
+                      {categories.length === 0 ? (
+                        <option value="">No categories — add one first</option>
+                      ) : (
+                        categories.map((c) => (
+                          <option key={c.id} value={c.slug}>{c.name}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
@@ -326,20 +331,22 @@ export default function ProductForm() {
                       className="field-input"
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="field-label">Expense Account (COGS)</label>
-                    <select
-                      value={(form as any).expense_account_id}
-                      onChange={(e) => set("expense_account_id", Number(e.target.value))}
-                      className="field-input appearance-none"
-                    >
-                      {accounts.length === 0 && <option value={9}>Cost of Goods Sold</option>}
-                      {accounts.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1">Expense account debited when this product is sold</p>
-                  </div>
+                  {accounts.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <label className="field-label">Expense Account (COGS)</label>
+                      <select
+                        value={(form as any).expense_account_id || ""}
+                        onChange={(e) => set("expense_account_id", Number(e.target.value) || 0)}
+                        className="field-input appearance-none"
+                      >
+                        <option value="">— None —</option>
+                        {accounts.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">Expense account debited when this product is sold</p>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>

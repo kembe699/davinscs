@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { Search, FileText, Plus, X, Download, Printer, CheckCircle, Clock, AlertCircle, Ban, ChevronRight, DollarSign, Trash2 } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
@@ -37,6 +38,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function Invoices() {
+  const { toast } = useToast();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
 
@@ -113,7 +115,7 @@ export default function Invoices() {
       setDetail(refreshed);
       setInvoices(prev => prev.map(i => i.id === refreshed.id ? { ...i, ...refreshed } : i));
     } catch (err: any) {
-      alert(err.message || "Failed to record payment");
+      toast(err.message || "Failed to record payment", "error", "Payment Failed");
     } finally {
       setPayLoading(false);
     }

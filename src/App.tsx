@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { ToastProvider } from "./contexts/ToastContext.tsx";
+import ToastContainer from "./components/ToastContainer.tsx";
+import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.tsx";
 import { LayoutProvider } from "./contexts/LayoutContext.tsx";
+import { useState, useEffect } from "react";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CamerasPage from "./pages/categories/Cameras.tsx";
@@ -50,6 +52,7 @@ import AuditTrail from "./pages/admin/AuditTrail.tsx";
 import Customers from "./pages/admin/Customers.tsx";
 import CustomerDetail from "./pages/admin/CustomerDetail.tsx";
 import Quotations from "./pages/admin/Quotations.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 
 const queryClient = new QueryClient();
 
@@ -58,15 +61,62 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/admin/login" replace />;
 }
 
+function SetupGuard({ children }: { children: React.ReactNode }) {
+  const [checking, setChecking] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    // Re-fetch when: initial load (checking=true) OR setup is still pending.
+    // Once confirmed done (needsSetup=false) skip all subsequent nav checks.
+    if (!checking && !needsSetup) return;
+    setChecking(true);
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.needs_setup) {
+          // Clear any stale auth token — it references a deleted user
+          localStorage.removeItem("cms_token");
+          localStorage.removeItem("cms_user");
+        }
+        setNeedsSetup(d.needs_setup);
+      })
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (needsSetup && location.pathname !== "/setup") {
+    return <Navigate to="/setup" replace />;
+  }
+
+  if (!needsSetup && location.pathname === "/setup") {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
+      <ThemeProvider>
+      <ToastProvider>
+        <ToastContainer />
       <AuthProvider>
         <LayoutProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <SetupGuard>
           <Routes>
+            <Route path="/setup" element={<Onboarding />} />
             <Route path="/" element={<Index />} />
             {/* Category listing pages */}
             <Route path="/cameras" element={<CamerasPage />} />
@@ -127,9 +177,12 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </SetupGuard>
         </BrowserRouter>
         </LayoutProvider>
       </AuthProvider>
+      </ToastProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

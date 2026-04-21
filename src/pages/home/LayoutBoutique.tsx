@@ -3,43 +3,61 @@ import { Link } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
-import heroCamera from "@/assets/hero-camera.jpg";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
+import { useLayout } from "@/contexts/LayoutContext";
 
 export default function LayoutBoutique() {
   const { baseCurrency } = useCurrency();
+  const { storefrontSettings: sf, companyName } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
   useEffect(() => { api.products.list(undefined, true).then(p => setFeatured(p.slice(0,6))).catch(()=>{}); }, []);
+
+  const stats: [string, string][] = [
+    ...(sf.hero_brands_count ? [[sf.hero_brands_count, "Brands"] as [string,string]] : []),
+    ...(sf.hero_products_count ? [[sf.hero_products_count, "Products"] as [string,string]] : []),
+    ...(sf.about_stat_3_value ? [[sf.about_stat_3_value, sf.about_stat_3_label || "Rating"] as [string,string]] : []),
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <section className="max-w-[1440px] mx-auto px-6 lg:px-8 py-20 lg:py-32 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <div>
-          <div className="flex items-center gap-3 mb-8"><div className="h-px w-10 bg-primary" /><p className="font-mono-tech text-[10px] text-primary tracking-[0.5em] uppercase">Curated for Professionals</p></div>
-          <h1 className="text-5xl lg:text-7xl font-light tracking-tight text-foreground leading-[1.05] mb-8">Where Vision<br />Meets <span className="italic font-semibold">Precision</span></h1>
-          <p className="text-muted-foreground leading-relaxed max-w-[42ch] mb-10">Professional media equipment for filmmakers, broadcasters, and creators who demand the best.</p>
+          {sf.hero_tagline && (
+            <div className="flex items-center gap-3 mb-8"><div className="h-px w-10 bg-primary" /><p className="font-mono-tech text-[10px] text-primary tracking-[0.5em] uppercase">{sf.hero_tagline}</p></div>
+          )}
+          <h1 className="text-5xl lg:text-7xl font-light tracking-tight text-foreground leading-[1.05] mb-8">
+            {sf.hero_heading_1 || ""}<br /><span className="italic font-semibold">{sf.hero_heading_2 || ""}</span>
+          </h1>
+          {sf.hero_subtext && <p className="text-muted-foreground leading-relaxed max-w-[42ch] mb-10">{sf.hero_subtext}</p>}
           <div className="flex items-center gap-6">
             <a href="#shop" className="h-14 px-10 bg-foreground text-background font-semibold uppercase tracking-widest text-sm flex items-center hover:bg-primary transition-colors">Explore Collection</a>
             <Link to="/contact" className="text-sm font-semibold hover:text-primary transition-colors uppercase tracking-widest">Contact →</Link>
           </div>
         </div>
         <div className="relative">
-          <div className="aspect-[4/5] overflow-hidden border border-border-subtle"><img src={heroCamera} alt="hero" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" /></div>
-          <div className="absolute -bottom-6 -left-6 bg-background border border-border-subtle p-5 hidden lg:block">
-            <p className="font-mono-tech text-[9px] text-primary tracking-widest uppercase mb-1">Est. 2018</p>
-            <p className="text-sm font-semibold">Trusted by 10,000+ creators</p>
+          <div className="aspect-[4/5] overflow-hidden border border-border-subtle">
+            <img src={sf.hero_image || "/placeholder.svg"} alt="hero" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
           </div>
+          {(companyName || sf.hero_badge_1) && (
+            <div className="absolute -bottom-6 -left-6 bg-background border border-border-subtle p-5 hidden lg:block">
+              {companyName && <p className="font-mono-tech text-[9px] text-primary tracking-widest uppercase mb-1">{companyName}</p>}
+              {sf.hero_badge_1 && <p className="text-sm font-semibold">{sf.hero_badge_1}</p>}
+            </div>
+          )}
         </div>
       </section>
-      <div className="border-t border-border-subtle">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[["50+","Brands"],["2,400+","Products"],["5 ★","Rating"],["Same Day","Shipping"]].map(([v,l]) => (
-            <div key={l}><p className="text-2xl font-semibold mb-1">{v}</p><p className="font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">{l}</p></div>
-          ))}
+      {stats.length > 0 && (
+        <div className="border-t border-border-subtle">
+          <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {stats.map(([v, l]) => (
+              <div key={l}><p className="text-2xl font-semibold mb-1">{v}</p><p className="font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">{l}</p></div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       {featured.length > 0 && (
         <section className="border-t border-border-subtle bg-chassis">
           <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-16 lg:py-24">

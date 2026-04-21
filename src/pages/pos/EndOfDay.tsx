@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 import {
   ArrowLeft, Printer, RefreshCw, Lock, AlertCircle,
@@ -10,6 +11,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 
 export default function EndOfDay() {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
@@ -59,7 +61,7 @@ export default function EndOfDay() {
   };
 
   const handleCloseShift = async () => {
-    if (!closingCash.trim()) { alert("Enter the closing cash amount."); return; }
+    if (!closingCash.trim()) { toast("Enter the closing cash amount.", "warning", "Required"); return; }
     setClosing(true);
     try {
       const result = await api.cashDrawer.close(Number(closingCash), closeNotes);
@@ -68,7 +70,7 @@ export default function EndOfDay() {
       setShowCloseModal(false);
       await loadAll();
     } catch (err: any) {
-      alert(err.message || "Failed to close shift.");
+      toast(err.message || "Failed to close shift.", "error", "Error");
     } finally {
       setClosing(false);
     }

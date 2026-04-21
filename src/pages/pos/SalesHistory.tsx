@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, RefreshCw, Printer, Trash2, RotateCcw, CheckCircle } from "lucide-react";
+import { useToast } from "@/contexts/ToastContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -8,6 +9,7 @@ import { printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt } from "@/utils/receiptUtils";
 
 export default function SalesHistory() {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const [sales, setSales] = useState<any[]>([]);
@@ -123,7 +125,7 @@ export default function SalesHistory() {
   };
 
   const handlePrint = () => {
-    if (!selectedSale) { alert("Please select a sale to print"); return; }
+    if (!selectedSale) { toast("Please select a sale to print", "warning", "Nothing Selected"); return; }
     const items = (saleItems || []).map((item: any) => ({
       name:       item.product_name || '',
       quantity:   item.quantity,
@@ -155,8 +157,8 @@ export default function SalesHistory() {
 
   const openRefundModal = () => {
     if (!selectedSale) return;
-    if (selectedSale.sale_type === 'refund') { alert("This record is already a refund."); return; }
-    if (selectedSale.voided)                 { alert("This sale has been voided."); return; }
+    if (selectedSale.sale_type === 'refund') { toast("This record is already a refund.", "info", "Info"); return; }
+    if (selectedSale.voided)                 { toast("This sale has been voided.", "info", "Info"); return; }
     // Initialise each item as unchecked, qty = original quantity
     const init: Record<number, { checked: boolean; qty: number }> = {};
     saleItems.forEach(item => {
@@ -183,7 +185,7 @@ export default function SalesHistory() {
     const selected = saleItems
       .filter(item => refundItems[item.product_id]?.checked)
       .map(item => ({ product_id: item.product_id, quantity: refundItems[item.product_id].qty }));
-    if (selected.length === 0) { alert("Select at least one item to refund."); return; }
+    if (selected.length === 0) { toast("Select at least one item to refund.", "warning", "Required"); return; }
     setRefundProcessing(true);
     try {
       const res = await api.pos.refundSale(selectedSale.id, selected, refundMethod, refundReason);
@@ -199,18 +201,18 @@ export default function SalesHistory() {
 
   const handleDelete = async () => {
     if (!selectedSale) {
-      alert("Please select a sale to delete");
+      toast("Please select a sale to delete", "warning", "Nothing Selected");
       return;
     }
     if (!confirm(`Are you sure you want to delete sale ${selectedSale.sale_number}? This action cannot be undone.`)) return;
     
     try {
       await api.pos.voidSale(selectedSale.id);
-      alert("Sale deleted successfully");
+      toast("Sale deleted successfully", "success", "Deleted");
       loadData();
       setSelectedSale(null);
     } catch (err: any) {
-      alert(err.message || "Failed to delete sale");
+      toast(err.message || "Failed to delete sale", "error", "Error");
     }
   };
 

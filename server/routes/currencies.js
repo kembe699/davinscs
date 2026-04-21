@@ -154,6 +154,11 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error(err);
+    if (err.code === "23503") {
+      return res.status(409).json({
+        error: "Cannot delete this currency — it is still referenced by existing sales or transactions. Archive it instead.",
+      });
+    }
     res.status(500).json({ error: "Server error" });
   }
 });

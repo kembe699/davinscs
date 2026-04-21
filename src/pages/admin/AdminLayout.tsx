@@ -2,11 +2,12 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart,
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
   ShoppingBag, Receipt, Shield, TrendingUp, Activity, UserCheck, ClipboardList,
-  ChevronDown, ChevronRight, BarChart2, Wallet,
+  ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun,
 } from "lucide-react";
 
 type NavItem = { label: string; href: string; icon: any; permission: string };
@@ -93,6 +94,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
 
   const handleLogout = () => { logout(); navigate("/admin/login"); };
+
+  function ThemeToggle() {
+    const { theme, setTheme } = useTheme();
+    return (
+      <button
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        className="p-1.5 border border-admin-border text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors"
+      >
+        {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+      </button>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-admin-bg flex">
@@ -191,12 +205,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
             {user?.email}
           </p>
-          <button onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={handleLogout}
+              className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 

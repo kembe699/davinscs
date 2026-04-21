@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
@@ -8,6 +9,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 
 export default function Products() {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -54,7 +56,7 @@ export default function Products() {
       setSelectedProduct(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Delete failed";
-      alert(errorMessage);
+      toast(errorMessage, "error", "Delete Failed");
     } finally {
       setConfirmId(null);
     }

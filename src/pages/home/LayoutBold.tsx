@@ -3,14 +3,15 @@ import { Link } from "react-router-dom";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
-import heroCamera from "@/assets/hero-camera.jpg";
 import Navbar from "@/components/Navbar";
+import { useLayout } from "@/contexts/LayoutContext";
 import MarqueeBanner from "@/components/MarqueeBanner";
 import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 
 export default function LayoutBold() {
   const { baseCurrency } = useCurrency();
+  const { storefrontSettings: sf } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
   useEffect(() => { api.products.list(undefined, true).then(p => setFeatured(p.slice(0,3))).catch(()=>{}); }, []);
 
@@ -26,13 +27,14 @@ export default function LayoutBold() {
             <div className="relative">
               <span className="absolute -top-4 -left-2 font-mono-tech text-[120px] lg:text-[200px] font-black text-primary/5 leading-none select-none pointer-events-none">PRO</span>
               <div className="relative">
-                <p className="font-mono-tech text-[10px] text-primary tracking-[0.5em] uppercase mb-4">For Creators. By Creators.</p>
+                {sf.hero_tagline && <p className="font-mono-tech text-[10px] text-primary tracking-[0.5em] uppercase mb-4">{sf.hero_tagline}</p>}
                 <h1 className="text-7xl lg:text-9xl font-black tracking-tighter leading-none text-foreground mb-6">
-                  THE<br />GEAR<br /><span className="text-primary">YOU</span><br />NEED
+                  {sf.hero_heading_1 && <>{sf.hero_heading_1}<br /></>}
+                  {sf.hero_heading_2 && <span className="text-primary">{sf.hero_heading_2}</span>}
                 </h1>
-                <p className="text-muted-foreground text-sm leading-relaxed max-w-[36ch] mb-10">
-                  50+ professional brands. 2,400+ products. Same-day shipping. Expert advice from working filmmakers.
-                </p>
+                {sf.hero_subtext && (
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-[36ch] mb-10">{sf.hero_subtext}</p>
+                )}
                 <a href="#shop" className="inline-flex items-center gap-4 h-16 px-10 bg-primary text-background font-black uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors">
                   SHOP NOW →
                 </a>

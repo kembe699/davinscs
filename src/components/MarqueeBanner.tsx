@@ -1,21 +1,13 @@
 import { useLayout } from "@/contexts/LayoutContext";
 
-const DEFAULT_ITEMS = [
-  "Free Shipping Over $500",
-  "Authorized Dealer",
-  "Expert Support",
-  "Same-Day Shipping",
-  "30-Day Returns",
-  "Price Match Guarantee",
-];
-
 const MarqueeBanner = () => {
   const { storefrontSettings: sf } = useLayout();
 
-  const items = sf.ticker_items?.length ? sf.ticker_items : DEFAULT_ITEMS;
+  const items = sf.ticker_items?.length ? sf.ticker_items : [];
+  if (items.length === 0) return null;
+
   const bg = sf.ticker_bg || "#ffffff";
   const textColor = sf.ticker_text_color || "#000000";
-
   const displayed = [...items, ...items];
 
   return (

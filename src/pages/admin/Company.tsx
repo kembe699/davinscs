@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 import { Upload, Save, Plus, Trash2 } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import { api, StorefrontSettings } from "@/lib/api";
@@ -6,30 +9,13 @@ import LayoutPicker from "@/components/admin/LayoutPicker";
 import { useLayout } from "@/contexts/LayoutContext";
 
 const DEFAULT_STOREFRONT: StorefrontSettings = {
-  hero_tagline: "Your Vision / Our Gear",
-  hero_heading_1: "CAPTURE",
-  hero_heading_2: "EVERYTHING",
-  hero_subtext: "Professional cameras, podcast setups, teleprompters, microphones, and studio lighting — all under one roof.",
-  hero_brands_count: "50+",
-  hero_products_count: "2,400+",
-  hero_badge_1: "[AUTH] Authorized dealer for Sony, Canon, Blackmagic, Røde & more.",
-  hero_badge_2: "[SHIP] Same-day shipping on in-stock items.",
-  hero_badge_3: "[SUPPORT] Expert advice from working professionals.",
-  about_tagline: "About Davin's",
-  about_heading: "Built for the creator who demands more.",
-  about_body: "We don't just sell equipment. We curate the tools that bridge your creative vision and professional output. Every product is hand-selected by working filmmakers, podcasters, and content creators.",
-  about_stat_1_value: "7+",
-  about_stat_1_label: "Years",
-  about_stat_2_value: "12K+",
-  about_stat_2_label: "Customers",
-  about_stat_3_value: "4.9★",
-  about_stat_3_label: "Rating",
-  ticker_items: ["30-Day Returns", "Price Match Guarantee", "Free Shipping Over $500", "Authorized Dealer", "Expert Support", "Same-Day Shipping"],
   ticker_bg: "#ffffff",
   ticker_text_color: "#000000",
 };
 
 export default function Company() {
+  const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const { refreshLayout } = useLayout();
   const [activeTab, setActiveTab] = useState<"general" | "storefront">("general");
   const [companyData, setCompanyData] = useState({
@@ -57,11 +43,27 @@ export default function Company() {
   const setSF = (patch: Partial<StorefrontSettings>) =>
     setCompanyData(prev => ({ ...prev, storefront_settings: { ...prev.storefront_settings, ...patch } }));
 
-  const readImageFile = (file: File, onDone: (dataUrl: string) => void) => {
-    const reader = new FileReader();
-    reader.onloadend = () => onDone(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  const compressImage = (file: File, maxPx = 400, quality = 0.85): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
 
   const setTickerItem = (i: number, val: string) => {
     const items = [...(companyData.storefront_settings.ticker_items || [])];
@@ -111,26 +113,18 @@ export default function Company() {
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      console.log('File selected:', file.name, file.size, 'bytes');
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const logoData = reader.result as string;
-        console.log('Logo data read, length:', logoData.length);
-        setLogoPreview(logoData);
-        setCompanyData(prev => ({ ...prev, logo: logoData }));
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    compressImage(file).then((dataUrl) => {
+      setLogoPreview(dataUrl);
+      setCompanyData(prev => ({ ...prev, logo: dataUrl }));
+    }).catch(() => {});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log('Submitting company data, logo length:', companyData.logo?.length || 0);
     try {
       const savedData = await api.company.save(companyData);
-      console.log('Saved data received, logo length:', savedData.logo?.length || 0);
       // Update local state with saved data
       const start = savedData.brand_color_start || "#004A99";
       const mid   = savedData.brand_color_mid   || "#008B8B";
@@ -159,9 +153,9 @@ export default function Company() {
       });
       setLogoPreview(savedData.logo || "");
       refreshLayout();
-      alert("Company details updated successfully!");
+      toast("Company details updated successfully!", "success", "Saved");
     } catch (err: any) {
-      alert(err.message || "Failed to update company details");
+      toast(err.message || "Failed to update company details", "error", "Save Failed");
     } finally {
       setLoading(false);
     }
@@ -210,7 +204,7 @@ export default function Company() {
                     <div className="flex flex-col gap-2">
                       <label className="flex items-center gap-2 px-4 py-2 bg-admin-surface border border-admin-border text-admin-text text-sm hover:bg-admin-bg cursor-pointer transition-colors">
                         <Upload size={13} /> Upload Image
-                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) readImageFile(f, url => setSF({ hero_image: url })); }} />
+                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) compressImage(f, 1200, 0.9).then(url => setSF({ hero_image: url })).catch(() => {}); }} />
                       </label>
                       {sf.hero_image && (
                         <button type="button" onClick={() => setSF({ hero_image: "" })} className="flex items-center gap-2 px-4 py-2 border border-admin-border text-admin-text text-sm hover:bg-admin-bg transition-colors">
@@ -277,7 +271,7 @@ export default function Company() {
                     <div className="flex flex-col gap-2">
                       <label className="flex items-center gap-2 px-4 py-2 bg-admin-surface border border-admin-border text-admin-text text-sm hover:bg-admin-bg cursor-pointer transition-colors">
                         <Upload size={13} /> Upload Image
-                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) readImageFile(f, url => setSF({ about_image: url })); }} />
+                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) compressImage(f, 1200, 0.9).then(url => setSF({ about_image: url })).catch(() => {}); }} />
                       </label>
                       {sf.about_image && (
                         <button type="button" onClick={() => setSF({ about_image: "" })} className="flex items-center gap-2 px-4 py-2 border border-admin-border text-admin-text text-sm hover:bg-admin-bg transition-colors">
@@ -573,6 +567,40 @@ export default function Company() {
             </div>
           </div>
 
+          {/* Appearance */}
+          <div className="border-b border-border-subtle bg-chassis p-6">
+            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Appearance</h2>
+            <p className="text-sm text-admin-text-secondary mb-4">Choose the interface colour scheme for the admin panel and POS.</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setTheme("dark")}
+                className={`flex items-center gap-2 px-5 py-3 border text-sm font-medium transition-colors ${
+                  theme === "dark"
+                    ? "bg-admin-text text-admin-bg border-admin-text"
+                    : "bg-admin-bg border-admin-border text-admin-text-secondary hover:text-admin-text"
+                }`}
+              >
+                <Moon size={14} />
+                Dark Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme("light")}
+                className={`flex items-center gap-2 px-5 py-3 border text-sm font-medium transition-colors ${
+                  theme === "light"
+                    ? "bg-admin-text text-admin-bg border-admin-text"
+                    : "bg-admin-bg border-admin-border text-admin-text-secondary hover:text-admin-text"
+                }`}
+              >
+                <Sun size={14} />
+                Light Mode
+              </button>
+            </div>
+            <p className="font-mono-tech text-[9px] text-admin-text-secondary uppercase tracking-widest mt-3">
+              Active: {theme === "dark" ? "Dark" : "Light"} — saved automatically
+            </p>
+          </div>
             </>
           )}
 

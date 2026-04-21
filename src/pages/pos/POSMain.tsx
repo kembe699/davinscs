@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock } from "lucide-react";
+import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -51,6 +52,11 @@ export default function POSMain() {
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
   const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
   const [showPromoModal, setShowPromoModal] = useState(false);
+  const { toast } = useToast();
+
+  type StockAlert = { product: ApiProduct; kind: "expired" | "out_of_stock" | "low_stock" };
+  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
+  const [showStockAlerts, setShowStockAlerts] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -202,6 +208,21 @@ export default function POSMain() {
       if (paymentTypesData.length > 0) {
         setSelectedPaymentType(paymentTypesData[0].id);
       }
+      // Stock alerts
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const alerts: StockAlert[] = [];
+      for (const p of productsData) {
+        if ((p as any).expiry_date && new Date((p as any).expiry_date) < today) {
+          alerts.push({ product: p, kind: "expired" });
+        } else if (!p.in_stock || (p.quantity_on_hand ?? 0) <= 0) {
+          alerts.push({ product: p, kind: "out_of_stock" });
+        } else if ((p.quantity_on_hand ?? 0) <= ((p as any).reorder_level ?? 0) && (p as any).reorder_level > 0) {
+          alerts.push({ product: p, kind: "low_stock" });
+        }
+      }
+      setStockAlerts(alerts);
+      if (alerts.length > 0) setShowStockAlerts(true);
     } catch (err) {
       console.error("Failed to load data:", err);
     }
@@ -224,7 +245,7 @@ export default function POSMain() {
     const availableStock = (product.quantity_on_hand ?? 0) - (product.quantity_reserved ?? 0);
     
     if (currentQtyInCart >= availableStock) {
-      alert(`Cannot add more! Only ${availableStock} units available in stock.`);
+      toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
       return;
     }
     
@@ -250,7 +271,7 @@ export default function POSMain() {
     if (cartItem) {
       const availableStock = (cartItem.product.quantity_on_hand ?? 0) - (cartItem.product.quantity_reserved ?? 0);
       if (quantity > availableStock) {
-        alert(`Cannot set quantity to ${quantity}! Only ${availableStock} units available in stock.`);
+        toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
         return;
       }
     }
@@ -305,7 +326,7 @@ export default function POSMain() {
 
   const handleHoldSale = async () => {
     if (cart.length === 0) {
-      alert("Cart is empty");
+      toast("Cart is empty", "warning", "Empty Cart");
       return;
     }
 
@@ -349,9 +370,9 @@ export default function POSMain() {
       // Print sale order
       printSaleOrder(heldSale);
       
-      alert(`Sale ${sale.sale_number} held successfully!`);
+      toast(`Sale ${sale.sale_number} held successfully`, "success", "Sale Held");
     } catch (err: any) {
-      alert(err.message || "Failed to hold sale");
+      toast(err.message || "Failed to hold sale", "error", "Error");
     }
   };
 
@@ -425,10 +446,10 @@ export default function POSMain() {
 
   const handleCreditPayment = async () => {
     if (!creditCustomerName.trim()) {
-      alert('Customer name is required for credit sales');
+      toast('Customer name is required for credit sales', 'warning', 'Required');
       return;
     }
-    if (cart.length === 0) { alert('Cart is empty'); return; }
+    if (cart.length === 0) { toast('Cart is empty', 'warning', 'Empty Cart'); return; }
     try {
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
       const invoice = await api.invoices.create({
@@ -456,20 +477,20 @@ export default function POSMain() {
       setCreditDueDate('');
       setPaymentMode('cash');
       setShowPaymentModal(false);
-      alert(`Invoice ${invoice.invoice_number} created! Total: ${formatCurrencySync(total, schemeCurrencySymbol(), false)}`);
+      toast(`Invoice ${invoice.invoice_number} created`, 'success', 'Invoice Created');
     } catch (err: any) {
-      alert(err.message || 'Failed to create invoice');
+      toast(err.message || 'Failed to create invoice', 'error', 'Error');
     }
   };
 
   const handlePayment = async () => {
     if (!selectedPaymentType) {
-      alert("Please select a payment type");
+      toast("Please select a payment type", "warning", "Required");
       return;
     }
 
     if (cart.length === 0) {
-      alert("Cart is empty");
+      toast("Cart is empty", "warning", "Empty Cart");
       return;
     }
 
@@ -558,7 +579,7 @@ export default function POSMain() {
       // Show receipt modal
       setShowReceipt(true);
     } catch (err: any) {
-      alert(err.message || "Failed to process sale");
+      toast(err.message || "Failed to process sale", "error", "Payment Failed");
     }
   };
 
@@ -658,6 +679,18 @@ export default function POSMain() {
           >
             F10 Payment
           </button>
+          {stockAlerts.length > 0 && (
+            <button
+              onClick={() => setShowStockAlerts(true)}
+              className="relative px-4 py-2 bg-admin-bg border border-admin-border text-amber-400 text-sm hover:bg-admin-surface"
+              title="Stock Alerts"
+            >
+              <Bell size={16} />
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                {stockAlerts.length}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
@@ -1431,6 +1464,88 @@ export default function POSMain() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ── Stock Alert Panel ── */}
+      {showStockAlerts && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-admin-border bg-admin-bg">
+              <div className="flex items-center gap-3">
+                <AlertTriangle size={16} className="text-amber-400" />
+                <div>
+                  <p className="font-mono-tech text-[9px] text-amber-400 uppercase tracking-widest">Inventory</p>
+                  <h2 className="text-sm font-bold text-admin-text">Stock Alerts</h2>
+                </div>
+                <span className="ml-1 px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  {stockAlerts.length}
+                </span>
+              </div>
+              <button onClick={() => setShowStockAlerts(false)} className="text-admin-text-secondary hover:text-admin-text">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto divide-y divide-admin-border">
+              {(["expired", "out_of_stock", "low_stock"] as const).map(kind => {
+                const group = stockAlerts.filter(a => a.kind === kind);
+                if (!group.length) return null;
+                const meta = {
+                  expired:     { icon: <Clock size={13} className="text-red-400" />,     label: "Expired",       color: "text-red-400",   bg: "bg-red-500/10" },
+                  out_of_stock:{ icon: <PackageX size={13} className="text-orange-400" />, label: "Out of Stock",  color: "text-orange-400", bg: "bg-orange-500/10" },
+                  low_stock:   { icon: <AlertTriangle size={13} className="text-amber-400" />, label: "Low Stock",  color: "text-amber-400",  bg: "bg-amber-500/10" },
+                }[kind];
+                return (
+                  <div key={kind}>
+                    <div className={`px-5 py-2 ${meta.bg} flex items-center gap-2`}>
+                      {meta.icon}
+                      <span className={`font-mono-tech text-[9px] uppercase tracking-widest font-bold ${meta.color}`}>
+                        {meta.label} — {group.length} item{group.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {group.map(({ product }) => (
+                      <div key={product.id} className="px-5 py-2.5 flex items-center justify-between hover:bg-admin-bg">
+                        <div>
+                          <p className="text-sm text-admin-text font-medium">{product.name}</p>
+                          <p className="text-xs text-admin-text-secondary font-mono-tech">
+                            {product.brand} · {product.category}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                          {kind === "expired" && (
+                            <p className="text-xs text-red-400 font-mono-tech">
+                              Exp: {new Date((product as any).expiry_date).toLocaleDateString()}
+                            </p>
+                          )}
+                          {kind !== "expired" && (
+                            <p className="text-xs font-mono-tech text-admin-text-secondary">
+                              Qty: {product.quantity_on_hand ?? 0}
+                              {(product as any).reorder_level > 0 && ` / Min ${(product as any).reorder_level}`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-admin-border bg-admin-bg flex justify-between items-center">
+              <p className="font-mono-tech text-[9px] text-admin-text-secondary uppercase tracking-widest">
+                Update stock in Admin → Products
+              </p>
+              <button
+                onClick={() => setShowStockAlerts(false)}
+                className="px-4 py-1.5 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}

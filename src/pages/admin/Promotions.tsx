@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import {
   Plus, Edit2, Trash2, Tag, Search, X, CheckCircle,
   Clock, AlertCircle, Calendar, Percent, DollarSign, ToggleLeft, ToggleRight,
@@ -54,6 +55,7 @@ const emptyForm = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function Promotions() {
+  const { toast } = useToast();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [saving,     setSaving]     = useState(false);
@@ -172,7 +174,7 @@ export default function Promotions() {
       await api.promotions.update(p.id, { ...p, is_active: !p.is_active });
       load();
     } catch {
-      alert("Failed to update promotion.");
+      toast("Failed to update promotion.", "error", "Error");
     }
   };
 
@@ -184,7 +186,7 @@ export default function Promotions() {
       setDeleteId(null);
       load();
     } catch {
-      alert("Failed to delete promotion.");
+      toast("Failed to delete promotion.", "error", "Error");
     }
   };
 
