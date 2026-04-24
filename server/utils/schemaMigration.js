@@ -26,9 +26,6 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS tenant_slug VARCHAR(50) UNIQUE;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_start TIMESTAMPTZ;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_end TIMESTAMPTZ;
-    ALTER TABLE public.pricing_plans ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
-    ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
-    ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
     CREATE TABLE IF NOT EXISTS public.tenant_db_snapshots (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -74,6 +71,9 @@ export async function migrateTenant(schemaName = "public") {
       billing_period VARCHAR(20) DEFAULT 'monthly',
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE public.pricing_plans ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
+    ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
+    ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 
     -- POS INSTANCE TABLES
     CREATE TABLE IF NOT EXISTS users (
