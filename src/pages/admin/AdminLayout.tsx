@@ -230,7 +230,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-admin-bg flex flex-col">
+    <div className="h-[100dvh] bg-admin-bg flex flex-col">
       {/* Mobile top bar */}
       <header className="lg:hidden sticky top-0 z-30 bg-admin-bg border-b border-admin-border px-4 py-3 flex items-center gap-3">
         <button
