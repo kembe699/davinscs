@@ -218,7 +218,7 @@ export default function Onboarding() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-sans">
 
       {/* Progress bar */}
       {step < 5 && (
@@ -232,18 +232,18 @@ export default function Onboarding() {
                 <div key={s.id} className="flex items-center">
                   <div className={`flex flex-col items-center gap-1`}>
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                      ${done ? "bg-emerald-500 border-emerald-500" : active ? "bg-blue-600 border-blue-500" : "bg-slate-700 border-slate-600"}`}>
+                      ${done ? "bg-emerald-500 border-emerald-500" : active ? "bg-primary border-primary" : "bg-background border-border-subtle"}`}>
                       {done
-                        ? <Check size={16} className="text-white" />
-                        : <Icon size={16} className={active ? "text-white" : "text-slate-400"} />}
+                        ? <Check size={16} className="text-foreground" />
+                        : <Icon size={16} className={active ? "text-foreground" : "text-muted-foreground"} />}
                     </div>
-                    <span className={`text-[10px] font-medium hidden sm:block ${active ? "text-blue-400" : done ? "text-emerald-400" : "text-slate-500"}`}>
+                    <span className={`text-[10px] font-medium hidden sm:block ${active ? "text-primary" : done ? "text-emerald-400" : "text-muted-foreground/70"}`}>
                       {s.label}
                     </span>
                   </div>
                   {i < 3 && (
                     <div className={`flex-1 h-[2px] mx-2 rounded transition-all duration-500
-                      ${step > s.id ? "bg-emerald-500" : "bg-slate-700"}`} style={{ width: "3rem" }} />
+                      ${step > s.id ? "bg-emerald-500" : "bg-background"}`} style={{ width: "3rem" }} />
                   )}
                 </div>
               );
@@ -253,29 +253,29 @@ export default function Onboarding() {
       )}
 
       {/* Card */}
-      <div className="w-full max-w-2xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl bg-chassis border border-border-subtle overflow-hidden">
 
         {/* ── Step 1: Business Type ── */}
         {step === 1 && (
           <div className="p-8">
             <div className="mb-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-600/20 border border-blue-500/30 mb-4">
-                <Rocket size={26} className="text-blue-400" />
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 border border-primary/30 mb-4">
+                <Rocket size={26} className="text-primary" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Welcome! Let's get you set up.</h1>
-              <p className="text-slate-400 text-sm">Tell us about your business so we can tailor the system for you.</p>
+              <h1 className="text-2xl font-bold text-foreground mb-2">Welcome! Let's get you set up.</h1>
+              <p className="text-muted-foreground text-sm">Tell us about your business so we can tailor the system for you.</p>
             </div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">What type of business do you run?</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">What type of business do you run?</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {BUSINESS_TYPES.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => set("business_type", id)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 text-sm font-medium
+                  className={`flex flex-col items-center gap-2 p-4 rounded-none border-2 transition-all duration-200 text-sm font-medium
                     ${form.business_type === id
-                      ? "border-blue-500 bg-blue-600/20 text-blue-300"
-                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 hover:bg-slate-700"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border-subtle bg-background/50 text-foreground/80 hover:border-primary/50 hover:bg-background"
                     }`}
                 >
                   <Icon size={22} />
@@ -290,26 +290,26 @@ export default function Onboarding() {
         {step === 2 && (
           <div className="p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-1">Business Information</h2>
-              <p className="text-slate-400 text-sm">This appears on receipts, invoices, and your storefront.</p>
+              <h2 className="text-xl font-bold text-foreground mb-1">Business Information</h2>
+              <p className="text-muted-foreground text-sm">This appears on receipts, invoices, and your storefront.</p>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
                     Business Name <span className="text-red-400">*</span>
                   </label>
                   <input
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     placeholder="e.g. FlippedPos"
                     value={form.company_name}
                     onChange={(e) => set("company_name", e.target.value)}
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Tagline / Slogan</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Tagline / Slogan</label>
                   <input
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     placeholder="e.g. Your Vision / Our Gear"
                     value={form.tagline}
                     onChange={(e) => set("tagline", e.target.value)}
@@ -326,30 +326,30 @@ export default function Onboarding() {
               </div>
 
               {/* Currency */}
-              <div className="pt-2 border-t border-slate-700">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Currency Settings</p>
+              <div className="pt-2 border-t border-border-subtle">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Currency Settings</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Primary Currency</label>
-                    <div className="w-full bg-slate-600/50 border border-slate-600 rounded-lg px-3 py-2.5 text-slate-300 text-sm flex items-center gap-2">
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Primary Currency</label>
+                    <div className="w-full bg-chassis border border-border-subtle rounded-none px-3 py-2.5 text-foreground/80 text-sm flex items-center gap-2">
                       <span className="text-lg">$</span>
                       <span>USD — US Dollar</span>
-                      <span className="ml-auto text-xs text-slate-500 bg-slate-700 px-2 py-0.5 rounded">Default</span>
+                      <span className="ml-auto text-xs text-muted-foreground/70 bg-background px-2 py-0.5 rounded">Default</span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">USD is the system base currency.</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">USD is the system base currency.</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Secondary Currency <span className="text-slate-500 normal-case">(optional)</span></label>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Secondary Currency <span className="text-muted-foreground/70 normal-case">(optional)</span></label>
                     <select
                       value={form.secondary_currency}
                       onChange={(e) => set("secondary_currency", e.target.value)}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     >
                       {CURRENCY_OPTIONS.map(c => (
                         <option key={c.code} value={c.code}>{c.name}</option>
                       ))}
                     </select>
-                    <p className="text-xs text-slate-500 mt-1">Can be changed later in Settings → Currencies.</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Can be changed later in Settings → Currencies.</p>
                   </div>
                 </div>
               </div>
@@ -361,24 +361,24 @@ export default function Onboarding() {
         {step === 3 && (
           <div className="p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-1">Brand & Appearance</h2>
-              <p className="text-slate-400 text-sm">Upload your logo and choose your brand colors and storefront style.</p>
+              <h2 className="text-xl font-bold text-foreground mb-1">Brand & Appearance</h2>
+              <p className="text-muted-foreground text-sm">Upload your logo and choose your brand colors and storefront style.</p>
             </div>
             <div className="space-y-6">
               {/* Logo */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Logo</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Logo</label>
                 <div className="flex items-start gap-4">
-                  <div className="w-24 h-24 rounded-xl bg-slate-700 border-2 border-dashed border-slate-600 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-24 h-24 rounded-none bg-background border-2 border-dashed border-border-subtle flex items-center justify-center overflow-hidden shrink-0">
                     {form.logo
                       ? <img src={form.logo} alt="Logo" className="w-full h-full object-contain p-2" />
-                      : <Camera size={24} className="text-slate-500" />}
+                      : <Camera size={24} className="text-muted-foreground/70" />}
                   </div>
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
                       onClick={() => logoInputRef.current?.click()}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-background font-bold uppercase tracking-widest text-xs rounded-none transition-colors"
                     >
                       <Upload size={14} /> Upload Logo
                     </button>
@@ -386,12 +386,12 @@ export default function Onboarding() {
                       <button
                         type="button"
                         onClick={() => set("logo", "")}
-                        className="flex items-center gap-2 px-4 py-2 border border-slate-600 text-slate-300 text-sm rounded-lg hover:bg-slate-700 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 border border-border-subtle text-foreground/80 text-sm rounded-none hover:bg-background transition-colors"
                       >
                         <Trash2 size={14} /> Remove
                       </button>
                     )}
-                    <p className="text-xs text-slate-500">PNG, SVG, or JPG. Square preferred.</p>
+                    <p className="text-xs text-muted-foreground/70">PNG, SVG, or JPG. Square preferred.</p>
                     <input
                       ref={logoInputRef}
                       type="file"
@@ -405,7 +405,7 @@ export default function Onboarding() {
 
               {/* Brand Colors */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Brand Gradient Colors</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Brand Gradient Colors</label>
                 <div className="grid grid-cols-3 gap-3">
                   {([
                     ["brand_color_start", "Primary"],
@@ -413,15 +413,15 @@ export default function Onboarding() {
                     ["brand_color_end", "Accent"],
                   ] as const).map(([key, label]) => (
                     <div key={key} className="flex flex-col gap-1.5">
-                      <span className="text-xs text-slate-400">{label}</span>
+                      <span className="text-xs text-muted-foreground">{label}</span>
                       <div className="flex items-center gap-2">
                         <input
                           type="color"
                           value={form[key]}
                           onChange={(e) => set(key, e.target.value)}
-                          className="w-10 h-10 rounded-lg border-0 cursor-pointer bg-transparent"
+                          className="w-10 h-10 rounded-none border-0 cursor-pointer bg-transparent"
                         />
-                        <span className="text-xs font-mono text-slate-400">{form[key]}</span>
+                        <span className="text-xs font-mono text-muted-foreground">{form[key]}</span>
                       </div>
                     </div>
                   ))}
@@ -435,21 +435,21 @@ export default function Onboarding() {
 
               {/* Site Layout */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Storefront Style</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Storefront Style</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {LAYOUTS.map(({ id, label, desc }) => (
                     <button
                       key={id}
                       type="button"
                       onClick={() => set("site_layout", id)}
-                      className={`p-3 rounded-lg border-2 text-left transition-all duration-200
+                      className={`p-3 rounded-none border-2 text-left transition-all duration-200
                         ${form.site_layout === id
-                          ? "border-blue-500 bg-blue-600/20"
-                          : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                          ? "border-primary bg-primary/10"
+                          : "border-border-subtle bg-background/50 hover:border-primary/50"
                         }`}
                     >
-                      <div className={`text-sm font-semibold mb-0.5 ${form.site_layout === id ? "text-blue-300" : "text-slate-200"}`}>{label}</div>
-                      <div className="text-xs text-slate-500 leading-snug">{desc}</div>
+                      <div className={`text-sm font-semibold mb-0.5 ${form.site_layout === id ? "text-primary" : "text-slate-200"}`}>{label}</div>
+                      <div className="text-xs text-muted-foreground/70 leading-snug">{desc}</div>
                     </button>
                   ))}
                 </div>
@@ -462,16 +462,16 @@ export default function Onboarding() {
         {step === 4 && (
           <div className="p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-1">Create Your Admin Account</h2>
-              <p className="text-slate-400 text-sm">This is the owner / super-admin login. You can add more users later.</p>
+              <h2 className="text-xl font-bold text-foreground mb-1">Create Your Admin Account</h2>
+              <p className="text-muted-foreground text-sm">This is the owner / super-admin login. You can add more users later.</p>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Your Name</label>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Your Name</label>
                 <div className="relative">
-                  <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                   <input
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-9 pr-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-background border border-border-subtle rounded-none pl-9 pr-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     placeholder="e.g. James Deng"
                     value={form.admin_name}
                     onChange={(e) => set("admin_name", e.target.value)}
@@ -479,14 +479,14 @@ export default function Onboarding() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
                   Email Address <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
-                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                   <input
                     type="email"
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-9 pr-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-background border border-border-subtle rounded-none pl-9 pr-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     placeholder="admin@yourbusiness.com"
                     value={form.admin_email}
                     onChange={(e) => set("admin_email", e.target.value)}
@@ -494,13 +494,13 @@ export default function Onboarding() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
                   Password <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 pr-10"
+                    className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50 pr-10"
                     placeholder="Min. 8 characters"
                     value={form.admin_password}
                     onChange={(e) => set("admin_password", e.target.value)}
@@ -508,7 +508,7 @@ export default function Onboarding() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground/80"
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -518,16 +518,16 @@ export default function Onboarding() {
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
                   Confirm Password <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showConfirm ? "text" : "password"}
-                    className={`w-full bg-slate-700 border rounded-lg px-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-1 pr-10
+                    className={`w-full bg-background border rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none  pr-10
                       ${form.admin_confirm && form.admin_confirm !== form.admin_password
                         ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                        : "border-slate-600 focus:border-blue-500 focus:ring-blue-500"}`}
+                        : "border-border-subtle focus:border-primary focus:ring-primary/50"}`}
                     placeholder="Repeat password"
                     value={form.admin_confirm}
                     onChange={(e) => set("admin_confirm", e.target.value)}
@@ -535,7 +535,7 @@ export default function Onboarding() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground/80"
                   >
                     {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -558,30 +558,30 @@ export default function Onboarding() {
               <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center">
                 <Check size={36} className="text-emerald-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white">You're all set, {form.admin_name || "Admin"}!</h2>
-              <p className="text-slate-400 max-w-md">
-                <strong className="text-white">{form.company_name}</strong> has been configured successfully.
+              <h2 className="text-2xl font-bold text-foreground">You're all set, {form.admin_name || "Admin"}!</h2>
+              <p className="text-muted-foreground max-w-md">
+                <strong className="text-foreground">{form.company_name}</strong> has been configured successfully.
                 Log in with your admin credentials to get started.
               </p>
             </div>
 
-            <div className="bg-slate-700/60 border border-slate-600 rounded-xl p-5 mb-8 text-left max-w-sm mx-auto">
-              <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-3">Your login details</p>
+            <div className="bg-background/50 border border-border-subtle rounded-none p-5 mb-8 text-left max-w-sm mx-auto">
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-3">Your login details</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Email</span>
-                  <span className="text-white font-mono">{form.admin_email}</span>
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="text-foreground font-mono">{form.admin_email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Password</span>
-                  <span className="text-slate-300">••••••••</span>
+                  <span className="text-muted-foreground">Password</span>
+                  <span className="text-foreground/80">••••••••</span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={() => { window.location.href = `/${tenantSlug}/admin/login`; }}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors text-sm"
+              className="inline-flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-foreground font-semibold rounded-none transition-colors text-sm"
             >
               <Rocket size={16} /> Go to Admin Login
             </button>
@@ -590,7 +590,7 @@ export default function Onboarding() {
 
         {/* ── Error ── */}
         {error && (
-          <div className="mx-8 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mx-8 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-none text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -602,7 +602,7 @@ export default function Onboarding() {
               <button
                 type="button"
                 onClick={back}
-                className="flex items-center gap-2 px-5 py-2.5 border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 border border-border-subtle text-foreground/80 hover:bg-background rounded-none text-sm font-medium transition-colors"
               >
                 <ChevronLeft size={15} /> Back
               </button>
@@ -611,10 +611,10 @@ export default function Onboarding() {
               type="button"
               onClick={next}
               disabled={!canAdvance() || loading}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors ml-auto"
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-background uppercase tracking-widest text-xs font-bold rounded-none text-sm font-semibold transition-colors ml-auto"
             >
               {loading
-                ? <span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4" />
+                ? <span className="animate-spin border-2 border-background/30 border-t-background rounded-full w-4 h-4" />
                 : null}
               {step === 4 ? "Complete Setup" : "Continue"}
               {!loading && <ChevronRight size={15} />}
@@ -623,7 +623,7 @@ export default function Onboarding() {
         )}
       </div>
 
-      <p className="mt-6 text-xs text-slate-600">Powered by <span className="text-slate-500 font-semibold">FlippedPos</span></p>
+      <p className="mt-6 text-xs text-muted-foreground/50">Powered by <span className="text-muted-foreground/70 font-semibold">FlippedPos</span></p>
     </div>
   );
 }
@@ -645,11 +645,11 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">{label}</label>
       <div className="relative">
-        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
         <input
-          className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-9 pr-3 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-full bg-background border border-border-subtle rounded-none pl-9 pr-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -675,7 +675,7 @@ function PasswordStrength({ password }: { password: string }) {
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < score ? colors[score - 1] : "bg-slate-600"}`}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < score ? colors[score - 1] : "bg-border-subtle"}`}
           />
         ))}
       </div>
