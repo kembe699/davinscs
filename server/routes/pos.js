@@ -107,10 +107,13 @@ router.post("/sales", requireAuth, async (req, res) => {
       
       const product = productResult.rows[0];
       
-      // Check stock
-      const available = product.quantity_on_hand - product.quantity_reserved;
-      if (available < item.quantity) {
-        throw new Error(`Insufficient stock for ${product.name}`);
+      // Check stock for non-service products
+      const isService = product.product_type === 'service';
+      if (!isService) {
+        const available = product.quantity_on_hand - product.quantity_reserved;
+        if (available < item.quantity) {
+          throw new Error(`Insufficient stock for ${product.name}`);
+        }
       }
       
       const unit_price = item.unit_price || product.price;
@@ -132,18 +135,20 @@ router.post("/sales", requireAuth, async (req, res) => {
         cogs: Math.round((product.cost_price || 0) * item.quantity),
       });
       
-      // Update inventory
-      await client.query(
-        "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
-        [item.quantity, product.id]
-      );
-      
-      // Record stock movement
-      await client.query(
-        `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
-         VALUES ($1, 'sale', $2, 'pos_sale', 0, $3, 'POS Sale')`,
-        [product.id, -item.quantity, user_id]
-      );
+      if (!isService) {
+        // Update inventory
+        await client.query(
+          "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
+          [item.quantity, product.id]
+        );
+        
+        // Record stock movement
+        await client.query(
+          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+           VALUES ($1, 'sale', $2, 'pos_sale', 0, $3, 'POS Sale')`,
+          [product.id, -item.quantity, user_id]
+        );
+      }
     }
     
     const total_discount = discount_amount || 0;
@@ -449,25 +454,30 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
     
     const sale = saleResult.rows[0];
     
-    // Get sale items
+    // Get sale items with product info
     const itemsResult = await client.query(
-      "SELECT * FROM pos_sale_items WHERE sale_id = $1",
+      `SELECT si.*, p.product_type 
+       FROM pos_sale_items si
+       JOIN products p ON si.product_id = p.id
+       WHERE si.sale_id = $1`,
       [id]
     );
     
     // Restore inventory
     for (const item of itemsResult.rows) {
-      await client.query(
-        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
-        [item.quantity, item.product_id]
-      );
-      
-      // Record stock movement
-      await client.query(
-        `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
-         VALUES ($1, 'adjustment', $2, 'void_sale', $3, $4, 'Sale voided')`,
-        [item.product_id, item.quantity, id, user_id]
-      );
+      if (item.product_type !== 'service') {
+        await client.query(
+          "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
+          [item.quantity, item.product_id]
+        );
+        
+        // Record stock movement
+        await client.query(
+          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+           VALUES ($1, 'adjustment', $2, 'void_sale', $3, $4, 'Sale voided')`,
+          [item.product_id, item.quantity, id, user_id]
+        );
+      }
     }
     
     // If credit sale, update customer balance
@@ -530,7 +540,10 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
 
     for (const refundItem of items) {
       const itemResult = await client.query(
-        "SELECT * FROM pos_sale_items WHERE sale_id = $1 AND product_id = $2",
+        `SELECT si.*, p.product_type 
+         FROM pos_sale_items si
+         JOIN products p ON si.product_id = p.id
+         WHERE si.sale_id = $1 AND si.product_id = $2`,
         [id, refundItem.product_id]
       );
       if (!itemResult.rows[0]) throw new Error(`Item not found in sale`);
@@ -553,22 +566,25 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
         discount_amount: 0,
       });
 
-      // Restore inventory
-      await client.query(
-        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
-        [refundItem.quantity, refundItem.product_id]
-      );
+      if (item.product_type !== 'service') {
+        // Restore inventory
+        await client.query(
+          "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
+          [refundItem.quantity, refundItem.product_id]
+        );
+        // Stock movement
+        await client.query(
+          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+           VALUES ($1, 'return', $2, 'refund', $3, $4, $5)`,
+          [refundItem.product_id, refundItem.quantity, id, user_id, reason || 'Customer return']
+        );
+      }
+      
       // Reduce original sale item quantity (net remaining after return)
       await client.query(
         `UPDATE pos_sale_items SET quantity = quantity - $1
          WHERE sale_id = $2 AND product_id = $3`,
         [refundItem.quantity, id, refundItem.product_id]
-      );
-      // Stock movement
-      await client.query(
-        `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
-         VALUES ($1, 'return', $2, 'refund', $3, $4, $5)`,
-        [refundItem.product_id, refundItem.quantity, id, user_id, reason || 'Customer return']
       );
     }
 

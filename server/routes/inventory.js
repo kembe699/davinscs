@@ -32,6 +32,7 @@ router.get("/low-stock", requireAuth, async (req, res) => {
         (p.quantity_on_hand - p.quantity_reserved) as available
       FROM products p
       WHERE p.quantity_on_hand <= p.reorder_level
+        AND p.product_type != 'service'
       ORDER BY p.quantity_on_hand ASC
     `);
     res.json(rows);

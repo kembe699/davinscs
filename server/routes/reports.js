@@ -497,6 +497,7 @@ router.get("/inventory/low-stock", requireAuth, async (req, res) => {
        FROM products
        WHERE quantity_on_hand > 0
          AND quantity_on_hand <= reorder_level
+         AND product_type != 'service'
        ORDER BY units_below_reorder DESC`
     );
 
@@ -520,6 +521,7 @@ router.get("/inventory/out-of-stock", requireAuth, async (req, res) => {
         updated_at
        FROM products
        WHERE quantity_on_hand = 0
+         AND product_type != 'service'
        ORDER BY updated_at DESC`
     );
 
