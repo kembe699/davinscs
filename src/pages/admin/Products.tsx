@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, Search, RefreshCw, Upload, Download, Edit } from "lucide-react";
@@ -11,6 +12,7 @@ import { formatCurrencySync } from "@/utils/currency";
 export default function Products() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categoryList, setCategoryList] = useState<ApiCategory[]>([]);
@@ -63,11 +65,11 @@ export default function Products() {
   };
 
   const openEditForm = (product: ApiProduct) => {
-    navigate(`/admin/products/${product.id}/edit`);
+    navigate(tp(`/admin/products/${product.id}/edit`));
   };
 
   const openNewForm = () => {
-    navigate('/admin/products/new');
+    navigate(tp('/admin/products/new'));
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {

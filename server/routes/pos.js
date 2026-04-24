@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 
@@ -28,7 +28,7 @@ router.post("/sales", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Payment type is required" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   
   try {
     await client.query("BEGIN");
@@ -392,7 +392,7 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
   const { id } = req.params;
   const user_id = req.user.id;
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   
   try {
     await client.query("BEGIN");
@@ -471,7 +471,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "No items selected for refund" });
   }
 
-  const client = await pool.connect();
+  const client = await getSchemaClient();
 
   try {
     await client.query("BEGIN");

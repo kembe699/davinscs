@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { api, ApiOrderStats, ApiProduct, MonthlyData, TopProduct, SalesSummary } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import { Package, ShoppingBag, TrendingUp, Plus, DollarSign, ArrowUp, ArrowDown, Activity } from "lucide-react";
@@ -7,6 +8,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 
+// useTenantPath is called inside the component below
 function compactNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + "K";
@@ -14,6 +16,7 @@ function compactNumber(n: number): string {
 }
 
 export default function Dashboard() {
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [stats, setStats] = useState<ApiOrderStats | null>(null);
@@ -100,7 +103,7 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           </div>
           <Link
-            to="/admin/products/new"
+            to={tp("/admin/products/new")}
             className="flex items-center gap-2 h-10 px-5 bg-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors"
           >
             <Plus size={14} />

@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db.js";
+import { optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ function getSessionId(req) {
   return req.session.id;
 }
 
-router.get("/", async (req, res) => {
+router.get("/", optionalTenantContext, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     const { rows } = await pool.query(`
@@ -34,7 +35,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/add", async (req, res) => {
+router.post("/add", optionalTenantContext, async (req, res) => {
   const { product_id, quantity } = req.body;
   
   if (!product_id || !quantity || quantity < 1) {
@@ -89,7 +90,7 @@ router.post("/add", async (req, res) => {
   }
 });
 
-router.put("/update/:id", async (req, res) => {
+router.put("/update/:id", optionalTenantContext, async (req, res) => {
   const { quantity } = req.body;
   
   if (!quantity || quantity < 1) {
@@ -131,7 +132,7 @@ router.put("/update/:id", async (req, res) => {
   }
 });
 
-router.delete("/remove/:id", async (req, res) => {
+router.delete("/remove/:id", optionalTenantContext, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     const { rowCount } = await pool.query(
@@ -150,7 +151,7 @@ router.delete("/remove/:id", async (req, res) => {
   }
 });
 
-router.delete("/clear", async (req, res) => {
+router.delete("/clear", optionalTenantContext, async (req, res) => {
   try {
     const sessionId = getSessionId(req);
     await pool.query("DELETE FROM cart_items WHERE session_id = $1", [sessionId]);

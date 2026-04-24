@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 // Get active tax rates
-router.get("/active", async (req, res) => {
+router.get("/active", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM tax_rates WHERE is_active = true ORDER BY name"
@@ -31,7 +31,7 @@ router.get("/active", async (req, res) => {
 });
 
 // Get default tax rate
-router.get("/default", async (req, res) => {
+router.get("/default", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM tax_rates WHERE is_default = true AND is_active = true LIMIT 1"

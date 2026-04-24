@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -135,7 +135,7 @@ router.post("/transactions", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Debits must equal credits" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     

@@ -1,11 +1,11 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Get all countries
-router.get("/", async (req, res) => {
+router.get("/", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM countries ORDER BY name"
@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get active countries
-router.get("/active", async (req, res) => {
+router.get("/active", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM countries WHERE is_active = true ORDER BY name"

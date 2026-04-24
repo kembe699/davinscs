@@ -1,12 +1,12 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
 // GET all products (public)
-router.get("/", async (req, res) => {
+router.get("/", optionalTenantContext, async (req, res) => {
   try {
     const { category, featured } = req.query;
     const conditions = [];
@@ -29,7 +29,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET single product by slug (public)
-router.get("/:slug", async (req, res) => {
+router.get("/:slug", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT p.*, a.name as expense_account_name, a.code as expense_account_code

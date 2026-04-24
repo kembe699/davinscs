@@ -1,10 +1,10 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM categories ORDER BY sort_order ASC, name ASC"

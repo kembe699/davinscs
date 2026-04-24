@@ -1,11 +1,11 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // POST track order click (public)
-router.post("/", async (req, res) => {
+router.post("/", optionalTenantContext, async (req, res) => {
   const { product_id, product_name } = req.body;
   if (!product_id) return res.status(400).json({ error: "product_id required" });
   try {

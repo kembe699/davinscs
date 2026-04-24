@@ -32,6 +32,25 @@ router.post("/", requireAuth, async (req, res) => {
       "INSERT INTO users (email, password_hash, role, role_id) VALUES ($1, $2, 'admin', $3) RETURNING id, email, role, role_id, created_at",
       [email.toLowerCase(), hash, role_id || null]
     );
+    // Sync login mapping so the new user can log in via /portal
+    const schemaName = req.user.schema_name || null;
+    if (schemaName) {
+      const tenantRes = await pool.query(
+        "SELECT id FROM public.tenants WHERE schema_name = $1",
+        [schemaName]
+      );
+      const tenantId = tenantRes.rows[0]?.id;
+      if (tenantId) {
+        await pool.query(
+          `INSERT INTO public.tenant_users (email, tenant_id, schema_name)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (email) DO UPDATE
+             SET schema_name = EXCLUDED.schema_name,
+                 tenant_id   = EXCLUDED.tenant_id`,
+          [email.toLowerCase(), tenantId, schemaName]
+        );
+      }
+    }
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_CREATED', entityType: 'user', entityId: rows[0].id, details: { email: rows[0].email }, ip: req.ip });
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -46,6 +65,9 @@ router.put("/:id", requireAuth, async (req, res) => {
   const { email, password } = req.body;
   if (!email) return res.status(400).json({ error: "Email required" });
   try {
+    // Capture old email before update to sync tenant_users if it changes
+    const { rows: existing } = await pool.query("SELECT email FROM users WHERE id = $1", [id]);
+    const oldEmail = existing[0]?.email;
     let query, params;
     if (password) {
       if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
@@ -58,6 +80,13 @@ router.put("/:id", requireAuth, async (req, res) => {
     }
     const { rows } = await pool.query(query, params);
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    // Keep login mapping in sync when email changes
+    if (oldEmail && oldEmail !== email.toLowerCase()) {
+      await pool.query(
+        "UPDATE public.tenant_users SET email = $1 WHERE email = $2",
+        [email.toLowerCase(), oldEmail]
+      );
+    }
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_UPDATED', entityType: 'user', entityId: id, details: { email, password_changed: !!password }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
@@ -90,8 +119,14 @@ router.delete("/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (id === req.user.id) return res.status(400).json({ error: "Cannot delete your own account" });
   try {
+    // Capture email before deletion so we can clean up the login mapping
+    const { rows: userRows } = await pool.query("SELECT email FROM users WHERE id = $1", [id]);
+    const deletedEmail = userRows[0]?.email;
     const { rowCount } = await pool.query("DELETE FROM users WHERE id = $1", [id]);
     if (rowCount === 0) return res.status(404).json({ error: "User not found" });
+    if (deletedEmail) {
+      await pool.query("DELETE FROM public.tenant_users WHERE email = $1", [deletedEmail]).catch(() => {});
+    }
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_DELETED', entityType: 'user', entityId: id, details: null, ip: req.ip });
     res.json({ success: true });
   } catch (err) {

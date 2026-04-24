@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { ToastProvider } from "./contexts/ToastContext.tsx";
 import ToastContainer from "./components/ToastContainer.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.tsx";
 import { LayoutProvider } from "./contexts/LayoutContext.tsx";
-import { useState, useEffect } from "react";
+import { TenantRoot } from "./contexts/TenantContext.tsx";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CamerasPage from "./pages/categories/Cameras.tsx";
@@ -53,55 +53,16 @@ import Customers from "./pages/admin/Customers.tsx";
 import CustomerDetail from "./pages/admin/CustomerDetail.tsx";
 import Quotations from "./pages/admin/Quotations.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
+import Portal from "./pages/Portal.tsx";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
-  return token ? <>{children}</> : <Navigate to="/admin/login" replace />;
-}
-
-function SetupGuard({ children }: { children: React.ReactNode }) {
-  const [checking, setChecking] = useState(true);
-  const [needsSetup, setNeedsSetup] = useState(false);
-  const location = useLocation();
-
-  useEffect(() => {
-    // Re-fetch when: initial load (checking=true) OR setup is still pending.
-    // Once confirmed done (needsSetup=false) skip all subsequent nav checks.
-    if (!checking && !needsSetup) return;
-    setChecking(true);
-    fetch("/api/setup/status")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.needs_setup) {
-          // Clear any stale auth token — it references a deleted user
-          localStorage.removeItem("cms_token");
-          localStorage.removeItem("cms_user");
-        }
-        setNeedsSetup(d.needs_setup);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  if (!token) {
+    // Redirect back to portal instead of a bare /admin/login
+    return <Navigate to="/portal" replace />;
   }
-
-  if (needsSetup && location.pathname !== "/setup") {
-    return <Navigate to="/setup" replace />;
-  }
-
-  if (!needsSetup && location.pathname === "/setup") {
-    return <Navigate to="/admin/login" replace />;
-  }
-
   return <>{children}</>;
 }
 
@@ -114,70 +75,74 @@ const App = () => (
       <AuthProvider>
         <LayoutProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <SetupGuard>
           <Routes>
-            <Route path="/setup" element={<Onboarding />} />
-            <Route path="/" element={<Index />} />
-            {/* Category listing pages */}
-            <Route path="/cameras" element={<CamerasPage />} />
-            <Route path="/lenses" element={<LensesPage />} />
-            <Route path="/microphones" element={<MicrophonesPage />} />
-            <Route path="/teleprompters" element={<TelepromptersPage />} />
-            <Route path="/lighting" element={<LightingPage />} />
-            {/* Product detail pages */}
-            <Route path="/cameras/:id" element={<ProductDetail />} />
-            <Route path="/lenses/:id" element={<ProductDetail />} />
-            <Route path="/microphones/:id" element={<ProductDetail />} />
-            <Route path="/teleprompters/:id" element={<ProductDetail />} />
-            <Route path="/lighting/:id" element={<ProductDetail />} />
-            {/* Support / Info pages */}
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/shipping" element={<Shipping />} />
-            <Route path="/returns" element={<Returns />} />
-            <Route path="/warranty" element={<Warranty />} />
-            {/* Admin CMS */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
-            <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
-            <Route path="/admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
-            <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
-            <Route path="/admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-            <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
-            <Route path="/admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
-            <Route path="/admin/reports" element={<ProtectedRoute><ReportsNew /></ProtectedRoute>} />
-            <Route path="/admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
-            <Route path="/admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
-            <Route path="/admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />
-            <Route path="/admin/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
-            <Route path="/admin/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
-            <Route path="/admin/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
-            <Route path="/admin/cashflow" element={<ProtectedRoute><CashflowReport /></ProtectedRoute>} />
-            <Route path="/admin/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
-            <Route path="/admin/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-            <Route path="/admin/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
-            <Route path="/admin/quotations" element={<ProtectedRoute><Quotations /></ProtectedRoute>} />
-            <Route path="/admin/reset-password" element={<ResetPassword />} />
-            <Route path="/pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
-            <Route path="/pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
-            <Route path="/pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
-            <Route path="/pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
-            {/* E-commerce */}
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
-            {/* Generic product detail (for StorefrontShop links) */}
-            <Route path="/product/:slug" element={<ProductDetail />} />
-            {/* Dynamic category catch-all — handles any slug from DB */}
-            <Route path="/:slug" element={<DynamicCategoryPage />} />
+            {/* Universal entry point — always accessible */}
+            <Route path="/portal" element={<Portal />} />
+            {/* Root redirect → portal */}
+            <Route path="/" element={<Navigate to="/portal" replace />} />
+
+            {/* All tenant routes live under /:tenantSlug */}
+            <Route path="/:tenantSlug" element={<TenantRoot />}>
+              {/* Storefront */}
+              <Route index element={<Index />} />
+              <Route path="setup" element={<Onboarding />} />
+              <Route path="cameras" element={<CamerasPage />} />
+              <Route path="lenses" element={<LensesPage />} />
+              <Route path="microphones" element={<MicrophonesPage />} />
+              <Route path="teleprompters" element={<TelepromptersPage />} />
+              <Route path="lighting" element={<LightingPage />} />
+              <Route path="cameras/:id" element={<ProductDetail />} />
+              <Route path="lenses/:id" element={<ProductDetail />} />
+              <Route path="microphones/:id" element={<ProductDetail />} />
+              <Route path="teleprompters/:id" element={<ProductDetail />} />
+              <Route path="lighting/:id" element={<ProductDetail />} />
+              <Route path="contact" element={<Contact />} />
+              <Route path="support" element={<Support />} />
+              <Route path="shipping" element={<Shipping />} />
+              <Route path="returns" element={<Returns />} />
+              <Route path="warranty" element={<Warranty />} />
+              <Route path="cart" element={<Cart />} />
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="order-confirmation/:id" element={<OrderConfirmation />} />
+              <Route path="product/:slug" element={<ProductDetail />} />
+              {/* Admin CMS */}
+              <Route path="admin/login" element={<AdminLogin />} />
+              <Route path="admin/reset-password" element={<ResetPassword />} />
+              <Route path="admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+              <Route path="admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+              <Route path="admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+              <Route path="admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+              <Route path="admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+              <Route path="admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+              <Route path="admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
+              <Route path="admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+              <Route path="admin/reports" element={<ProtectedRoute><ReportsNew /></ProtectedRoute>} />
+              <Route path="admin/payment-types" element={<ProtectedRoute><PaymentTypes /></ProtectedRoute>} />
+              <Route path="admin/tax-rates" element={<ProtectedRoute><TaxRates /></ProtectedRoute>} />
+              <Route path="admin/currencies" element={<ProtectedRoute><CurrenciesEnhanced /></ProtectedRoute>} />
+              <Route path="admin/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
+              <Route path="admin/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
+              <Route path="admin/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+              <Route path="admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+              <Route path="admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
+              <Route path="admin/cashflow" element={<ProtectedRoute><CashflowReport /></ProtectedRoute>} />
+              <Route path="admin/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
+              <Route path="admin/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+              <Route path="admin/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
+              <Route path="admin/quotations" element={<ProtectedRoute><Quotations /></ProtectedRoute>} />
+              {/* POS */}
+              <Route path="pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
+              <Route path="pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
+              <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
+              <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
+              {/* Dynamic category catch-all — must be last */}
+              <Route path=":categorySlug" element={<DynamicCategoryPage />} />
+            </Route>
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </SetupGuard>
         </BrowserRouter>
         </LayoutProvider>
       </AuthProvider>

@@ -116,5 +116,56 @@ export async function autoSeed() {
     );
   }
 
-  console.log("✅ Auto-seed complete (RBAC: permissions + roles)");
+  // ── SaaS Admin seed ────────────────────────────────────────────────────────
+  const bcrypt = await import("bcryptjs");
+  const saasAdminEmail = "admin@flippedpos.com";
+  const { rows: saasAdmins } = await pool.query("SELECT * FROM public.saas_admins WHERE email = $1", [saasAdminEmail]);
+  if (saasAdmins.length === 0) {
+    const hash = await bcrypt.default.hash("password", 10);
+    await pool.query(
+      "INSERT INTO public.saas_admins (email, password_hash, name) VALUES ($1, $2, $3)",
+      [saasAdminEmail, hash, "FlippedPOS Admin"]
+    );
+    console.log("✅ Seeded default SaaS admin: admin@flippedpos.com / password");
+  }
+
+  // ── Pricing Plans seed (public schema only) ───────────────────────────────
+  const { tenantStorage } = await import('./tenantStorage.js');
+  const currentSchema = tenantStorage.getStore() || 'public';
+  if (currentSchema === 'public') {
+    const defaultPlans = [
+      {
+        name: 'Self-Hosted', price: 'Free', sub_label: 'Forever', highlight: false, sort_order: 0,
+        description: 'Download the source, run it on your own server or locally with Docker.',
+        features: JSON.stringify(['Full POS terminal','Inventory management','Basic reports','Unlimited products','Receipt printing','Docker deployment','Community support']),
+        cta_label: 'Download Free', cta_href: 'https://github.com/kembe699/davinscs',
+      },
+      {
+        name: 'Professional', price: '$29', sub_label: 'per month', highlight: true, sort_order: 1,
+        description: 'Fully hosted and managed by us. We handle updates, backups, and uptime.',
+        features: JSON.stringify(['Everything in Self-Hosted','Cloud hosting included','Automatic backups','Custom domain','Priority support','Email notifications','Multi-user access','Advanced analytics']),
+        cta_label: 'Get Started', cta_href: '/register',
+      },
+      {
+        name: 'Enterprise', price: 'Custom', sub_label: 'contact us', highlight: false, sort_order: 2,
+        description: 'For chains, franchises, or businesses with custom requirements.',
+        features: JSON.stringify(['Everything in Professional','Multiple branches','Custom integrations','Dedicated server','On-site training','SLA guarantee','White-label option']),
+        cta_label: 'Contact Sales', cta_href: '#contact',
+      },
+    ];
+
+    const { rows: existingPlans } = await pool.query('SELECT COUNT(*) FROM public.pricing_plans');
+    if (parseInt(existingPlans[0].count) === 0) {
+      for (const p of defaultPlans) {
+        await pool.query(
+          `INSERT INTO public.pricing_plans (name, price, sub_label, description, features, cta_label, cta_href, highlight, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [p.name, p.price, p.sub_label, p.description, p.features, p.cta_label, p.cta_href, p.highlight, p.sort_order]
+        );
+      }
+      console.log('✅ Seeded default pricing plans');
+    }
+  }
+
+  console.log("✅ Auto-seed complete (RBAC & SaaS Admin)");
 }

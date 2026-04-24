@@ -3,6 +3,7 @@ import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -11,6 +12,7 @@ import { buildThermalReceipt } from "@/utils/receiptUtils";
 
 export default function POSMain() {
   const navigate = useNavigate();
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const { user } = useAuth();
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -609,7 +611,7 @@ export default function POSMain() {
             {user?.email && <><br /><span className="text-admin-text font-medium">{user.email}</span></>}
           </p>
           <button
-            onClick={() => navigate("/pos/cash-management")}
+            onClick={() => navigate(tp("/pos/cash-management"))}
             className="w-full py-3 bg-admin-success text-white font-semibold hover:opacity-90 text-sm"
           >
             Open Session in Cash Management
@@ -994,25 +996,25 @@ export default function POSMain() {
             </div>
             <div className="space-y-2">
               <button
-                onClick={() => navigate("/admin")}
+                onClick={() => navigate(tp("/admin"))}
                 className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
               >
                 Management
               </button>
               <button 
-                onClick={() => navigate("/pos/sales-history")}
+                onClick={() => navigate(tp("/pos/sales-history"))}
                 className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
               >
                 View Sales History
               </button>
               <button 
-                onClick={() => navigate("/pos/cash-management")}
+                onClick={() => navigate(tp("/pos/cash-management"))}
                 className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
               >
                 Cash In / Out
               </button>
               <button 
-                onClick={() => navigate("/pos/end-of-day")}
+                onClick={() => navigate(tp("/pos/end-of-day"))}
                 className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
               >
                 End of Day

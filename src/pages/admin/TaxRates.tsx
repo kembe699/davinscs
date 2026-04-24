@@ -36,8 +36,10 @@ export default function TaxRates() {
     try {
       if (editingId) {
         await api.taxRates.update(editingId, formData);
+        toast("Tax rate updated successfully!", "success", "Saved");
       } else {
         await api.taxRates.create(formData);
+        toast("Tax rate created successfully!", "success", "Saved");
       }
       setShowModal(false);
       setEditingId(null);

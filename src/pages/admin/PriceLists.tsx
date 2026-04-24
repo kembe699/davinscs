@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { api, ApiCurrency, ApiProduct, PriceList, PriceListItem } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { Check, Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload, X } from "lucide-react";
@@ -10,12 +11,12 @@ import * as XLSX from "xlsx";
 type TabId = "schemes" | "pricelist";
 
 export default function PriceLists() {
+  const { toast } = useToast();
   const { baseCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useState<TabId>("schemes");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [currencies, setCurrencies] = useState<ApiCurrency[]>([]);
@@ -89,11 +90,6 @@ export default function PriceLists() {
     else setItems([]);
   }, [selectedSchemeId]);
 
-  const flash = (msg: string) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(""), 3000);
-  };
-
   // ── Scheme CRUD ──────────────────────────────────────────────────────────
   const createScheme = async () => {
     if (!addForm.name.trim()) return;
@@ -111,7 +107,7 @@ export default function PriceLists() {
       );
       setAddForm(emptyAdd);
       setShowAddForm(false);
-      flash("Scheme created successfully");
+      toast("Scheme created successfully!", "success", "Saved");
     } catch (e: any) {
       setError(e?.message || "Failed to create scheme");
     } finally {
@@ -141,7 +137,7 @@ export default function PriceLists() {
       } as any);
       setPriceLists((prev) => prev.map((p) => (p.id === id ? { ...p, ...(updated as any) } : p)));
       setEditingId(null);
-      flash("Scheme updated");
+      toast("Scheme updated!", "success", "Saved");
     } catch (e: any) {
       setError(e?.message || "Failed to update");
     } finally {
@@ -159,7 +155,7 @@ export default function PriceLists() {
           await api.priceLists.delete(id);
           setPriceLists((prev) => prev.filter((p) => p.id !== id));
           if (selectedSchemeId === id) { setSelectedSchemeId(null); setItems([]); }
-          flash("Scheme deleted");
+          toast("Scheme deleted.", "success", "Deleted");
         } catch (e: any) {
           setError(e?.message || "Failed to delete");
         } finally {
@@ -219,7 +215,7 @@ export default function PriceLists() {
         count++;
       }
       await loadItems(selectedSchemeId);
-      flash(`Imported ${count} price override(s) successfully`);
+      toast(`Imported ${count} price override(s) successfully!`, "success", "Import Complete");
     } catch (e: any) {
       setError(e?.message || "Import failed — check that the file matches the template format");
     } finally {
@@ -293,10 +289,6 @@ export default function PriceLists() {
             <button onClick={() => setError("")}><X size={14} /></button>
           </div>
         )}
-        {success && (
-          <div className="mb-4 p-3 border border-green-500 text-green-600 bg-green-50 text-sm">{success}</div>
-        )}
-
         {/* Tabs */}
         <div className="flex border-b border-admin-border mb-6">
           {(["schemes", "pricelist"] as TabId[]).map((tab) => (

@@ -1,11 +1,11 @@
 import { Router } from "express";
-import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import pool, { getSchemaClient } from "../db.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = Router();
 
 // GET all currencies
-router.get("/", async (req, res) => {
+router.get("/", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM currencies ORDER BY is_base DESC, code ASC"
@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET base currency
-router.get("/base", async (req, res) => {
+router.get("/base", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM currencies WHERE is_base = TRUE LIMIT 1"
@@ -94,7 +94,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 
 // PUT set as base currency (admin)
 router.put("/:id/set-base", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   
   try {
     await client.query("BEGIN");

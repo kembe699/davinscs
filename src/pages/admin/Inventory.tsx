@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, ApiInventoryItem, ApiStockMovement } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Package, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
 
 export default function Inventory() {
+  const { toast } = useToast();
   const [items, setItems] = useState<ApiInventoryItem[]>([]);
   const [movements, setMovements] = useState<ApiStockMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,7 @@ export default function Inventory() {
       setAdjusting(null);
       setAdjustQty("");
       setAdjustNotes("");
+      toast("Stock adjusted successfully!", "success", "Adjusted");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Adjustment failed");
     } finally {

@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -85,7 +85,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // Create quotation
 router.post("/", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     const { customer_id, customer_name, customer_email, customer_phone, customer_address,
@@ -130,7 +130,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 // Update quotation
 router.put("/:id", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     const { customer_id, customer_name, customer_email, customer_phone, customer_address,
@@ -188,7 +188,7 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
 
 // Convert quotation to invoice
 router.post("/:id/convert", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     const { rows: qRows } = await client.query(

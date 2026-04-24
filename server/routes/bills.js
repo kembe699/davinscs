@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -144,7 +144,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 
 // DELETE bill
 router.delete("/:id", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     

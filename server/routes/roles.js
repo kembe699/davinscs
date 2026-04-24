@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -94,7 +94,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 router.put("/:id/permissions", requireAuth, async (req, res) => {
   const { permission_ids } = req.body;
   if (!Array.isArray(permission_ids)) return res.status(400).json({ error: "permission_ids array required" });
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     await client.query("DELETE FROM role_permissions WHERE role_id = $1", [req.params.id]);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { ArrowLeft, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -10,6 +11,7 @@ import { CashDrawerSession } from "@/lib/api";
 export default function CashManagement() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const [currentSession, setCurrentSession] = useState<CashDrawerSession | null>(null);
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
@@ -101,7 +103,7 @@ export default function CashManagement() {
     <div className="min-h-screen bg-admin-bg p-6">
       <div className="mb-6 flex items-center gap-4">
         <button
-          onClick={() => navigate("/pos")}
+          onClick={() => navigate(tp("/pos"))}
           className="px-4 py-2 bg-admin-surface border border-admin-border text-admin-text hover:bg-admin-bg flex items-center gap-2"
         >
           <ArrowLeft size={16} />

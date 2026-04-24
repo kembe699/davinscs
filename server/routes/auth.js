@@ -6,53 +6,107 @@ import { v4 as uuidv4 } from "uuid";
 import pool from "../db.js";
 import { logAudit } from "../utils/audit.js";
 
+
+import { tenantStorage } from "../tenantStorage.js";
+
 const router = express.Router();
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, schema_name: clientSchema } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
   try {
-    const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [email.toLowerCase()]);
-    const user = rows[0];
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    // 1. Find user in tenant_users mapping
+    const tuRes = await pool.query("SELECT * FROM public.tenant_users WHERE email = $1", [email.toLowerCase()]);
+    const tenantUser = tuRes.rows[0];
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN_FAILED', entityType: 'user', entityId: user.id, details: { reason: 'Wrong password' }, ip: req.ip });
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Fall back to the schema the frontend told us (e.g. newly-created user whose
+    // tenant_users row was never inserted), otherwise default to 'public'.
+    let schemaName = tenantUser?.schema_name || clientSchema || 'public';
+    let tenantId   = tenantUser?.tenant_id   || null;
+
+    // 2. Enforce SaaS Trial Status (only when we have a real tenant mapping)
+    if (tenantUser) {
+      const tenantRes = await pool.query("SELECT * FROM public.tenants WHERE id = $1", [tenantUser.tenant_id]);
+      const tenant = tenantRes.rows[0];
+
+      if (tenant) {
+        if (tenant.status === 'suspended') {
+          return res.status(403).json({ error: "ACCOUNT_SUSPENDED", message: "Account has been suspended." });
+        }
+        if (tenant.status === 'trial') {
+          const trialEnds = new Date(tenant.trial_ends_at);
+          if (trialEnds < new Date()) {
+            return res.status(403).json({ error: "TRIAL_EXPIRED", message: "Your 7-day trial has expired." });
+          }
+        }
+      }
     }
 
-    // Load permissions for this user's role
-    let permissions = [];
-    let roleName = null;
-    if (user.role_id) {
-      const { rows: permRows } = await pool.query(
-        `SELECT p.key FROM permissions p
-         JOIN role_permissions rp ON rp.permission_id = p.id
-         WHERE rp.role_id = $1`,
-        [user.role_id]
+    // 3. Authenticate against the tenant's schema
+    await tenantStorage.run(schemaName, async () => {
+      const { rows } = await pool.query("SELECT * FROM users WHERE email = $1", [email.toLowerCase()]);
+      const user = rows[0];
+      if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) {
+        await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN_FAILED', entityType: 'user', entityId: user.id, details: { reason: 'Wrong password' }, ip: req.ip });
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // 4. Auto-heal: if this user wasn't in public.tenant_users, insert them now
+      if (!tenantUser && schemaName !== 'public') {
+        try {
+          if (!tenantId) {
+            const tRes = await pool.query("SELECT id FROM public.tenants WHERE schema_name = $1", [schemaName]);
+            tenantId = tRes.rows[0]?.id || null;
+          }
+          if (tenantId) {
+            await pool.query(
+              `INSERT INTO public.tenant_users (email, tenant_id, schema_name)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (email) DO UPDATE
+                 SET schema_name = EXCLUDED.schema_name,
+                     tenant_id   = EXCLUDED.tenant_id`,
+              [email.toLowerCase(), tenantId, schemaName]
+            );
+          }
+        } catch (syncErr) {
+          console.error("[login] tenant_users auto-heal failed:", syncErr.message);
+        }
+      }
+
+      // Load permissions for this user's role
+      let permissions = [];
+      let roleName = null;
+      if (user.role_id) {
+        const { rows: permRows } = await pool.query(
+          `SELECT p.key FROM permissions p
+           JOIN role_permissions rp ON rp.permission_id = p.id
+           WHERE rp.role_id = $1`,
+          [user.role_id]
+        );
+        permissions = permRows.map(r => r.key);
+        const { rows: roleRow } = await pool.query("SELECT name FROM roles WHERE id = $1", [user.role_id]);
+        roleName = roleRow[0]?.name || null;
+      } else if (user.role === "admin") {
+        const { rows: allPerms } = await pool.query("SELECT key FROM permissions");
+        permissions = allPerms.map(r => r.key);
+        roleName = "Admin";
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role, role_id: user.role_id, permissions, schema_name: schemaName },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
       );
-      permissions = permRows.map(r => r.key);
-      const { rows: roleRow } = await pool.query("SELECT name FROM roles WHERE id = $1", [user.role_id]);
-      roleName = roleRow[0]?.name || null;
-    } else if (user.role === "admin") {
-      // Legacy admin users without role_id get all permissions
-      const { rows: allPerms } = await pool.query("SELECT key FROM permissions");
-      permissions = allPerms.map(r => r.key);
-      roleName = "Admin";
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, role_id: user.role_id, permissions },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-    await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN', entityType: 'user', entityId: user.id, details: { role: roleName }, ip: req.ip });
-    res.json({
-      token,
-      user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions }
+      await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN', entityType: 'user', entityId: user.id, details: { role: roleName }, ip: req.ip });
+      res.json({
+        token,
+        user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name: schemaName }
+      });
     });
   } catch (err) {
     console.error(err);
@@ -60,44 +114,57 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email required" });
   try {
-    const { rows } = await pool.query("SELECT id FROM users WHERE email = $1", [email.toLowerCase()]);
-    if (!rows[0]) {
-      console.log(`[forgot-password] email not found in DB: ${email}`);
-      return res.json({ message: "If that email exists, a reset link has been sent." });
-    }
-    const token = uuidv4();
-    const expires = new Date(Date.now() + 60 * 60 * 1000);
-    await pool.query(
-      "DELETE FROM password_resets WHERE email = $1",
+    // Resolve tenant schema from the global email → schema mapping
+    const tuRes = await pool.query(
+      "SELECT schema_name FROM public.tenant_users WHERE email = $1",
       [email.toLowerCase()]
     );
-    await pool.query(
-      "INSERT INTO password_resets (email, token, expires_at) VALUES ($1, $2, $3)",
-      [email.toLowerCase(), token, expires]
-    );
-    const appUrl = process.env.APP_URL || "http://localhost:5173";
-    const resetLink = `${appUrl}/admin/reset-password?token=${token}`;
-    console.log(`[forgot-password] SMTP_USER=${process.env.SMTP_USER} sending to ${email}`);
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      tls: { rejectUnauthorized: false },
+    const schemaName = tuRes.rows[0]?.schema_name || 'public';
+
+    let tokenGenerated = null;
+    await tenantStorage.run(schemaName, async () => {
+      const { rows } = await pool.query("SELECT id FROM users WHERE email = $1", [email.toLowerCase()]);
+      if (!rows[0]) return; // silently do nothing — don't reveal whether email exists
+      tokenGenerated = uuidv4();
+      const expires = new Date(Date.now() + 60 * 60 * 1000);
+      await pool.query("DELETE FROM password_resets WHERE email = $1", [email.toLowerCase()]);
+      await pool.query(
+        "INSERT INTO password_resets (email, token, expires_at) VALUES ($1, $2, $3)",
+        [email.toLowerCase(), tokenGenerated, expires]
+      );
     });
-    await transporter.sendMail({
-      from: `"Davin's Store" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: "Password Reset \u2014 Davin's CMS",
-      html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
-             <p><a href="${resetLink}">${resetLink}</a></p>
-             <p>If you did not request this, ignore this email.</p>`,
-    });
-    console.log(`[forgot-password] email sent successfully to ${email}`);
+
+    if (tokenGenerated) {
+      const tenantRes = await pool.query(
+        "SELECT tenant_slug FROM public.tenants WHERE schema_name = $1",
+        [schemaName]
+      );
+      const tenantSlug = tenantRes.rows[0]?.tenant_slug;
+      const cmsUrl = process.env.CMS_URL || process.env.APP_URL || "http://localhost:8080";
+      const resetLink = tenantSlug
+        ? `${cmsUrl}/${tenantSlug}/admin/reset-password?token=${tokenGenerated}`
+        : `${cmsUrl}/admin/reset-password?token=${tokenGenerated}`;
+      const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        tls: { rejectUnauthorized: false },
+      });
+      await transporter.sendMail({
+        from: `"FlippedPOS" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: "Password Reset \u2014 FlippedPOS",
+        html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
+               <p><a href="${resetLink}">${resetLink}</a></p>
+               <p>If you did not request this, ignore this email.</p>`,
+      });
+    }
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch (err) {
     console.error("[forgot-password] error:", err.message);
@@ -106,18 +173,24 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 router.post("/reset-password", async (req, res) => {
-  const { token, password } = req.body;
+  const { token, password, schema } = req.body;
   if (!token || !password) return res.status(400).json({ error: "Token and password required" });
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  const schemaName = schema || 'public';
   try {
-    const { rows } = await pool.query(
-      "SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()",
-      [token]
-    );
-    if (!rows[0]) return res.status(400).json({ error: "Invalid or expired reset token" });
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2", [hash, rows[0].email]);
-    await pool.query("DELETE FROM password_resets WHERE token = $1", [token]);
+    let updated = false;
+    await tenantStorage.run(schemaName, async () => {
+      const { rows } = await pool.query(
+        "SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()",
+        [token]
+      );
+      if (!rows[0]) return;
+      const hash = await bcrypt.hash(password, 10);
+      await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2", [hash, rows[0].email]);
+      await pool.query("DELETE FROM password_resets WHERE token = $1", [token]);
+      updated = true;
+    });
+    if (!updated) return res.status(400).json({ error: "Invalid or expired reset token" });
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);

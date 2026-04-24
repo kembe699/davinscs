@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api, ApiCurrency } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Globe, Trash2, Check } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 export default function Currencies() {
+  const { toast } = useToast();
   const { refreshCurrencies } = useCurrency();
   const [currencies, setCurrencies] = useState<ApiCurrency[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export default function Currencies() {
       await refreshCurrencies();
       setCreating(false);
       setForm({ code: "", name: "", symbol: "", exchange_rate: "", is_active: true });
+      toast("Currency created successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
     } finally {
@@ -75,6 +78,7 @@ export default function Currencies() {
       await api.currencies.setBase(id);
       await loadCurrencies();
       await refreshCurrencies();
+      toast("Base currency updated!", "success", "Updated");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set base currency");
     } finally {

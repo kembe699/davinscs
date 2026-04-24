@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useTenant } from "@/contexts/TenantContext";
 
 const Login = () => {
   const { login } = useAuth();
-  const { logo, companyName } = useLayout();
+  const { logo, companyName, refreshLayout } = useLayout();
+  const { schemaName } = useTenant();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,6 +20,7 @@ const Login = () => {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState("");
   const [forgotError, setForgotError] = useState("");
+  const [accountStatus, setAccountStatus] = useState("");
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,11 +42,16 @@ const Login = () => {
     setError("");
     setLoading(true);
     try {
-      const { token, user } = await api.auth.login(email, password);
+      const { token, user } = await api.auth.login(email, password, schemaName);
       login(token, user);
-      navigate("/admin");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      refreshLayout();
+      window.location.replace(`/${tenantSlug}/admin`);
+    } catch (err: any) {
+      if (err.message === "TRIAL_EXPIRED" || err.message === "ACCOUNT_SUSPENDED") {
+        setAccountStatus(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -59,7 +68,27 @@ const Login = () => {
           <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase">CMS Admin Portal</p>
         </div>
 
-        {showForgot ? (
+        {accountStatus ? (
+          <div className="border border-border-subtle p-8 space-y-5 bg-chassis text-center">
+            <h1 className="text-xl font-bold text-red-500 tracking-tight uppercase">
+              {accountStatus === "TRIAL_EXPIRED" ? "Trial Expired" : "Account Suspended"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-4">
+              {accountStatus === "TRIAL_EXPIRED" 
+                ? "Your 7-day free trial has come to an end. Your data is perfectly safe."
+                : "This account has been temporarily suspended by an administrator."}
+            </p>
+            <div className="mt-6 pt-6 border-t border-border-subtle">
+              <p className="text-xs text-foreground mb-4">Please contact support or pay for a plan to restore your access.</p>
+              <button 
+                onClick={() => setAccountStatus("")}
+                className="w-full h-10 border border-border-subtle text-muted-foreground hover:text-foreground text-xs uppercase tracking-widest transition-colors"
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        ) : showForgot ? (
           <div className="border border-border-subtle p-8 space-y-5 bg-chassis">
             <h1 className="text-lg font-bold text-foreground tracking-tight">Reset Password</h1>
             <p className="text-xs text-muted-foreground">Enter your email and we'll send a reset link.</p>

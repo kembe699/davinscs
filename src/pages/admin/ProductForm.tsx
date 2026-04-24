@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -43,8 +45,10 @@ type Account = { id: number; code: string; name: string; account_type: string };
 export default function ProductForm() {
   const { id } = useParams<{ id: string }>();
   const { baseCurrency } = useCurrency();
+  const { toast } = useToast();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const tp = useTenantPath();
 
   const [form, setForm] = useState(empty);
   const [margin, setMargin] = useState<number | "">("");
@@ -74,7 +78,7 @@ export default function ProductForm() {
     api.products.list()
       .then((products) => {
         const p = products.find((x) => x.id === Number(id));
-        if (!p) return navigate("/admin/products");
+        if (!p) return navigate(tp("/admin/products"));
         // Convert expiry_date to yyyy-MM-dd format if it exists
         const expiryDate = (p as any).expiry_date 
           ? new Date((p as any).expiry_date).toISOString().split('T')[0]
@@ -96,7 +100,7 @@ export default function ProductForm() {
         });
         if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
-      .catch(() => navigate("/admin/products"))
+      .catch(() => navigate(tp("/admin/products")))
       .finally(() => setFetching(false));
   }, [id, isEdit, navigate]);
 
@@ -125,10 +129,12 @@ export default function ProductForm() {
     try {
       if (isEdit) {
         await api.products.update(Number(id), form as Partial<ApiProduct>);
+        toast("Product updated successfully!", "success", "Saved");
       } else {
         await api.products.create(form as Partial<ApiProduct>);
+        toast("Product created successfully!", "success", "Saved");
       }
-      navigate("/admin/products");
+      navigate(tp("/admin/products"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -151,7 +157,7 @@ export default function ProductForm() {
       <div className="p-8">
         <div className="flex items-center gap-4 mb-8">
           <button
-            onClick={() => navigate("/admin/products")}
+            onClick={() => navigate(tp("/admin/products"))}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={18} />
@@ -242,16 +248,18 @@ export default function ProductForm() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => set("in_stock", !form.in_stock)}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${form.in_stock ? "bg-primary" : "bg-border-subtle"}`}
-                    >
-                      <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.in_stock ? "translate-x-5" : "translate-x-0.5"}`} />
-                    </button>
-                    <span className="text-sm text-foreground">{form.in_stock ? "In Stock" : "Out of Stock"}</span>
-                  </div>
+                  {(form as any).product_type !== 'service' && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => set("in_stock", !form.in_stock)}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${form.in_stock ? "bg-primary" : "bg-border-subtle"}`}
+                      >
+                        <span className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.in_stock ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
+                      <span className="text-sm text-foreground">{form.in_stock ? "In Stock" : "Out of Stock"}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -410,46 +418,48 @@ export default function ProductForm() {
                 ))}
               </section>
 
-              {/* Stock Control */}
-              <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
-                
-                <div className="space-y-5">
-                  <div>
-                    <label className="field-label">Unit of Measure (UOM)</label>
-                    <select
-                      value={(form as any).uom}
-                      onChange={(e) => set("uom", e.target.value)}
-                      className="field-input appearance-none"
-                    >
-                      {UOM_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground mt-1">How this product is sold / counted</p>
+              {/* Stock Control — only for physical products, not services */}
+              {(form as any).product_type !== 'service' && (
+                <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
+                  
+                  <div className="space-y-5">
+                    <div>
+                      <label className="field-label">Unit of Measure (UOM)</label>
+                      <select
+                        value={(form as any).uom}
+                        onChange={(e) => set("uom", e.target.value)}
+                        className="field-input appearance-none"
+                      >
+                        {UOM_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">How this product is sold / counted</p>
+                    </div>
+                    <div>
+                      <label className="field-label">Current Stock</label>
+                      <input
+                        type="number" min={0} value={(form as any).quantity_on_hand}
+                        onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
+                        placeholder="0"
+                        className="field-input"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
+                    </div>
+                    <div>
+                      <label className="field-label">Reorder Level</label>
+                      <input
+                        type="number" min={0} value={(form as any).reorder_level}
+                        onChange={(e) => set("reorder_level", Number(e.target.value))}
+                        placeholder="10"
+                        className="field-input"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="field-label">Current Stock</label>
-                    <input
-                      type="number" min={0} value={(form as any).quantity_on_hand}
-                      onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
-                      placeholder="0"
-                      className="field-input"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
-                  </div>
-                  <div>
-                    <label className="field-label">Reorder Level</label>
-                    <input
-                      type="number" min={0} value={(form as any).reorder_level}
-                      onChange={(e) => set("reorder_level", Number(e.target.value))}
-                      placeholder="10"
-                      className="field-input"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
-                  </div>
-                </div>
-              </section>
+                </section>
+              )}
 
               {/* Image URL Card */}
               <section className="border border-border-subtle p-6 bg-chassis space-y-5">
@@ -483,7 +493,7 @@ export default function ProductForm() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/admin/products")}
+              onClick={() => navigate(tp("/admin/products"))}
               className="h-12 px-6 border border-border-subtle text-muted-foreground font-mono-tech text-xs uppercase tracking-widest hover:border-primary/40 hover:text-foreground transition-colors"
             >
               Cancel

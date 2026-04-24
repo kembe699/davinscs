@@ -702,20 +702,20 @@ export const api = {
       request<ApiUser>(`/api/users/${id}/role`, { method: "PUT", body: JSON.stringify({ role_id }) }),
   },
   auth: {
-    login: (email: string, password: string) =>
+    login: (email: string, password: string, schema_name?: string) =>
       request<{ token: string; user: { id: number; email: string; role: string } }>("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, schema_name }),
       }),
     forgotPassword: (email: string) =>
       request<{ message: string }>("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email }),
       }),
-    resetPassword: (token: string, password: string) =>
+    resetPassword: (token: string, password: string, schema?: string) =>
       request<{ message: string }>("/api/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, password, schema }),
       }),
   },
   inventory: {

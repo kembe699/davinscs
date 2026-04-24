@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import AdminLayout from "./AdminLayout";
 import { api } from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -18,6 +19,7 @@ export default function Customers() {
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
   const navigate = useNavigate();
+  const tp = useTenantPath();
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,8 +65,10 @@ export default function Customers() {
     try {
       if (editingId) {
         await api.customers.update(editingId, form);
+        toast("Customer updated successfully!", "success", "Saved");
       } else {
         await api.customers.create(form);
+        toast("Customer added successfully!", "success", "Saved");
       }
       setShowForm(false);
       load(search || undefined);
@@ -149,7 +153,7 @@ export default function Customers() {
                 )}
                 {filtered.map(c => (
                   <tr key={c.id}
-                    onClick={() => navigate(`/admin/customers/${c.id}`)}
+                    onClick={() => navigate(tp(`/admin/customers/${c.id}`))}
                     className="hover:bg-chassis/50 transition-colors cursor-pointer">
                     <td className="px-4 py-3 font-medium text-foreground">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.email || "—"}</td>
@@ -160,7 +164,7 @@ export default function Customers() {
                     <td className="px-4 py-3 text-right font-mono text-xs text-yellow-400">{formatCurrencySync(Number(c.balance || 0), sym, false)}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => navigate(`/admin/customers/${c.id}`)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><ChevronRight size={14} /></button>
+                        <button onClick={() => navigate(tp(`/admin/customers/${c.id}`))} className="p-1 text-muted-foreground hover:text-primary transition-colors"><ChevronRight size={14} /></button>
                         <button onClick={() => openEdit(c)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Edit2 size={14} /></button>
                         <button onClick={() => handleDelete(c.id)} className="p-1 text-muted-foreground hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                       </div>

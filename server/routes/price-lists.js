@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 // Get active price lists
-router.get("/active", async (req, res) => {
+router.get("/active", optionalTenantContext, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT pl.*, c.code as currency_code, c.symbol as currency_symbol
@@ -38,7 +38,7 @@ router.get("/active", async (req, res) => {
 });
 
 // Get items for a price list (no auth required – needed by POS)
-router.get("/:id/items", async (req, res) => {
+router.get("/:id/items", optionalTenantContext, async (req, res) => {
   const { id } = req.params;
 
   try {

@@ -156,8 +156,10 @@ export default function Promotions() {
       };
       if (editingId) {
         await api.promotions.update(editingId, payload);
+        toast("Promotion updated successfully!", "success", "Saved");
       } else {
         await api.promotions.create(payload);
+        toast("Promotion created successfully!", "success", "Saved");
       }
       closeModal();
       load();

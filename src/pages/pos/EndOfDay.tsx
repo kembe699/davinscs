@@ -6,6 +6,7 @@ import {
   ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, Package, Users, Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { api, CashDrawerSession } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -13,6 +14,7 @@ import { formatCurrencySync } from "@/utils/currency";
 export default function EndOfDay() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
   const printRef = useRef<HTMLDivElement>(null);
@@ -195,7 +197,7 @@ export default function EndOfDay() {
       {/* Top bar */}
       <div className="bg-admin-surface border-b border-admin-border px-6 py-4 flex items-center gap-3 print:hidden">
         <button
-          onClick={() => navigate("/pos")}
+          onClick={() => navigate(tp("/pos"))}
           className="flex items-center gap-2 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
         >
           <ArrowLeft size={15} /> Back to POS

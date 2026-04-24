@@ -36,8 +36,10 @@ export default function PaymentTypes() {
     try {
       if (editingId) {
         await api.paymentTypes.update(editingId, formData);
+        toast("Payment type updated successfully!", "success", "Saved");
       } else {
         await api.paymentTypes.create(formData);
+        toast("Payment type created successfully!", "success", "Saved");
       }
       setShowModal(false);
       setEditingId(null);

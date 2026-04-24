@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiCategory } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 
@@ -12,6 +13,7 @@ function autoSlug(name: string) {
 }
 
 export default function Categories() {
+  const { toast } = useToast();
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -45,6 +47,7 @@ export default function Categories() {
       const created = await api.categories.create(draft);
       setCategories((prev) => [...prev, created].sort((a, b) => a.sort_order - b.sort_order));
       closeModal();
+      toast("Category created successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -66,6 +69,7 @@ export default function Categories() {
         prev.map((c) => (c.id === id ? updated : c)).sort((a, b) => a.sort_order - b.sort_order)
       );
       setEditId(null);
+      toast("Category updated successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

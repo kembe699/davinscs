@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 
@@ -66,7 +66,7 @@ router.post("/close", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Closing cash amount is required" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   
   try {
     await client.query("BEGIN");

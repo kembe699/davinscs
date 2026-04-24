@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { api, ApiUser } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, Pencil, Check, X, Shield, Key, Users as UsersIcon, ChevronDown, ChevronUp } from "lucide-react";
 
 type Tab = "users" | "roles" | "permissions";
 type EditState = { email: string; password: string };
 
-// ── Users Tab ─────────────────────────────────────────────────────────────────
+// ── Users Tab ───────────────────────────────────────────────────────────────────────────────
 function UsersTab() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,7 @@ function UsersTab() {
       const role = roles.find(r => r.id === newRoleId);
       setUsers(prev => [...prev, { ...created, role_name: role?.name || null }]);
       setNewEmail(""); setNewPassword(""); setNewRoleId(""); setAdding(false);
+      toast("User created successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
     } finally { setSaving(false); }
@@ -85,6 +88,7 @@ function UsersTab() {
       await api.users.assignRole(userId, roleId);
       const role = roles.find(r => r.id === roleId);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role_id: roleId, role_name: role?.name || null } : u));
+      toast("Role assigned successfully!", "success", "Updated");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to assign role");
     } finally { setAssigningId(null); }

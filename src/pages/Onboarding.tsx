@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useTenant } from "../contexts/TenantContext.tsx";
 import {
   Building2, User, Palette, Rocket, ChevronRight, ChevronLeft,
   Upload, Eye, EyeOff, Check, Store, ShoppingBag, Utensils,
@@ -90,7 +91,9 @@ const STEPS = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Onboarding() {
-  const navigate = useNavigate();
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const tenant = useTenant();
+  const schemaName = tenant.schemaName;
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
@@ -169,6 +172,7 @@ export default function Onboarding() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          schema_name: schemaName,
           admin_name: form.admin_name,
           admin_email: form.admin_email,
           admin_password: form.admin_password,
@@ -576,7 +580,7 @@ export default function Onboarding() {
             </div>
 
             <button
-              onClick={() => navigate("/admin/login")}
+              onClick={() => { window.location.href = `/${tenantSlug}/admin/login`; }}
               className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors text-sm"
             >
               <Rocket size={16} /> Go to Admin Login

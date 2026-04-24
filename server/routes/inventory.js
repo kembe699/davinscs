@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -78,7 +78,7 @@ router.post("/adjust", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Product ID and quantity required" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     

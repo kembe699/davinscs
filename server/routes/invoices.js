@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
@@ -86,7 +86,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // Create invoice
 router.post("/", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     const {
@@ -154,7 +154,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 
 // Record payment
 router.post("/:id/payments", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     const { amount, payment_method, notes } = req.body;

@@ -116,6 +116,7 @@ export default function Invoices() {
       const refreshed = await api.invoices.get(detail.id);
       setDetail(refreshed);
       setInvoices(prev => prev.map(i => i.id === refreshed.id ? { ...i, ...refreshed } : i));
+      toast("Payment recorded successfully!", "success", "Payment Saved");
     } catch (err: any) {
       toast(err.message || "Failed to record payment", "error", "Payment Failed");
     } finally {
@@ -131,6 +132,7 @@ export default function Invoices() {
           await api.invoices.void(id);
           loadInvoices();
           if (detail?.id === id) setDetail({ ...detail, status: "voided" });
+          toast("Invoice voided successfully.", "success", "Voided");
         } catch (err: any) {
           toast(err.message || "Failed to void invoice", "error", "Error");
         }

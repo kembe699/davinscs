@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTenantPath, useTenant } from "@/contexts/TenantContext";
 import { api } from "@/lib/api";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
   const navigate = useNavigate();
+  const tp = useTenantPath();
+  const { schemaName } = useTenant();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,9 +22,9 @@ export default function ResetPassword() {
     setError("");
     setLoading(true);
     try {
-      await api.auth.resetPassword(token, password);
+      await api.auth.resetPassword(token, password, schemaName);
       setSuccess(true);
-      setTimeout(() => navigate("/admin/login"), 2500);
+      setTimeout(() => navigate(tp("/admin/login")), 2500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reset failed");
     } finally {

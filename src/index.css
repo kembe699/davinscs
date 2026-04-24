@@ -17,46 +17,46 @@
 /* ── Admin theme tokens ─────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --admin-bg: #1a1a1a;
-  --admin-surface: #2d2d2d;
-  --admin-border: #404040;
-  --admin-text: #ffffff;
-  --admin-text-secondary: #b0b0b0;
+  --admin-bg: #1f1f1f;
+  --admin-surface: #262626;
+  --admin-border: #3d3d3d;
+  --admin-text: #ededed;
+  --admin-text-secondary: #999999;
   --admin-accent: #ffffff;
   --admin-success: #4caf50;
   --admin-danger: #f44336;
 }
 
 [data-theme="light"] {
-  --admin-bg: #f0f2f5;
+  --admin-bg: #f8f9fa;
   --admin-surface: #ffffff;
-  --admin-border: #d1d5db;
-  --admin-text: #111827;
-  --admin-text-secondary: #6b7280;
-  --admin-accent: #111827;
-  --admin-success: #16a34a;
-  --admin-danger: #dc2626;
+  --admin-border: #e2e8f0;
+  --admin-text: #334155;
+  --admin-text-secondary: #64748b;
+  --admin-accent: #334155;
+  --admin-success: #10b981;
+  --admin-danger: #ef4444;
 }
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 90%;
+    --background: 0 0% 12%;
+    --foreground: 0 0% 93%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 90%;
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 93%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 90%;
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 93%;
 
     --primary: 211 100% 30%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 90%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 58%;
 
     --accent: 211 100% 30%;
     --accent-foreground: 0 0% 100%;
@@ -64,26 +64,26 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
+    --border: 0 0% 24%;
+    --input: 0 0% 20%;
     --ring: 211 100% 30%;
 
     --radius: 0rem;
 
-    --sidebar-background: 0 0% 5%;
+    --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 211 100% 30%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent: 0 0% 17%;
     --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 12%;
+    --sidebar-border: 0 0% 24%;
     --sidebar-ring: 211 100% 30%;
 
     --indicator: 211 100% 30%;
-    --chassis: 0 0% 4%;
-    --grip: 0 0% 7%;
+    --chassis: 0 0% 15%;
+    --grip: 0 0% 18%;
     --metal: 0 0% 90%;
-    --border-subtle: 0 0% 12%;
+    --border-subtle: 0 0% 24%;
     --brand-gradient: linear-gradient(90deg, #004A99 0%, #008B8B 50%, #32CD32 100%);
     --brand-start: #004A99;
     --brand-mid: #008B8B;
@@ -91,27 +91,27 @@
   }
 
   [data-theme="light"] {
-    --background: 0 0% 97%;
-    --foreground: 220 14% 10%;
+    --background: 210 20% 98%;
+    --foreground: 220 10% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 220 14% 10%;
+    --card-foreground: 220 10% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 10%;
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 220 14% 10%;
-    --muted: 220 14% 90%;
-    --muted-foreground: 220 8% 42%;
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --sidebar-background: 220 14% 95%;
-    --sidebar-foreground: 220 14% 10%;
-    --sidebar-accent: 220 14% 90%;
-    --sidebar-accent-foreground: 220 14% 10%;
-    --sidebar-border: 220 13% 88%;
-    --border-subtle: 220 13% 88%;
-    --chassis: 0 0% 97%;
+    --popover-foreground: 220 10% 25%;
+    --secondary: 210 15% 94%;
+    --secondary-foreground: 220 10% 20%;
+    --muted: 210 15% 95%;
+    --muted-foreground: 220 10% 45%;
+    --border: 220 10% 88%;
+    --input: 220 10% 88%;
+    --sidebar-background: 210 20% 97%;
+    --sidebar-foreground: 220 10% 25%;
+    --sidebar-accent: 210 15% 92%;
+    --sidebar-accent-foreground: 220 10% 20%;
+    --sidebar-border: 220 10% 88%;
+    --border-subtle: 220 10% 90%;
+    --chassis: 210 20% 97%;
     --grip: 0 0% 100%;
-    --metal: 220 14% 10%;
+    --metal: 220 10% 25%;
   }
 }
 
@@ -175,13 +175,9 @@ a.hover\:bg-primary:hover {
   background: rgba(0, 74, 153, 0.2) !important;
 }
 
-/* Gradient text */
 .text-primary {
-  background: linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 /* Gradient border helpers */
@@ -209,13 +205,10 @@ a.hover\:bg-primary:hover {
   background: linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%) !important;
 }
 
-/* Gradient text utility for explicit use */
+/* Gradient text utility — now plain white */
 .text-brand-gradient {
-  background: linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 /* Gradient background utility for explicit use */

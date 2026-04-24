@@ -20,7 +20,10 @@ export async function getCurrencies(): Promise<Currency[]> {
   }
   
   try {
-    const response = await fetch('/api/currencies');
+    const token = localStorage.getItem('cms_token');
+    const response = await fetch('/api/currencies', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!response.ok) throw new Error('Failed to fetch currencies');
     cachedCurrencies = await response.json();
     return cachedCurrencies;
@@ -46,7 +49,10 @@ export async function getBaseCurrency(): Promise<Currency> {
   }
   
   try {
-    const response = await fetch('/api/currencies/base');
+    const token = localStorage.getItem('cms_token');
+    const response = await fetch('/api/currencies/base', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!response.ok) throw new Error('Failed to fetch base currency');
     cachedBaseCurrency = await response.json();
     return cachedBaseCurrency;

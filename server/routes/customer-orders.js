@@ -1,5 +1,5 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -111,7 +111,7 @@ router.put("/:id/status", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid status" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     
@@ -202,7 +202,7 @@ router.put("/:id", requireAuth, async (req, res) => {
 
 // POST cancel order
 router.post("/:id/cancel", requireAuth, async (req, res) => {
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     

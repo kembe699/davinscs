@@ -3,6 +3,7 @@ import { ArrowLeft, RefreshCw, Printer, Trash2, RotateCcw, CheckCircle } from "l
 import { useToast } from "@/contexts/ToastContext";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -12,6 +13,7 @@ import { buildThermalReceipt } from "@/utils/receiptUtils";
 export default function SalesHistory() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const [sales, setSales] = useState<any[]>([]);
   const [saleItems, setSaleItems] = useState<any[]>([]);
@@ -242,7 +244,7 @@ export default function SalesHistory() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate("/pos")}
+              onClick={() => navigate(tp("/pos"))}
               className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface flex items-center gap-2"
             >
               <ArrowLeft size={16} />

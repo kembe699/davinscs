@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useTenantPath } from "@/contexts/TenantContext";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
@@ -31,6 +32,7 @@ type Tab = "orders" | "pos" | "invoices";
 export default function CustomerDetail() {
   const { toast } = useToast();
   const { id } = useParams<{ id: string }>();
+  const tp = useTenantPath();
   const navigate = useNavigate();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
@@ -77,6 +79,7 @@ export default function CustomerDetail() {
       await api.customers.update(Number(id), form);
       setEditing(false);
       load();
+      toast("Customer updated successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -90,7 +93,7 @@ export default function CustomerDetail() {
       action: async () => {
         try {
           await api.customers.delete(Number(id));
-          navigate("/admin/customers");
+          navigate(tp("/admin/customers"));
         } catch (err) {
           toast(err instanceof Error ? err.message : "Delete failed", "error", "Error");
         }
@@ -107,7 +110,7 @@ export default function CustomerDetail() {
       customer_email: c.email || "",
       customer_phone: c.phone || "",
     });
-    navigate(`/admin/quotations?new=1&${params}`);
+    navigate(tp(`/admin/quotations?new=1&${params}`));
   };
 
   if (loading) return (
@@ -120,7 +123,7 @@ export default function CustomerDetail() {
     <AdminLayout>
       <div className="p-8">
         <p className="text-red-400 text-sm mb-4">{error || "Customer not found"}</p>
-        <Link to="/admin/customers" className="text-primary text-sm hover:underline">← Back to Customers</Link>
+        <Link to={tp("/admin/customers")} className="text-primary text-sm hover:underline">← Back to Customers</Link>
       </div>
     </AdminLayout>
   );
@@ -141,7 +144,7 @@ export default function CustomerDetail() {
         {/* Breadcrumb + actions */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Link to="/admin/customers" className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
+            <Link to={tp("/admin/customers")} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
               <ArrowLeft size={14} /> Customers
             </Link>
             <span className="text-border-subtle">/</span>
@@ -309,7 +312,7 @@ export default function CustomerDetail() {
           {activeTab === "invoices" && (
             <div>
               <div className="flex justify-end px-6 py-3 border-b border-border-subtle">
-                <Link to="/admin/invoices"
+                <Link to={tp("/admin/invoices")}
                   className="flex items-center gap-1 text-xs text-primary hover:underline">
                   <Plus size={12} /> Create Invoice
                 </Link>

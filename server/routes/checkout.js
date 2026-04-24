@@ -1,6 +1,7 @@
 import express from "express";
 import nodemailer from "nodemailer";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
+import { optionalTenantContext } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const transporter = nodemailer.createTransport({
   tls: { rejectUnauthorized: false },
 });
 
-router.post("/", async (req, res) => {
+router.post("/", optionalTenantContext, async (req, res) => {
   const { customer_name, customer_email, customer_phone, shipping_address, shipping_city, shipping_postal_code, shipping_country, notes } = req.body;
   
   if (!customer_name || !customer_email || !shipping_address) {
@@ -24,7 +25,7 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "No active cart session" });
   }
   
-  const client = await pool.connect();
+  const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
     
@@ -241,7 +242,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/orders/:id", async (req, res) => {
+router.get("/orders/:id", optionalTenantContext, async (req, res) => {
   try {
     const orderResult = await pool.query(
       "SELECT * FROM customer_orders WHERE id = $1",
