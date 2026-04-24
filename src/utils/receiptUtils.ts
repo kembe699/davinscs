@@ -62,85 +62,128 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const taxAmount    = sale.taxAmount ?? sale.tax_amount ?? 0;
   const discAmount   = sale.discountAmount ?? sale.discount_amount ?? 0;
   const total        = sale.total ?? sale.total_amount ?? 0;
-  const customerName = sale.customerName ?? sale.customer_name ?? 'Walk-in Customer';
-  const paymentName  = sale.paymentTypeName ?? '';
-  const saleDate     = new Date(sale.created_at).toISOString().split('T')[0];
+  const customerName = sale.customerName ?? sale.customer_name ?? 'Cash Customer';
+  const paymentName  = sale.paymentTypeName ?? 'Cash';
+  const saleDate     = new Date(sale.created_at).toLocaleString();
+  const runDate      = new Date().toLocaleDateString();
 
   const itemRows = items.map(item => `
     <tr class="item-row">
-      <td class="col-item">${item.name.substring(0, 26)}</td>
-      <td class="col-qty">${item.quantity}</td>
-      <td class="col-price">${money(item.unit_price)}</td>
-      <td class="col-total">${money(item.total)}</td>
+      <td class="col-item">${item.name.substring(0, 20)}</td>
+      <td class="col-qty">${item.quantity.toFixed(2)}</td>
+      <td class="col-unit">PCE</td>
+      <td class="col-price">${money(item.unit_price).replace(sym+' ', '')}</td>
+      <td class="col-total">${money(item.total).replace(sym+' ', '')}</td>
     </tr>
   `).join('');
 
-  const rateLine = hasFx
-    ? `<div class="rate-box">Rate: 1 ${baseCurrencyCode || 'BASE'} = ${rate!.toFixed(4)} ${secondaryCurrency!.code} (manual, ${saleDate})</div>`
-    : '';
+  // Tax breakdown (approximate based on standard VAT)
+  const amtWoVat = total - taxAmount;
+  const netAmt = total;
+
+  const receiptUrl = `${window.location.origin}/verify/${sale.sale_number}`;
 
   const css = `
     @page { size: 80mm auto; margin: 4mm 3mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; width: 74mm; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; width: 74mm; padding-bottom: 20px; }
     .center { text-align: center; }
+    .left { text-align: left; }
     .bold   { font-weight: bold; }
     .large  { font-size: 13px; }
     .small  { font-size: 9px; }
     .dash   { white-space: pre; overflow: hidden; margin: 3px 0; }
     .row    { display: flex; justify-content: space-between; margin: 1px 0; }
     .total-row { font-size: 13px; font-weight: bold; margin: 2px 0; }
-    .fx-total  { font-size: 12px; font-weight: bold; color: #333; }
-    .rate-box  { font-size: 9px; border: 1px dashed #999; padding: 2px 4px; margin: 2px 0; }
     table  { width: 100%; border-collapse: collapse; margin: 2px 0; }
-    th     { font-size: 10px; font-weight: bold; padding: 1px 2px; border-bottom: 1px solid #000; }
-    td     { font-size: 10px; padding: 2px 2px; vertical-align: top; }
-    .col-item  { width: 44%; text-align: left; }
-    .col-qty   { width: 8%;  text-align: right; }
-    .col-price { width: 24%; text-align: right; }
-    .col-total { width: 24%; text-align: right; }
-    tr.item-row td { border-bottom: 1px dashed #ccc; }
+    th     { font-size: 10px; font-weight: normal; padding: 1px 1px; border-bottom: 1px dashed #000; text-align: right; }
+    th.col-item { text-align: left; }
+    td     { font-size: 10px; padding: 2px 1px; vertical-align: top; text-align: right; }
+    .col-item  { width: 40%; text-align: left; }
+    .col-qty   { width: 10%; }
+    .col-unit  { width: 10%; text-align: center; }
+    .col-price { width: 20%; }
+    .col-total { width: 20%; }
+    .vat-table th { border-bottom: none; border-top: 1px dashed #000; padding-top: 4px; }
+    .vat-table td { padding-bottom: 4px; border-bottom: 1px dashed #000; }
+    .qr-container { display: flex; flex-direction: column; align-items: flex-start; margin-top: 5px; }
+    .footer-line { margin-top: 10px; margin-bottom: 2px; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   `;
 
   return `
 <style>${css}</style>
 ${co?.logo ? `<div class="center" style="margin-bottom:4px;"><img src="${co.logo}" style="max-height:48px;max-width:60mm;object-fit:contain;"></div>` : ''}
-<div class="center bold large">${(co?.name || '').toUpperCase()}</div>
-${co?.address ? `<div class="center small">${co.address}</div>` : ''}
-${co?.city    ? `<div class="center small">${co.city}${co.country ? ', ' + co.country : ''}</div>` : ''}
-${co?.phone   ? `<div class="center small">Tel: ${co.phone}</div>` : ''}
-${co?.email   ? `<div class="center small">Email: ${co.email}</div>` : ''}
+<div class="center bold large" style="margin-bottom:4px;">${(co?.name || 'SUPERMARKET').toUpperCase()}</div>
+${co?.address ? `<div class="center">${co.address}, .</div>` : '<div class="center">Najjanankumbi, .</div>'}
+${co?.phone   ? `<div class="center">${co.phone}</div>` : '<div class="center">0770000000</div>'}
+${co?.email   ? `<div class="center">${co.email}</div>` : '<div class="center">info@store.com</div>'}
+<div class="center" style="margin-bottom: 4px;">TIN : ${co?.tax_id || '1000477621'}</div>
+
 <div class="dash">${dash}</div>
-<div class="center bold">** SALES RECEIPT **</div>
-<div class="center small">#${sale.sale_number}</div>
-<div class="center small">${new Date(sale.created_at).toLocaleString()}</div>
-<div class="small" style="margin-top:2px;">Customer: ${customerName}</div>
+<div class="center bold large" style="margin: 4px 0;">CASH SALE / TAX INVOICE</div>
+<div class="center" style="margin-bottom: 6px;">${sale.sale_number}</div>
+
+<div class="center" style="margin-bottom: 8px;">
+  <img src="https://barcode.tec-it.com/barcode.ashx?data=${sale.sale_number}&code=Code128&dpi=96" style="max-width:100%;height:40px;" />
+</div>
+
+<div class="row"><span>Date : ${saleDate}</span><span>Till: TILL 1</span></div>
+<div class="row"><span>Run Date : ${runDate}</span></div>
+
+<div style="margin: 6px 0;">Customer Name : ${customerName}</div>
+
 <div class="dash">${dash}</div>
 <table>
   <thead>
     <tr>
-      <th class="col-item">ITEM</th>
-      <th class="col-qty">QTY</th>
-      <th class="col-price">PRICE</th>
-      <th class="col-total">TOTAL</th>
+      <th class="col-item">Item</th>
+      <th class="col-qty">Qty</th>
+      <th class="col-unit">Unit</th>
+      <th class="col-price">Price</th>
+      <th class="col-total">Amount</th>
     </tr>
   </thead>
   <tbody>${itemRows}</tbody>
 </table>
-<div class="dash">${dash}</div>
-<div class="row"><span>Subtotal:</span><span>${money(subtotal)}</span></div>
-${discAmount > 0 ? `<div class="row"><span>Discount${sale.promotionName ? ` (${sale.promotionName})` : ''}:</span><span>-${money(discAmount)}</span></div>` : ''}
-<div class="row"><span>Tax (${sale.taxRate ?? 0}%):</span><span>${money(taxAmount)}</span></div>
-<div class="dash">${eq}</div>
-<div class="row total-row"><span>TOTAL:</span><span>${money(total)}</span></div>
-${hasFx ? `<div class="row fx-total"><span>TOTAL (${secondaryCurrency!.code}):</span><span>${fxMoney(total)}</span></div>${rateLine}` : ''}
-<div class="dash">${dash}</div>
-<div class="row"><span>Payment:</span><span>${paymentName}</span></div>
-<div class="dash" style="margin-top:6px;">${dash}</div>
-<div class="center bold">*** THANK YOU ***</div>
-<div class="center small">Please come again!</div>
-<div class="dash">${dash}</div>
-<div class="center small" style="margin-top:2px;">Powered by FlippedPOS</div>
+
+<div class="row total-row" style="margin-top: 4px;"><span>Total :</span><span>${money(total).replace(sym+' ', '')}</span></div>
+<div class="row"><span>${paymentName}</span><span>${money(total).replace(sym+' ', '')}</span></div>
+<div class="row"><span>Change :</span><span>0</span></div>
+<div class="row" style="margin-bottom: 4px;"><span>Total Items :</span><span>${items.length}</span></div>
+
+<table class="vat-table">
+  <thead>
+    <tr>
+      <th style="text-align:left;">VAT</th>
+      <th style="text-align:right;">Amt W/o VAT</th>
+      <th style="text-align:right;">VAT Amt</th>
+      <th style="text-align:right;">Net Amt</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align:left;">Standard</td>
+      <td style="text-align:right;">${money(amtWoVat).replace(sym+' ', '')}</td>
+      <td style="text-align:right;">${money(taxAmount).replace(sym+' ', '')}</td>
+      <td style="text-align:right;">${money(netAmt).replace(sym+' ', '')}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="row" style="margin-top:4px;"><span>Fiscal Doc No :</span><span class="bold">${sale.sale_number}</span></div>
+<div class="row"><span>Verification Code :</span><span class="bold">${Date.now()}${Math.floor(Math.random()*1000)}</span></div>
+
+<div class="qr-container">
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(receiptUrl)}" style="width:80px; height:80px;" />
+</div>
+
+<div class="footer-line">Received By : _______________________</div>
+<div class="footer-line">You Were Served By : ${sale.userName || 'ADMIN'}</div>
+<div class="footer-line bold">Thank You !!! Please Come Again....</div>
+<div class="center bold" style="margin: 4px 0;">*** Goods once sold are not returnable ***</div>
+
+<div class="footer-line">Powered by FlippedPOS (www.flippedpos.com)</div>
+<div class="footer-line">Email: info@flippedpos.com</div>
 `;
 }

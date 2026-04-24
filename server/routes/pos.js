@@ -5,6 +5,46 @@ import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
+// PUBLIC VERIFY ENDPOINT (No Auth Required)
+router.get("/verify/:sale_number", async (req, res) => {
+  const schema = req.headers["x-schema-name"];
+  if (!schema) return res.status(400).json({ error: "Schema name is required" });
+
+  try {
+    const saleResult = await pool.query(`SELECT * FROM ${schema}.pos_sales WHERE sale_number = $1`, [req.params.sale_number]);
+    const sale = saleResult.rows[0];
+    if (!sale) return res.status(404).json({ error: "Sale not found" });
+
+    const itemsResult = await pool.query(
+      `SELECT si.*, p.name as product_name, p.sku 
+       FROM ${schema}.pos_sale_items si
+       JOIN ${schema}.products p ON si.product_id = p.id
+       WHERE si.sale_id = $1`, 
+      [sale.id]
+    );
+    const items = itemsResult.rows;
+
+    const companyResult = await pool.query(`SELECT * FROM ${schema}.settings WHERE id = 1`);
+    const company = companyResult.rows[0] || {};
+
+    res.json({
+      sale,
+      items,
+      company: {
+        name: company.company_name,
+        address: company.address,
+        phone: company.phone,
+        email: company.email,
+        tax_id: company.tax_id,
+        logo: company.logo
+      }
+    });
+  } catch (error) {
+    console.error("Error verifying sale:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Generate sale number
 function generateSaleNumber() {
   const now = new Date();

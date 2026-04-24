@@ -41,6 +41,7 @@ import POSMain from "./pages/pos/POSMain.tsx";
 import SalesHistory from "./pages/pos/SalesHistory.tsx";
 import CashManagement from "./pages/pos/CashManagement.tsx";
 import EndOfDay from "./pages/pos/EndOfDay.tsx";
+import ReceiptVerify from "./pages/pos/ReceiptVerify.tsx";
 import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
 import TaxRates from "./pages/admin/TaxRates.tsx";
 import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
               <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
               <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
+              <Route path="verify/:saleNumber" element={<ReceiptVerify />} />
               {/* Dynamic category catch-all — must be last */}
               <Route path=":categorySlug" element={<DynamicCategoryPage />} />
             </Route>
