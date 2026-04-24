@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useParams } from "react-router-dom";
 import { ToastProvider } from "./contexts/ToastContext.tsx";
 import ToastContainer from "./components/ToastContainer.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext.tsx";
@@ -60,8 +60,12 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
+  const { tenantSlug } = useParams();
+  
   if (!token) {
-    // Redirect back to portal instead of a bare /admin/login
+    if (tenantSlug) {
+      return <Navigate to={`/${tenantSlug}/admin/login`} replace />;
+    }
     return <Navigate to="/portal" replace />;
   }
   return <>{children}</>;

@@ -188,6 +188,18 @@ const Login = () => {
             >
               {loading ? "Signing in…" : "Sign In"}
             </button>
+            <div className="pt-4 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("saved_tenant_slug");
+                  window.location.href = "/portal";
+                }}
+                className="font-mono-tech text-[10px] text-muted-foreground hover:text-foreground uppercase tracking-widest transition-colors"
+              >
+                ← Switch Instance
+              </button>
+            </div>
           </form>
         )}
       </div>

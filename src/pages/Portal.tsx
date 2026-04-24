@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, AlertCircle, CheckCircle2, Building2, Globe, RotateCcw } from "lucide-react";
 
 export default function Portal() {
@@ -6,6 +6,14 @@ export default function Portal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [found, setFound] = useState<{ businessName: string; needsSetup: boolean; schemaName: string; tenantSlug: string } | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    const savedSlug = localStorage.getItem("saved_tenant_slug");
+    if (savedSlug) {
+      window.location.replace(`/${savedSlug}/admin/login`);
+    }
+  }, []);
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +47,11 @@ export default function Portal() {
       setError("Instance URL not available. Please contact support.");
       return;
     }
+    
+    if (rememberMe) {
+      localStorage.setItem("saved_tenant_slug", found.tenantSlug);
+    }
+    
     const dest = found.needsSetup
       ? `/${found.tenantSlug}/setup`
       : `/${found.tenantSlug}/admin/login`;
@@ -145,6 +158,18 @@ export default function Portal() {
                 </>
               )}
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer pt-2 pb-1 justify-center">
+              <input 
+                type="checkbox" 
+                checked={rememberMe} 
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-3.5 h-3.5 bg-background border border-border-subtle rounded-none text-primary focus:ring-primary focus:ring-offset-background"
+              />
+              <span className="font-mono-tech text-[10px] text-white uppercase tracking-widest">
+                Remember this device
+              </span>
+            </label>
 
             <button
               onClick={handleContinue}

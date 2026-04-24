@@ -9,8 +9,19 @@
     <meta name="description" content="Shop professional cameras, microphones, teleprompters, podcast equipment, and studio lighting at Davin&#39;s Camera Store.">
     <meta name="author" content="Davin's Camera Store" />
 
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/logo.png">
     
-    
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.error('Service worker registration failed:', err);
+          });
+        });
+      }
+    </script>
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/RJryt0duYaQn6t7RLUYMpfE5PL42/social-images/social-1776249320325-WhatsApp_Image_2026-04-15_at_3.34.34_AM.webp">
 
