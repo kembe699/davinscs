@@ -108,12 +108,65 @@ router.post("/login", async (req, res) => {
         user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name: schemaName }
       });
     });
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
+router.post("/pin-login", async (req, res) => {
+  const { pin, schema_name } = req.body;
+  if (!pin || !schema_name) {
+    return res.status(400).json({ error: "PIN and schema are required" });
+  }
+  try {
+    const tenantRes = await pool.query("SELECT * FROM public.tenants WHERE schema_name = $1", [schema_name]);
+    const tenant = tenantRes.rows[0];
+    if (tenant) {
+      if (tenant.status === 'suspended') return res.status(403).json({ error: "ACCOUNT_SUSPENDED" });
+      if (tenant.status === 'trial' && new Date(tenant.trial_ends_at) < new Date()) {
+        return res.status(403).json({ error: "TRIAL_EXPIRED" });
+      }
+    } else if (schema_name !== 'public') {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    await tenantStorage.run(schema_name, async () => {
+      const { rows } = await pool.query("SELECT * FROM users WHERE pin = $1", [pin]);
+      const user = rows[0];
+      if (!user) return res.status(401).json({ error: "Invalid PIN" });
+
+      let permissions = [];
+      let roleName = null;
+      if (user.role_id) {
+        const { rows: permRows } = await pool.query(
+          `SELECT p.key FROM permissions p
+           JOIN role_permissions rp ON rp.permission_id = p.id
+           WHERE rp.role_id = $1`,
+          [user.role_id]
+        );
+        permissions = permRows.map(r => r.key);
+        const { rows: roleRow } = await pool.query("SELECT name FROM roles WHERE id = $1", [user.role_id]);
+        roleName = roleRow[0]?.name || null;
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name, role: user.role, role_id: user.role_id, permissions, schema_name },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN_PIN', entityType: 'user', entityId: user.id, details: { role: roleName }, ip: req.ip });
+      res.json({
+        token,
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;

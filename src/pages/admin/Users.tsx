@@ -16,12 +16,14 @@ function UsersTab() {
   const [adding, setAdding] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPin, setNewPin] = useState("");
   const [newRoleId, setNewRoleId] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
-  const [editState, setEditState] = useState<EditState>({ email: "", password: "" });
+  const [editState, setEditState] = useState<EditState & { name?: string; pin?: string }>({ email: "", password: "", name: "", pin: "" });
   const [editSaving, setEditSaving] = useState(false);
   const [assigningId, setAssigningId] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -38,18 +40,18 @@ function UsersTab() {
 
   const startEdit = (u: any) => {
     setEditId(u.id);
-    setEditState({ email: u.email, password: "" });
+    setEditState({ email: u.email, password: "", name: u.name || "", pin: u.pin || "" });
     setConfirmId(null);
     setError("");
   };
-  const cancelEdit = () => { setEditId(null); setEditState({ email: "", password: "" }); };
+  const cancelEdit = () => { setEditId(null); setEditState({ email: "", password: "", name: "", pin: "" }); };
 
   const handleSaveEdit = async () => {
     if (!editState.email.trim()) return;
     setEditSaving(true);
     setError("");
     try {
-      const updated = await api.users.update(editId!, editState.email.trim(), editState.password || undefined);
+      const updated = await api.users.update(editId!, editState.email.trim(), editState.password || undefined, editState.name, editState.pin);
       setUsers(prev => prev.map(u => u.id === editId ? { ...u, ...updated } : u));
       cancelEdit();
     } catch (err) {
@@ -62,10 +64,10 @@ function UsersTab() {
     setSaving(true);
     setError("");
     try {
-      const created = await api.users.create(newEmail.trim(), newPassword, newRoleId || null);
+      const created = await api.users.create(newEmail.trim(), newPassword, newRoleId || null, newName.trim(), newPin.trim());
       const role = roles.find(r => r.id === newRoleId);
       setUsers(prev => [...prev, { ...created, role_name: role?.name || null }]);
-      setNewEmail(""); setNewPassword(""); setNewRoleId(""); setAdding(false);
+      setNewEmail(""); setNewPassword(""); setNewName(""); setNewPin(""); setNewRoleId(""); setAdding(false);
       toast("User created successfully!", "success", "Saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
@@ -118,9 +120,10 @@ function UsersTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border-subtle bg-chassis">
+              <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Name</th>
               <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Email</th>
               <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Role</th>
-              <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Password</th>
+              <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Password / PIN</th>
               <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Created</th>
               <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Actions</th>
             </tr>
@@ -132,11 +135,15 @@ function UsersTab() {
               editId === u.id ? (
                 <tr key={u.id} className="bg-primary/5 border-l-2 border-primary/40">
                   <td className="px-4 py-2">
+                    <input type="text" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} placeholder="Name" className={inputCls} />
+                  </td>
+                  <td className="px-4 py-2">
                     <input type="email" value={editState.email} onChange={e => setEditState(s => ({ ...s, email: e.target.value }))} className={inputCls} autoFocus />
                   </td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">{u.role_name || "—"}</td>
-                  <td className="px-4 py-2">
-                    <input type="password" value={editState.password} onChange={e => setEditState(s => ({ ...s, password: e.target.value }))} placeholder="Leave blank to keep" className={inputCls} onKeyDown={e => e.key === "Enter" && handleSaveEdit()} />
+                  <td className="px-4 py-2 flex flex-col gap-1">
+                    <input type="password" value={editState.password} onChange={e => setEditState(s => ({ ...s, password: e.target.value }))} placeholder="Password (blank to keep)" className={inputCls} />
+                    <input type="text" value={editState.pin} onChange={e => setEditState(s => ({ ...s, pin: e.target.value }))} placeholder="PIN" className={inputCls} onKeyDown={e => e.key === "Enter" && handleSaveEdit()} />
                   </td>
                   <td className="px-4 py-2 font-mono-tech text-[11px] text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-2">
@@ -152,6 +159,7 @@ function UsersTab() {
                 </tr>
               ) : (
                 <tr key={u.id} className="hover:bg-chassis/50 transition-colors">
+                  <td className="px-4 py-3 text-xs">{u.name || "—"}</td>
                   <td className="px-4 py-3 font-medium text-foreground">{u.email}</td>
                   <td className="px-4 py-3">
                     <select
@@ -164,7 +172,10 @@ function UsersTab() {
                       {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                     </select>
                   </td>
-                  <td className="px-4 py-3 font-mono-tech text-[11px] text-muted-foreground">••••••••</td>
+                  <td className="px-4 py-3 font-mono-tech text-[11px] text-muted-foreground">
+                    ••••••••
+                    {u.pin && <span className="block mt-1">PIN: {u.pin}</span>}
+                  </td>
                   <td className="px-4 py-3 font-mono-tech text-[11px] text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
@@ -192,7 +203,10 @@ function UsersTab() {
             {adding && (
               <tr className="bg-primary/5 border-t-2 border-primary/20">
                 <td className="px-4 py-2">
-                  <input type="email" value={newEmail} placeholder="user@example.com" onChange={e => setNewEmail(e.target.value)} className={inputCls} autoFocus />
+                  <input type="text" value={newName} placeholder="Name" onChange={e => setNewName(e.target.value)} className={inputCls} autoFocus />
+                </td>
+                <td className="px-4 py-2">
+                  <input type="email" value={newEmail} placeholder="user@example.com" onChange={e => setNewEmail(e.target.value)} className={inputCls} />
                 </td>
                 <td className="px-4 py-2">
                   <select value={newRoleId} onChange={e => setNewRoleId(e.target.value === "" ? "" : Number(e.target.value))} className="w-full h-8 bg-background border border-border-subtle px-2 text-xs text-foreground focus:outline-none focus:border-primary/60">
@@ -200,8 +214,9 @@ function UsersTab() {
                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </td>
-                <td className="px-4 py-2">
-                  <input type="password" value={newPassword} placeholder="Min 8 characters" onChange={e => setNewPassword(e.target.value)} className={inputCls} onKeyDown={e => e.key === "Enter" && handleAdd()} />
+                <td className="px-4 py-2 flex flex-col gap-1">
+                  <input type="password" value={newPassword} placeholder="Min 8 chars" onChange={e => setNewPassword(e.target.value)} className={inputCls} />
+                  <input type="text" value={newPin} placeholder="PIN (Optional)" onChange={e => setNewPin(e.target.value)} className={inputCls} onKeyDown={e => e.key === "Enter" && handleAdd()} />
                 </td>
                 <td className="px-4 py-2" />
                 <td className="px-4 py-2">

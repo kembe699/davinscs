@@ -80,9 +80,13 @@ export async function migrateTenant(schemaName = "public") {
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(255),
+      pin VARCHAR(10),
       role VARCHAR(50) DEFAULT 'admin',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS pin VARCHAR(10);
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
       slug VARCHAR(100) UNIQUE NOT NULL,

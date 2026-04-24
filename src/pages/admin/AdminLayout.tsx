@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -78,6 +78,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (user?.role_name?.toLowerCase() === 'cashier') {
+      navigate(`/${tenantSlug}/admin/pos`, { replace: true });
+    }
+  }, [user, navigate, tenantSlug]);
 
   const tp = (path: string) => `/${tenantSlug}${path}`;
 

@@ -21,7 +21,8 @@ const Login = () => {
   const [forgotMsg, setForgotMsg] = useState("");
   const [forgotError, setForgotError] = useState("");
   const [accountStatus, setAccountStatus] = useState("");
-
+  const [showPinLogin, setShowPinLogin] = useState(false);
+  const [pin, setPin] = useState("");
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError("");
@@ -51,6 +52,26 @@ const Login = () => {
         setAccountStatus(err.message);
       } else {
         setError(err instanceof Error ? err.message : "Login failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const { token, user } = await api.auth.pinLogin(pin, schemaName);
+      login(token, user);
+      refreshLayout();
+      window.location.replace(`/${tenantSlug}/admin/pos`);
+    } catch (err: any) {
+      if (err.message === "TRIAL_EXPIRED" || err.message === "ACCOUNT_SUSPENDED") {
+        setAccountStatus(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Invalid PIN");
       }
     } finally {
       setLoading(false);
@@ -134,6 +155,47 @@ const Login = () => {
               ← Back to Sign In
             </button>
           </div>
+        ) : showPinLogin ? (
+          <form onSubmit={handlePinSubmit} className="border border-border-subtle p-8 space-y-5 bg-chassis">
+            <h1 className="text-lg font-bold text-foreground tracking-tight">POS Cashier Login</h1>
+            <p className="text-xs text-muted-foreground">Enter your secure PIN to access the Point of Sale.</p>
+
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs px-4 py-3 font-mono-tech">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest block mb-2">
+                Cashier PIN
+              </label>
+              <input
+                type="password"
+                required
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="••••"
+                className="w-full h-11 bg-background border border-border-subtle px-4 text-center tracking-[1em] text-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 transition-colors"
+                maxLength={10}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !pin}
+              className="w-full h-12 bg-primary text-background font-bold uppercase tracking-widest text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Entering POS…" : "Enter POS"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowPinLogin(false); setError(""); setPin(""); }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors text-center pt-2"
+            >
+              ← Back to Admin Login
+            </button>
+          </form>
         ) : (
           <form onSubmit={handleSubmit} className="border border-border-subtle p-8 space-y-5 bg-chassis">
             <h1 className="text-lg font-bold text-foreground tracking-tight">Sign In</h1>
@@ -188,14 +250,21 @@ const Login = () => {
             >
               {loading ? "Signing in…" : "Sign In"}
             </button>
-            <div className="pt-4 text-center">
+            <div className="pt-4 flex flex-col gap-3 text-center">
+              <button
+                type="button"
+                onClick={() => { setShowPinLogin(true); setError(""); }}
+                className="w-full h-10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-colors"
+              >
+                POS Cashier Login
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   localStorage.removeItem("saved_tenant_slug");
                   window.location.href = "/portal";
                 }}
-                className="font-mono-tech text-[10px] text-muted-foreground hover:text-foreground uppercase tracking-widest transition-colors"
+                className="font-mono-tech text-[10px] text-muted-foreground hover:text-foreground uppercase tracking-widest transition-colors mt-2"
               >
                 ← Switch Instance
               </button>

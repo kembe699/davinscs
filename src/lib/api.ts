@@ -58,6 +58,8 @@ export type ApiCategory = {
 export type ApiUser = {
   id: number;
   email: string;
+  name?: string;
+  pin?: string;
   role: string;
   created_at: string;
 };
@@ -692,10 +694,10 @@ export const api = {
   },
   users: {
     list: () => request<ApiUser[]>("/api/users"),
-    create: (email: string, password: string, role_id?: number | null) =>
-      request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password, role_id }) }),
-    update: (id: number, email: string, password?: string) =>
-      request<ApiUser>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify({ email, password: password || undefined }) }),
+    create: (email: string, password: string, role_id?: number | null, name?: string, pin?: string) =>
+      request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password, role_id, name, pin }) }),
+    update: (id: number, email: string, password?: string, name?: string, pin?: string) =>
+      request<ApiUser>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify({ email, password: password || undefined, name, pin }) }),
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/users/${id}`, { method: "DELETE" }),
     assignRole: (id: number, role_id: number | null) =>
@@ -703,9 +705,14 @@ export const api = {
   },
   auth: {
     login: (email: string, password: string, schema_name?: string) =>
-      request<{ token: string; user: { id: number; email: string; role: string } }>("/api/auth/login", {
+      request<{ token: string; user: { id: number; email: string; name?: string; role: string } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password, schema_name }),
+      }),
+    pinLogin: (pin: string, schema_name?: string) =>
+      request<{ token: string; user: { id: number; email: string; name?: string; role: string } }>("/api/auth/pin-login", {
+        method: "POST",
+        body: JSON.stringify({ pin, schema_name }),
       }),
     forgotPassword: (email: string) =>
       request<{ message: string }>("/api/auth/forgot-password", {

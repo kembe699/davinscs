@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, u.role, u.role_id, u.created_at, r.name AS role_name
+      `SELECT u.id, u.email, u.name, u.pin, u.role, u.role_id, u.created_at, r.name AS role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        ORDER BY u.created_at ASC`
@@ -22,15 +22,14 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.post("/", requireAuth, async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, name, pin, role_id } = req.body;
   if (!email || !password) return res.status(400).json({ error: "Email and password required" });
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
   try {
     const hash = await bcrypt.hash(password, 10);
-    const { role_id } = req.body;
     const { rows } = await pool.query(
-      "INSERT INTO users (email, password_hash, role, role_id) VALUES ($1, $2, 'admin', $3) RETURNING id, email, role, role_id, created_at",
-      [email.toLowerCase(), hash, role_id || null]
+      "INSERT INTO users (email, password_hash, role, role_id, name, pin) VALUES ($1, $2, 'admin', $3, $4, $5) RETURNING id, email, name, pin, role, role_id, created_at",
+      [email.toLowerCase(), hash, role_id || null, name || null, pin || null]
     );
     // Sync login mapping so the new user can log in via /portal
     const schemaName = req.user.schema_name || null;
@@ -62,7 +61,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 router.put("/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
-  const { email, password } = req.body;
+  const { email, password, name, pin } = req.body;
   if (!email) return res.status(400).json({ error: "Email required" });
   try {
     // Capture old email before update to sync tenant_users if it changes
@@ -72,11 +71,11 @@ router.put("/:id", requireAuth, async (req, res) => {
     if (password) {
       if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
       const hash = await bcrypt.hash(password, 10);
-      query = "UPDATE users SET email = $1, password_hash = $2 WHERE id = $3 RETURNING id, email, role, created_at";
-      params = [email.toLowerCase(), hash, id];
+      query = "UPDATE users SET email = $1, password_hash = $2, name = $3, pin = $4 WHERE id = $5 RETURNING id, email, name, pin, role, created_at";
+      params = [email.toLowerCase(), hash, name || null, pin || null, id];
     } else {
-      query = "UPDATE users SET email = $1 WHERE id = $2 RETURNING id, email, role, created_at";
-      params = [email.toLowerCase(), id];
+      query = "UPDATE users SET email = $1, name = $2, pin = $3 WHERE id = $4 RETURNING id, email, name, pin, role, created_at";
+      params = [email.toLowerCase(), name || null, pin || null, id];
     }
     const { rows } = await pool.query(query, params);
     if (!rows[0]) return res.status(404).json({ error: "User not found" });

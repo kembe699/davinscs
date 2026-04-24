@@ -997,12 +997,14 @@ export default function POSMain() {
               </button>
             </div>
             <div className="space-y-2">
-              <button
-                onClick={() => navigate(tp("/admin"))}
-                className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
-              >
-                Management
-              </button>
+              {user?.role_name?.toLowerCase() !== 'cashier' && (
+                <button
+                  onClick={() => navigate(tp("/admin"))}
+                  className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
+                >
+                  Management
+                </button>
+              )}
               <button 
                 onClick={() => navigate(tp("/pos/sales-history"))}
                 className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:text-admin-text hover:bg-admin-bg"
