@@ -56,6 +56,7 @@ const allowedOrigins = process.env.NODE_ENV === "production"
       "https://flippedpos.com",
       "https://www.flippedpos.com",
       "https://flippedpos.onrender.com",
+      "https://flippedpos-website.onrender.com",
       ...(process.env.APP_URL ? [process.env.APP_URL] : []),
     ]
   : ["http://localhost:5173", "http://localhost:5174", "http://flippedadmin.localhost:5174", "http://localhost:8080", "http://localhost:5175", "http://localhost:3000", "http://localhost:8081"];
