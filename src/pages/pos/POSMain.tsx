@@ -646,20 +646,20 @@ export default function POSMain() {
           </select>
           <button 
             onClick={() => setShowCustomerModal(true)}
-            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 shrink-0 whitespace-nowrap"
           >
             <User size={16} />
             {customerName || "Customer"}
           </button>
           <button 
             onClick={() => setShowDiscountModal(true)}
-            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface shrink-0 whitespace-nowrap"
           >
             Discount {cartDiscount > 0 && !appliedPromotion ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', false)})` : ''}
           </button>
           <button
             onClick={() => setShowPromoModal(true)}
-            className={`px-4 py-2 text-sm border transition-colors ${
+            className={`px-4 py-2 text-sm border transition-colors shrink-0 whitespace-nowrap ${
               appliedPromotion
                 ? 'bg-emerald-600 border-emerald-600 text-white'
                 : 'bg-admin-bg border-admin-border text-admin-text hover:bg-admin-surface'
@@ -669,23 +669,23 @@ export default function POSMain() {
           </button>
           <button 
             onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
-            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface shrink-0 whitespace-nowrap"
           >
             New Sale
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowPaymentModal(true)}
             disabled={cart.length === 0}
-            className="px-6 py-2 bg-admin-success text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+            className="px-6 py-2 bg-admin-success text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0 whitespace-nowrap"
           >
             F10 Payment
           </button>
           {stockAlerts.length > 0 && (
             <button
               onClick={() => setShowStockAlerts(true)}
-              className="relative px-4 py-2 bg-admin-bg border border-admin-border text-amber-400 text-sm hover:bg-admin-surface"
+              className="relative px-4 py-2 bg-admin-bg border border-admin-border text-amber-400 text-sm hover:bg-admin-surface shrink-0"
               title="Stock Alerts"
             >
               <Bell size={16} />
@@ -696,7 +696,7 @@ export default function POSMain() {
           )}
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+            className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface shrink-0"
           >
             <Menu size={16} />
           </button>
