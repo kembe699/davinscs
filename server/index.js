@@ -51,10 +51,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PgSession = connectPgSimple(session);
 
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [
+      "https://flippedpos.com",
+      "https://www.flippedpos.com",
+      "https://flippedpos.onrender.com",
+      ...(process.env.APP_URL ? [process.env.APP_URL] : []),
+    ]
+  : ["http://localhost:5173", "http://localhost:5174", "http://flippedadmin.localhost:5174", "http://localhost:8080", "http://localhost:5175", "http://localhost:3000", "http://localhost:8081"];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? process.env.APP_URL 
-    : ["http://localhost:5173", "http://localhost:5174", "http://flippedadmin.localhost:5174", "http://localhost:8080", "http://localhost:5175", "http://localhost:3000", "http://localhost:8081"],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
