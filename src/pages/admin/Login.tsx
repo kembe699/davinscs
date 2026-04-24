@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -21,7 +21,8 @@ const Login = () => {
   const [forgotMsg, setForgotMsg] = useState("");
   const [forgotError, setForgotError] = useState("");
   const [accountStatus, setAccountStatus] = useState("");
-  const [showPinLogin, setShowPinLogin] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [showPinLogin, setShowPinLogin] = useState(searchParams.get("view") === "pin");
   const [pin, setPin] = useState("");
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();

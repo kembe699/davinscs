@@ -14,7 +14,7 @@ export default function POSMain() {
   const navigate = useNavigate();
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1023,6 +1023,17 @@ export default function POSMain() {
               >
                 End of Day
               </button>
+              {user?.role_name?.toLowerCase() === 'cashier' && (
+                <button 
+                  onClick={() => {
+                    logout();
+                    window.location.replace(tp("/admin/login") + "?view=pin");
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-admin-danger hover:bg-admin-bg mt-4 border-t border-admin-border pt-4"
+                >
+                  Sign Out
+                </button>
+              )}
             </div>
           </div>
         )}
