@@ -1174,94 +1174,11 @@ export default function POSMain() {
       {showReceipt && completedSale && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 w-96 max-h-[90vh] overflow-y-auto font-mono">
-            <div className="mb-4">
-              {/* Logo left — company details right */}
-              <div className="flex items-start gap-3 mb-3">
-                {companyData?.logo && (
-                  <img src={companyData.logo} alt={companyData.name} className="h-14 w-auto object-contain flex-shrink-0" />
-                )}
-                <div className="flex-1">
-                  <h2 className="text-sm font-bold text-black uppercase leading-tight">{companyData?.name || "FlippedPos"}</h2>
-                  {companyData?.address && <p className="text-xs text-black">{companyData.address}</p>}
-                  {companyData?.city && <p className="text-xs text-black">{companyData.city}{companyData.country ? `, ${companyData.country}` : ''}</p>}
-                  <p className="text-xs text-black">Tel: {companyData?.phone || "+211-XXX-XXXXXX"}</p>
-                  {companyData?.email && <p className="text-xs text-black">Email: {companyData.email}</p>}
-                  {companyData?.tax_id && <p className="text-xs text-black">Tax ID: {companyData.tax_id}</p>}
-                </div>
-              </div>
-              <div className="border-t border-black my-2"></div>
-              <div className="text-center">
-                <p className="text-sm font-bold text-black">SALES RECEIPT</p>
-                <p className="text-xs text-black">#{completedSale.sale_number}</p>
-                <p className="text-xs text-black">{new Date(completedSale.created_at).toLocaleString()}</p>
-              </div>
-              <div className="border-t border-black my-2"></div>
-              <p className="text-xs text-black">Customer: {completedSale.customerName}</p>
-            </div>
-
-            <div className="mb-4">
-              {/* Header row */}
-              <div className="border-b border-black pb-1 mb-1" style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:'0 6px'}}>
-                <span className="text-xs font-bold text-black">ITEM</span>
-                <span className="text-xs font-bold text-black text-center w-8">QTY</span>
-                <span className="text-xs font-bold text-black text-right w-20">PRICE</span>
-                <span className="text-xs font-bold text-black text-right w-20">TOTAL</span>
-              </div>
-              {/* Item rows — one row per item, data aligned under headers */}
-              {completedSale.items.map((item: any, idx: number) => {
-                const itemTotal = item.unit_price * item.quantity - item.discount;
-                return (
-                  <div key={idx} className="border-b border-dashed border-gray-300 py-1" style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:'0 6px', alignItems:'start'}}>
-                    <span className="text-xs text-black leading-tight">{item.product.name}</span>
-                    <span className="text-xs text-black text-center w-8">{item.quantity}</span>
-                    <span className="text-xs text-black text-right w-20">{formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}</span>
-                    <span className="text-xs text-black text-right w-20">{formatCurrencySync(itemTotal, baseCurrency?.symbol || 'UGX', false)}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-black pt-2 mb-4">
-              <div className="flex justify-between text-xs text-black mb-1">
-                <span>Subtotal:</span>
-                <div className="text-right">
-                  <div>{formatCurrencySync(completedSale.subtotal, baseCurrency?.symbol || 'UGX', false)}</div>
-                  {secondaryCurrency && exchangeRate && <div className="text-[10px] text-gray-500">{formatCurrencySync(Math.round(completedSale.subtotal * exchangeRate), secondaryCurrency.symbol, false)}</div>}
-                </div>
-              </div>
-              {completedSale.discountAmount > 0 && (
-                <div className="flex justify-between text-xs text-black mb-1">
-                  <span>Discount{completedSale.promotionName ? ` (${completedSale.promotionName})` : ''}:</span>
-                  <span>-{formatCurrencySync(completedSale.discountAmount, baseCurrency?.symbol || 'UGX', false)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-black mb-1">
-                <span>Tax ({defaultTax?.rate}%):</span>
-                <span>{formatCurrencySync(completedSale.taxAmount, baseCurrency?.symbol || 'UGX', false)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold border-t border-black pt-2 mt-2">
-                <span className="text-black">TOTAL:</span>
-                <div className="text-right">
-                  <div className="text-black">{formatCurrencySync(completedSale.total, baseCurrency?.symbol || 'UGX', false)}</div>
-                  {secondaryCurrency && exchangeRate && (
-                    <div className="text-xs font-normal text-gray-600">{formatCurrencySync(Math.round(completedSale.total * exchangeRate), secondaryCurrency.symbol, false)}</div>
-                  )}
-                </div>
-              </div>
-              {secondaryCurrency && exchangeRate && (
-                <div className="text-[10px] text-black mt-1 border border-black/30 px-2 py-1">
-                  Rate: 1 {baseCurrency?.code || 'BASE'} = {exchangeRate.toFixed(4)} {secondaryCurrency.code}
-                </div>
-              )}
-              <div className="flex justify-between text-xs text-black mt-3">
-                <span>Payment:</span>
-                <span>{completedSale.paymentTypeName}</span>
-              </div>
-            </div>
-
-            <div className="text-center text-xs text-black mb-6 border-t border-black pt-3">
-              <p>*** Thank you for your business! ***</p>
-              <p>*** Please come again ***</p>
+            <div className="bg-white shadow-xl mb-6 flex justify-center" style={{ minHeight: '100mm' }}>
+              <div 
+                style={{ width: '80mm', backgroundColor: 'white', padding: '0', margin: '0' }}
+                dangerouslySetInnerHTML={{ __html: buildReceiptBody(completedSale) }} 
+              />
             </div>
 
             <button
