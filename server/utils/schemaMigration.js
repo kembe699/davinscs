@@ -1,9 +1,8 @@
 import pool from '../db.js';
 
 export async function migrateTenant(schemaName = "public") {
-  await pool.query(`SET search_path TO "${schemaName}", public`);
-
   await pool.query(`
+    SET search_path TO "${schemaName}", public;
     -- SAAS CONTROL PLANE TABLES (Always in public schema)
     CREATE TABLE IF NOT EXISTS public.saas_admins (
       id SERIAL PRIMARY KEY,
