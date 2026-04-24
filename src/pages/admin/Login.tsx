@@ -66,7 +66,7 @@ const Login = () => {
       const { token, user } = await api.auth.pinLogin(pin, schemaName);
       login(token, user);
       refreshLayout();
-      window.location.replace(`/${tenantSlug}/admin/pos`);
+      window.location.replace(`/${tenantSlug}/pos`);
     } catch (err: any) {
       if (err.message === "TRIAL_EXPIRED" || err.message === "ACCOUNT_SUSPENDED") {
         setAccountStatus(err.message);

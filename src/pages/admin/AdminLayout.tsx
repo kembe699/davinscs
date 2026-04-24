@@ -81,7 +81,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user?.role_name?.toLowerCase() === 'cashier') {
-      navigate(`/${tenantSlug}/admin/pos`, { replace: true });
+      navigate(`/${tenantSlug}/pos`, { replace: true });
     }
   }, [user, navigate, tenantSlug]);
 
