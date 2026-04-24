@@ -108,7 +108,6 @@ router.post("/login", async (req, res) => {
         user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name: schemaName }
       });
     });
-    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
