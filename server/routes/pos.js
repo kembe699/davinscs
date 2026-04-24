@@ -24,7 +24,7 @@ router.get("/verify/:sale_number", async (req, res) => {
     );
     const items = itemsResult.rows;
 
-    const companyResult = await pool.query(`SELECT * FROM ${schema}.settings WHERE id = 1`);
+    const companyResult = await pool.query(`SELECT * FROM ${schema}.company_settings WHERE id = 1`);
     const company = companyResult.rows[0] || {};
 
     res.json({
