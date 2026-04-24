@@ -92,7 +92,7 @@ export default function Categories() {
 
   return (
     <AdminLayout>
-      <div className="p-8 w-full">
+      <div className="p-4 sm:p-8 w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Navigation</p>

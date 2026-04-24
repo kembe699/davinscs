@@ -245,7 +245,7 @@ export default function Invoices() {
         {/* Left panel */}
         <div className={`flex flex-col flex-1 min-w-0 ${selected ? 'border-r border-admin-border' : ''}`}>
           {/* Header */}
-          <div className="p-6 border-b border-admin-border bg-admin-bg">
+          <div className="p-4 sm:p-6 border-b border-admin-border bg-admin-bg">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-xl font-bold text-admin-text">Invoices</h1>

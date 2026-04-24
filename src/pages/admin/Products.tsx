@@ -138,7 +138,7 @@ export default function Products() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>

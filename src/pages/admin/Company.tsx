@@ -464,7 +464,7 @@ export default function Company() {
                 <textarea value={companyData.description} onChange={(e) => setCompanyData({ ...companyData, description: e.target.value })} rows={6} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary resize-none" placeholder="Brief description of your company..." />
               </div>
             </div>
-            <div className="p-6 bg-chassis border-b border-border-subtle">
+            <div className="p-4 sm:p-6 bg-chassis border-b border-border-subtle">
               <LayoutPicker value={companyData.site_layout} onChange={(key) => setCompanyData({ ...companyData, site_layout: key })} />
             </div>
           </div>

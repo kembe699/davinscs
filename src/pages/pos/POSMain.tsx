@@ -631,12 +631,12 @@ export default function POSMain() {
   return (
     <div className="h-screen bg-admin-bg flex flex-col">
       {/* Top Toolbar */}
-      <div className="bg-admin-surface border-b border-admin-border p-3 flex items-center gap-2">
-        <div className="flex items-center gap-2 flex-1">
+      <div className="bg-admin-surface border-b border-admin-border p-2 sm:p-3 flex items-center gap-2 overflow-x-auto shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <select
             value={selectedSchemeId ?? ""}
             onChange={e => setSelectedSchemeId(e.target.value === "" ? null : Number(e.target.value))}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+            className="px-2 sm:px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-xs sm:text-sm hover:bg-admin-surface shrink-0"
             title="Pricing Scheme"
           >
             <option value="">Cash (Standard)</option>
@@ -703,9 +703,10 @@ export default function POSMain() {
         </div>
       </div>
 
+      {/* Main area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Cart */}
-        <div className="w-80 bg-admin-surface border-r border-admin-border flex flex-col">
+        {/* Left Panel - Cart (desktop: always visible, mobile: tab) */}
+        <div className="lg:w-80 lg:flex hidden bg-admin-surface border-r border-admin-border flex-col">
           <div className="p-3 border-b border-admin-border">
             <h3 className="text-admin-text font-medium text-sm">Shopping Cart</h3>
           </div>
@@ -842,8 +843,8 @@ export default function POSMain() {
         </div>
 
         {/* Right Panel - Products */}
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 border-b border-admin-border">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="p-3 sm:p-4 border-b border-admin-border">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-text-secondary" size={18} />
               <input
@@ -1025,10 +1026,23 @@ export default function POSMain() {
         )}
       </div>
 
+      {/* Mobile floating cart button */}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30">
+          <button
+            onClick={() => setShowPaymentModal(true)}
+            className="flex items-center gap-3 px-5 py-3 bg-admin-success text-white shadow-2xl text-sm font-bold"
+          >
+            <ShoppingCart size={18} />
+            {cart.length} item{cart.length !== 1 ? 's' : ''} — Pay {formatCurrencySync(total, baseCurrency?.symbol || 'UGX', false)}
+          </button>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-[420px] max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-admin-surface border border-admin-border p-4 sm:p-6 w-full sm:w-[420px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-admin-text mb-4">Process Payment</h2>
 
             {/* Mode tabs */}

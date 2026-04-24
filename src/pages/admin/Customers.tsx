@@ -101,7 +101,7 @@ export default function Customers() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -185,7 +185,7 @@ export default function Customers() {
               <h2 className="font-bold text-foreground">{editingId ? "Edit Customer" : "Add Customer"}</h2>
               <button onClick={() => setShowForm(false)}><X size={16} /></button>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 grid grid-cols-2 gap-4">
               {error && <p className="col-span-2 text-red-400 text-sm">{error}</p>}
               <div className="col-span-2">
                 <label className="block text-xs text-muted-foreground mb-1 uppercase tracking-widest font-mono-tech">Name *</label>

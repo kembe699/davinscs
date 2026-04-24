@@ -285,7 +285,7 @@ export default function Quotations() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -376,7 +376,7 @@ export default function Quotations() {
               <button onClick={() => setShowForm(false)}><X size={16} /></button>
             </div>
 
-            <div className="p-6 space-y-6 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
               {/* Customer section */}
@@ -543,7 +543,7 @@ export default function Quotations() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-4 sm:p-6 space-y-6">
                   {/* Customer info */}
                   <div className="grid grid-cols-2 gap-6">
                     <div>

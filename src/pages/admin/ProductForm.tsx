@@ -34,9 +34,9 @@ const UOM_OPTIONS = [
 ];
 
 const empty = {
-  slug: "", name: "", brand: "", price: 0, cost_price: 0, tag: "", description: "",
+  slug: "", name: "", brand: "", price: "" as number | "", cost_price: "" as number | "", tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "",
-  barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: 0, reorder_level: 0,
+  barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: "" as number | "", reorder_level: "" as number | "",
   expense_account_id: 0, uom: "pcs",
 };
 
@@ -84,17 +84,18 @@ export default function ProductForm() {
           ? new Date((p as any).expiry_date).toISOString().split('T')[0]
           : "";
         
-        const cp = p.cost_price ?? 0;
-        const sp = p.price ?? 0;
+        const cp = p.cost_price ?? "";
+        const sp = p.price ?? "";
         setForm({
-          slug: p.slug, name: p.name, brand: p.brand, price: sp, cost_price: cp,
+          slug: p.slug, name: p.name, brand: p.brand, price: sp as number | "", cost_price: cp as number | "",
           tag: p.tag, description: p.description,
           specs: Array.isArray(p.specs) ? p.specs : [],
           image_url: p.image_url, in_stock: p.in_stock, is_featured: p.is_featured, category: p.category,
           barcode: (p as any).barcode || "",
           expiry_date: expiryDate,
           product_type: (p as any).product_type || "product",
-          quantity_on_hand: (p as any).quantity_on_hand || 0, reorder_level: (p as any).reorder_level || 0,
+          quantity_on_hand: (p as any).quantity_on_hand ?? "" as number | "",
+          reorder_level: (p as any).reorder_level ?? "" as number | "",
           expense_account_id: (p as any).expense_account_id || 0,
           uom: (p as any).uom || "pcs",
         });
@@ -154,7 +155,7 @@ export default function ProductForm() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate(tp("/admin/products"))}
@@ -281,12 +282,12 @@ export default function ProductForm() {
                   <div>
                     <label className="field-label">Unit Cost ({baseCurrency?.code || 'UGX'})</label>
                     <input
-                      type="number" min={0} value={form.cost_price || ""}
+                      type="number" min={0} value={form.cost_price === 0 ? "" : form.cost_price}
                       onChange={(e) => {
-                        const cp = Number(e.target.value) || 0;
+                        const cp = e.target.value === "" ? "" : Number(e.target.value);
                         set("cost_price", cp);
-                        if (cp > 0 && margin !== "") {
-                          set("price", Math.round(cp * (1 + Number(margin) / 100)));
+                        if (cp !== "" && cp > 0 && margin !== "") {
+                          set("price", Math.round(Number(cp) * (1 + Number(margin) / 100)));
                         }
                       }}
                       placeholder="e.g. 500000"
@@ -313,11 +314,11 @@ export default function ProductForm() {
                   <div>
                     <label className="field-label">Selling Price ({baseCurrency?.code || 'UGX'}) *</label>
                     <input
-                      required type="number" min={0} value={form.price || ""}
+                      required type="number" min={0} value={form.price === 0 ? "" : form.price}
                       onChange={(e) => {
-                        const sp = Number(e.target.value) || 0;
+                        const sp = e.target.value === "" ? "" : Number(e.target.value);
                         set("price", sp);
-                        if (form.cost_price > 0 && sp > 0) {
+                        if (form.cost_price && Number(form.cost_price) > 0 && sp !== "" && Number(sp) > 0) {
                           setMargin(Math.round((sp - form.cost_price) / form.cost_price * 100));
                         }
                       }}
@@ -440,9 +441,10 @@ export default function ProductForm() {
                     <div>
                       <label className="field-label">Current Stock</label>
                       <input
-                        type="number" min={0} value={(form as any).quantity_on_hand}
-                        onChange={(e) => set("quantity_on_hand", Number(e.target.value))}
-                        placeholder="0"
+                        type="number" min={0}
+                        value={(form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
+                        onChange={(e) => set("quantity_on_hand", e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="e.g. 100"
                         className="field-input"
                       />
                       <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
@@ -450,9 +452,10 @@ export default function ProductForm() {
                     <div>
                       <label className="field-label">Reorder Level</label>
                       <input
-                        type="number" min={0} value={(form as any).reorder_level}
-                        onChange={(e) => set("reorder_level", Number(e.target.value))}
-                        placeholder="10"
+                        type="number" min={0}
+                        value={(form as any).reorder_level === 0 ? "" : (form as any).reorder_level}
+                        onChange={(e) => set("reorder_level", e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="e.g. 10"
                         className="field-input"
                       />
                       <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>

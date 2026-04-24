@@ -115,13 +115,13 @@ export default function CustomerDetail() {
 
   if (loading) return (
     <AdminLayout>
-      <div className="p-8 text-muted-foreground text-sm animate-pulse">Loading customer…</div>
+      <div className="p-4 sm:p-8 text-muted-foreground text-sm animate-pulse">Loading customer…</div>
     </AdminLayout>
   );
 
   if (error || !data) return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <p className="text-red-400 text-sm mb-4">{error || "Customer not found"}</p>
         <Link to={tp("/admin/customers")} className="text-primary text-sm hover:underline">← Back to Customers</Link>
       </div>
@@ -140,7 +140,7 @@ export default function CustomerDetail() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         {/* Breadcrumb + actions */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -357,7 +357,7 @@ export default function CustomerDetail() {
               <h2 className="font-bold text-foreground">Edit Customer</h2>
               <button onClick={() => setEditing(false)}><X size={16} /></button>
             </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 grid grid-cols-2 gap-4">
               {error && <p className="col-span-2 text-red-400 text-sm">{error}</p>}
               <div className="col-span-2">
                 <label className="block text-xs text-muted-foreground mb-1 uppercase tracking-widest font-mono-tech">Name *</label>

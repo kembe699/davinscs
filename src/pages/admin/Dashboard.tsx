@@ -96,7 +96,7 @@ export default function Dashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Overview</p>
@@ -198,7 +198,7 @@ export default function Dashboard() {
                   <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Monthly Sales - {new Date().getFullYear()}</h2>
                   <p className="text-xs text-muted-foreground mt-1">Sales data grouped by month</p>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={monthlySales}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -219,7 +219,7 @@ export default function Dashboard() {
                 <div className="px-6 py-4 border-b border-border-subtle">
                   <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Total Sales</h2>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="text-center mb-6">
                     <p className="text-6xl font-bold text-primary font-mono">
                       {salesSummary ? compactNumber(salesSummary.totalSales) : '0'}
@@ -247,7 +247,7 @@ export default function Dashboard() {
                 <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Top Products</h2>
                 <p className="text-xs text-muted-foreground mt-1">Best selling products by revenue</p>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={topProducts}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />

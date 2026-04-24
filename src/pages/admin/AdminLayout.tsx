@@ -7,8 +7,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import {
   LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart,
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
-  ShoppingBag, Receipt, Shield, TrendingUp, Activity, UserCheck, ClipboardList,
-  ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun,
+  ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
+  ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X,
 } from "lucide-react";
 
 type NavItem = { label: string; path: string; icon: any; permission: string };
@@ -77,8 +77,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Prefix a path segment with the current tenant slug
   const tp = (path: string) => `/${tenantSlug}${path}`;
 
   const isActive = (path: string) =>
@@ -99,6 +99,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
 
   const handleLogout = () => { logout(); navigate(tp("/admin/login")); };
+  const closeSidebar = () => setSidebarOpen(false);
 
   function ThemeToggle() {
     const { theme, setTheme } = useTheme();
@@ -113,117 +114,156 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-admin-bg flex">
-      {/* Sidebar */}
-      <aside className="w-56 shrink-0 border-r border-admin-border flex flex-col bg-admin-bg sticky top-0 h-screen overflow-y-auto">
-        {/* Logo */}
-        <div className="p-5 border-b border-admin-border">
-          <Link to={tp("/")}>
-            {logo
-              ? <img src={logo} alt={companyName || "Logo"} className="h-16 object-contain" />
-              : <span className="font-bold text-sm text-admin-text tracking-widest uppercase">{companyName}</span>
-            }
-          </Link>
-          <div className="mt-2 flex items-center justify-between">
-            <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">ADMIN PANEL</p>
-            {user?.role_name && (
-              <span className="flex items-center gap-1 text-[8px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
-                <Shield size={8} />{user.role_name}
-              </span>
-            )}
-          </div>
-        </div>
+  const SidebarInner = () => (
+    <div className="flex flex-col h-full bg-admin-bg border-r border-admin-border">
+      {/* Logo */}
+      <div className="p-4 border-b border-admin-border flex items-center justify-between">
+        <Link to={tp("/")} onClick={closeSidebar}>
+          {logo
+            ? <img src={logo} alt={companyName || "Logo"} className="h-12 object-contain" />
+            : <span className="font-bold text-sm text-admin-text tracking-widest uppercase">{companyName}</span>
+          }
+        </Link>
+        <button onClick={closeSidebar} className="lg:hidden p-1 text-admin-text-secondary hover:text-admin-text">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="px-4 py-2 border-b border-admin-border/50 flex items-center justify-between">
+        <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">Admin Panel</p>
+        {user?.role_name && (
+          <span className="flex items-center gap-1 text-[8px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
+            <Shield size={8} />{user.role_name}
+          </span>
+        )}
+      </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {/* Standalone top items */}
-          {TOP_ITEMS.filter(i => hasPermission(i.permission)).map(item => {
-            const active = isActive(item.path);
-            return (
-              <Link key={item.path} to={tp(item.path)}
-                className={`flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded ${
-                  active
-                    ? "bg-admin-surface text-admin-text border border-admin-border"
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {TOP_ITEMS.filter(i => hasPermission(i.permission)).map(item => {
+          const active = isActive(item.path);
+          return (
+            <Link key={item.path} to={tp(item.path)} onClick={closeSidebar}
+              className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors rounded ${
+                active
+                  ? "bg-admin-surface text-admin-text border border-admin-border"
+                  : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
+              }`}
+            >
+              <item.icon size={15} />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="my-2 border-t border-admin-border/50" />
+
+        {NAV_GROUPS.map(group => {
+          const visibleItems = group.items.filter(i => hasPermission(i.permission));
+          if (visibleItems.length === 0) return null;
+          const isOpen = !!openGroups[group.label];
+          const hasActive = groupHasActive(group);
+          return (
+            <div key={group.label}>
+              <button
+                onClick={() => toggleGroup(group.label)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold uppercase tracking-wider rounded transition-colors ${
+                  hasActive
+                    ? "text-admin-text"
                     : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
                 }`}
               >
-                <item.icon size={15} />
-                {item.label}
-              </Link>
-            );
-          })}
+                <span className="flex items-center gap-2.5">
+                  <group.icon size={14} />
+                  {group.label}
+                </span>
+                {isOpen
+                  ? <ChevronDown size={12} className="opacity-60" />
+                  : <ChevronRight size={12} className="opacity-40" />
+                }
+              </button>
 
-          <div className="my-2 border-t border-admin-border/50" />
+              {isOpen && (
+                <div className="ml-3 mt-0.5 mb-1 pl-3 border-l border-admin-border/50 space-y-0.5">
+                  {visibleItems.map(item => {
+                    const active = isActive(item.path);
+                    return (
+                      <Link key={item.path} to={tp(item.path)} onClick={closeSidebar}
+                        className={`flex items-center gap-2.5 px-2.5 py-2 text-sm rounded transition-colors ${
+                          active
+                            ? "bg-admin-surface text-admin-text border border-admin-border"
+                            : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
+                        }`}
+                      >
+                        <item.icon size={13} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
 
-          {/* Grouped sections */}
-          {NAV_GROUPS.map(group => {
-            const visibleItems = group.items.filter(i => hasPermission(i.permission));
-            if (visibleItems.length === 0) return null;
-            const isOpen = !!openGroups[group.label];
-            const hasActive = groupHasActive(group);
-            return (
-              <div key={group.label}>
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded transition-colors ${
-                    hasActive
-                      ? "text-admin-text"
-                      : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <group.icon size={14} />
-                    {group.label}
-                  </span>
-                  {isOpen
-                    ? <ChevronDown size={12} className="opacity-60" />
-                    : <ChevronRight size={12} className="opacity-40" />
-                  }
-                </button>
-
-                {isOpen && (
-                  <div className="ml-3 mt-0.5 mb-1 pl-3 border-l border-admin-border/50 space-y-0.5">
-                    {visibleItems.map(item => {
-                      const active = isActive(item.path);
-                      return (
-                        <Link key={item.path} to={tp(item.path)}
-                          className={`flex items-center gap-2.5 px-2.5 py-1.5 text-sm rounded transition-colors ${
-                            active
-                              ? "bg-admin-surface text-admin-text border border-admin-border"
-                              : "text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface"
-                          }`}
-                        >
-                          <item.icon size={13} />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-admin-border">
-          <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
-            {user?.email}
-          </p>
-          <div className="flex items-center justify-between mb-3">
-            <button onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
-            >
-              <LogOut size={14} />
-              Sign Out
-            </button>
-            <ThemeToggle />
-          </div>
+      {/* Footer */}
+      <div className="p-4 border-t border-admin-border">
+        <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
+          {user?.email}
+        </p>
+        <div className="flex items-center justify-between">
+          <button onClick={handleLogout}
+            className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
+          >
+            <LogOut size={14} />
+            Sign Out
+          </button>
+          <ThemeToggle />
         </div>
-      </aside>
+      </div>
+    </div>
+  );
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-admin-bg">{children}</main>
+  return (
+    <div className="min-h-screen bg-admin-bg flex flex-col">
+      {/* Mobile top bar */}
+      <header className="lg:hidden sticky top-0 z-30 bg-admin-bg border-b border-admin-border px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface rounded transition-colors"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="flex-1 min-w-0">
+          {logo
+            ? <img src={logo} alt={companyName || "Logo"} className="h-8 object-contain" />
+            : <span className="font-bold text-sm text-admin-text tracking-widest uppercase truncate">{companyName}</span>
+          }
+        </div>
+        <ThemeToggle />
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex w-56 shrink-0 flex-col sticky top-0 h-screen overflow-y-auto">
+          <SidebarInner />
+        </aside>
+
+        {/* Mobile sidebar drawer */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={closeSidebar}
+            />
+            <div className="absolute left-0 top-0 bottom-0 w-64 z-50 overflow-y-auto">
+              <SidebarInner />
+            </div>
+          </div>
+        )}
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto bg-admin-bg min-w-0">{children}</main>
+      </div>
     </div>
   );
 }

@@ -77,7 +77,7 @@ export default function PaymentTypes() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-admin-text">Payment Types</h1>
         <button

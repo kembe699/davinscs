@@ -159,7 +159,7 @@ export default function Orders() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="mb-6">
           <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">E-Commerce</p>
           <h1 className="text-2xl font-bold text-foreground">Customer Orders</h1>

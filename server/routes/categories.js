@@ -19,13 +19,24 @@ router.post("/", requireAuth, async (req, res) => {
   const { slug, name, sort_order = 0, image_url = "" } = req.body;
   if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
   try {
+    // Check slug uniqueness within this tenant's schema only
+    const schemaName = req.user?.schema_name;
+    if (schemaName) {
+      const existing = await pool.query(
+        `SELECT id FROM ${schemaName}.categories WHERE slug = $1`,
+        [slug.toLowerCase().trim()]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(409).json({ error: "A category with this slug already exists in your store. Please choose a different slug." });
+      }
+    }
     const { rows } = await pool.query(
       "INSERT INTO categories (slug, name, sort_order, image_url) VALUES ($1,$2,$3,$4) RETURNING *",
       [slug.toLowerCase().trim(), name.trim(), sort_order, image_url.trim()]
     );
     res.status(201).json(rows[0]);
-  } catch (err) {
-    if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
+  } catch (err: any) {
+    if (err.code === "23505") return res.status(409).json({ error: "A category with this slug already exists in your store." });
     res.status(500).json({ error: err.message });
   }
 });

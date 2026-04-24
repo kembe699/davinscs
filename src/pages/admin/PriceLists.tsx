@@ -264,7 +264,7 @@ export default function PriceLists() {
   // ── RENDER ───────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
-      <div className="p-6 max-w-7xl">
+      <div className="p-4 sm:p-6 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
