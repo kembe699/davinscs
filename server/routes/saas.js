@@ -667,6 +667,59 @@ router.get('/customer/me', requireCustomer, async (req, res) => {
   }
 });
 
+// Customer — self-subscribe (creates unpaid invoice for admin to mark paid)
+router.post('/customer/subscribe', requireCustomer, async (req, res) => {
+  const { plan_id, billing_period } = req.body;
+  if (!plan_id) return res.status(400).json({ error: 'plan_id is required' });
+
+  try {
+    const tenantId = req.customer.tenant_id;
+
+    // Fetch the chosen plan
+    const planRes = await pool.query(
+      `SELECT * FROM public.pricing_plans WHERE id = $1`, [plan_id]
+    );
+    if (!planRes.rows.length) return res.status(404).json({ error: 'Plan not found' });
+    const plan = planRes.rows[0];
+
+    // Prevent duplicate pending invoices for the same plan
+    const dupCheck = await pool.query(
+      `SELECT id FROM public.saas_billing
+       WHERE tenant_id=$1 AND plan_name=$2 AND status='pending'`,
+      [tenantId, plan.name]
+    );
+    if (dupCheck.rows.length) {
+      return res.status(409).json({ error: 'You already have a pending invoice for this plan. Please wait for the admin to process it.' });
+    }
+
+    // Generate unique invoice number
+    let invoiceNumber;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = 'INV-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const exists = await pool.query(
+        'SELECT 1 FROM public.saas_billing WHERE invoice_number = $1', [candidate]
+      );
+      if (!exists.rows.length) { invoiceNumber = candidate; break; }
+    }
+    if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
+
+    const period = billing_period || plan.billing_period || 'monthly';
+    // Parse price: strip non-numeric chars except decimal
+    const priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
+
+    const inv = await pool.query(
+      `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [invoiceNumber, tenantId, plan.name, priceNum, 'USD', `Subscription request via portal`, period]
+    );
+
+    res.json({ invoice: inv.rows[0], message: 'Subscription request submitted. Your account will be activated once payment is confirmed.' });
+  } catch (err) {
+    console.error('Customer subscribe error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── Website Contact Form ─────────────────────────────────────────────────────
 router.post('/contact', async (req, res) => {
   const { name, email, message, phone } = req.body;
