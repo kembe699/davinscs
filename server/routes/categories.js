@@ -35,7 +35,7 @@ router.post("/", requireAuth, async (req, res) => {
       [slug.toLowerCase().trim(), name.trim(), sort_order, image_url.trim()]
     );
     res.status(201).json(rows[0]);
-  } catch (err: any) {
+  } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "A category with this slug already exists in your store." });
     res.status(500).json({ error: err.message });
   }
