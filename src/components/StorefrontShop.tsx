@@ -199,8 +199,8 @@ export default function StorefrontShop({ initialCategory }: Props) {
               ))}
             </div>
             {/* Sort */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Sort:</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">Sort:</span>
               {([
                 { value: "default", label: "Default" },
                 { value: "price-asc", label: "Price ↑" },
