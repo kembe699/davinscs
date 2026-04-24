@@ -244,9 +244,10 @@ export default function POSMain() {
   const addToCart = (product: ApiProduct) => {
     const existing = cart.find(item => item.product.id === product.id);
     const currentQtyInCart = existing ? existing.quantity : 0;
+    const isService = (product as any).product_type === 'service';
     const availableStock = (product.quantity_on_hand ?? 0) - (product.quantity_reserved ?? 0);
     
-    if (currentQtyInCart >= availableStock) {
+    if (!isService && currentQtyInCart >= availableStock) {
       toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
       return;
     }
