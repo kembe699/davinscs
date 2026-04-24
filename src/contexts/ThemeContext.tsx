@@ -19,44 +19,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [saving, setSaving] = useState(false);
 
-  // Load theme on mount: try API first, fall back to localStorage
+  // Force dark mode on mount and ignore any old light mode settings
   useEffect(() => {
-    const local = localStorage.getItem("app_theme") as Theme | null;
-    if (local === "light" || local === "dark") {
-      applyTheme(local);
-      setThemeState(local);
-    }
-    api.company.get()
-      .then((data: any) => {
-        const sf = data?.storefront_settings || {};
-        const saved = sf.theme as Theme | undefined;
-        if (saved === "light" || saved === "dark") {
-          applyTheme(saved);
-          setThemeState(saved);
-          localStorage.setItem("app_theme", saved);
-        }
-      })
-      .catch(() => {});
+    applyTheme("dark");
+    setThemeState("dark");
+    localStorage.setItem("app_theme", "dark");
   }, []);
 
   const setTheme = useCallback(async (t: Theme) => {
-    applyTheme(t);
-    setThemeState(t);
-    localStorage.setItem("app_theme", t);
-    setSaving(true);
-    try {
-      const data = await api.company.get();
-      const sf = { ...(data?.storefront_settings || {}), theme: t };
-      await api.company.save({ ...data, storefront_settings: sf });
-    } catch (e) {
-      console.error("Failed to save theme preference", e);
-    } finally {
-      setSaving(false);
-    }
+    // Force dark mode ALWAYS
+    applyTheme("dark");
+    setThemeState("dark");
+    localStorage.setItem("app_theme", "dark");
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, saving }}>
+    <ThemeContext.Provider value={{ theme: "dark", setTheme, saving: false }}>
       {children}
     </ThemeContext.Provider>
   );
