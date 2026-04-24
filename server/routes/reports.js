@@ -1023,6 +1023,7 @@ router.get("/cashflow", requireAuth, async (req, res) => {
              COUNT(*) as tx_count
       FROM cash_movements m
       WHERE DATE(m.created_at) BETWEEN $1 AND $2
+        AND m.reason NOT LIKE 'POS Sale%'
       GROUP BY DATE(m.created_at), m.type
       ORDER BY date`, [startDate, endDate]);
 
