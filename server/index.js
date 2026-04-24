@@ -41,7 +41,7 @@ import auditLogsRoutes from "./routes/audit-logs.js";
 import customersRoutes from "./routes/customers.js";
 import quotationsRoutes, { migrateQuotations } from "./routes/quotations.js";
 import setupRoutes from "./routes/setup.js";
-import saasRoutes from "./routes/saas.js";
+import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
 
 dotenv.config();
 
@@ -123,6 +123,7 @@ migrateTenant("public")
   .then(() => migrateQuotations(pool))
   .then(() => autoSeed())
   .then(() => {
+    initSaasSchedulers();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

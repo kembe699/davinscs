@@ -778,8 +778,10 @@ async function recordDbSnapshots() {
   }
 }
 
-// Run immediately on startup then every 15 minutes
-runSubscriptionSweep();
-recordDbSnapshots();
-setInterval(runSubscriptionSweep, 15 * 60 * 1000);
-setInterval(recordDbSnapshots, 6 * 60 * 60 * 1000);
+// Called from server/index.js AFTER migrations complete so the tables exist
+export function initSaasSchedulers() {
+  runSubscriptionSweep();
+  recordDbSnapshots();
+  setInterval(runSubscriptionSweep, 15 * 60 * 1000);
+  setInterval(recordDbSnapshots, 6 * 60 * 60 * 1000);
+}
