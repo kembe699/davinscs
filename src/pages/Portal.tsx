@@ -168,7 +168,7 @@ export default function Portal() {
       <p className="text-center text-[10px] font-mono-tech text-white/70 mt-6 uppercase tracking-widest">
         No account?{" "}
         <a
-          href="http://localhost:5174/register"
+          href="https://flippedpos-website.onrender.com/register"
           className="text-white underline hover:text-white/80 transition-colors"
         >
           Register at flippedpos.com
