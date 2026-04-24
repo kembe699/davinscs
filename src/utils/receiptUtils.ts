@@ -81,7 +81,8 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const amtWoVat = total - taxAmount;
   const netAmt = total;
 
-  const receiptUrl = `${window.location.origin}/verify/${sale.sale_number}`;
+  const tenantSlug = window.location.pathname.split('/')[1] || '';
+  const receiptUrl = `${window.location.origin}/${tenantSlug}/verify/${sale.sale_number}`;
 
   const css = `
     @page { size: 80mm auto; margin: 4mm 3mm; }
