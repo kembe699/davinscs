@@ -118,6 +118,17 @@ if (process.env.NODE_ENV === "production") {
 
 
 migrateTenant("public")
+  .then(async () => {
+    const { rows } = await pool.query("SELECT schema_name FROM public.tenants");
+    for (const tenant of rows) {
+      try {
+        await migrateTenant(tenant.schema_name);
+        console.log(`Migrated tenant schema: ${tenant.schema_name}`);
+      } catch (err) {
+        console.error(`Failed to migrate tenant schema: ${tenant.schema_name}`, err);
+      }
+    }
+  })
   .then(() => migrateQuotations(pool))
   .then(() => autoSeed())
   .then(() => {
