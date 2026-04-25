@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useTenant } from "@/contexts/TenantContext";
-import { api } from "@/lib/api";
 import { buildThermalReceipt } from "@/utils/receiptUtils";
 
 export default function ReceiptVerify() {
-  const { saleNumber } = useParams<{ saleNumber: string }>();
-  const { schemaName } = useTenant();
+  // tenantSlug comes from the URL: /:tenantSlug/verify/:saleNumber
+  const { saleNumber, tenantSlug } = useParams<{ saleNumber: string; tenantSlug: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
@@ -14,13 +12,16 @@ export default function ReceiptVerify() {
   useEffect(() => {
     async function verifySale() {
       try {
-        const res = await fetch(`/api/pos/verify/${saleNumber}`, {
-          headers: {
-            "x-schema-name": schemaName
-          }
-        });
+        if (!saleNumber) throw new Error("No sale number in URL");
+
+        // Build URL — pass tenant_slug so the backend can resolve the schema
+        // without requiring a logged-in session (public QR scan)
+        const params = new URLSearchParams();
+        if (tenantSlug) params.set("tenant_slug", tenantSlug);
+
+        const res = await fetch(`/api/pos/verify/${encodeURIComponent(saleNumber)}?${params.toString()}`);
         const data = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(data.error || "Failed to verify receipt");
         }
@@ -35,7 +36,7 @@ export default function ReceiptVerify() {
             total: i.subtotal
           })),
           companyData: data.company,
-          baseCurrencySymbol: "UGX", // Assuming base currency or fetch it
+          baseCurrencySymbol: data.company?.currency || "UGX",
         });
 
         setHtmlContent(html);
@@ -46,10 +47,10 @@ export default function ReceiptVerify() {
       }
     }
 
-    if (saleNumber && schemaName) {
+    if (saleNumber) {
       verifySale();
     }
-  }, [saleNumber, schemaName]);
+  }, [saleNumber, tenantSlug]);
 
   if (loading) {
     return (

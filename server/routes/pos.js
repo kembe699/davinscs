@@ -7,24 +7,38 @@ const router = express.Router();
 
 // PUBLIC VERIFY ENDPOINT (No Auth Required)
 router.get("/verify/:sale_number", async (req, res) => {
-  const schema = req.headers["x-schema-name"];
+  let schema = req.headers["x-schema-name"] || req.query.schema;
+
+  // Fallback: resolve schema from tenant_slug if schema not provided directly
+  if (!schema && req.query.tenant_slug) {
+    try {
+      const slugRes = await pool.query(
+        'SELECT schema_name FROM public.tenants WHERE tenant_slug = $1',
+        [req.query.tenant_slug]
+      );
+      schema = slugRes.rows[0]?.schema_name;
+    } catch (slugErr) {
+      console.error('Error resolving schema from slug:', slugErr.message);
+    }
+  }
+
   if (!schema) return res.status(400).json({ error: "Schema name is required" });
 
   try {
-    const saleResult = await pool.query(`SELECT * FROM ${schema}.pos_sales WHERE sale_number = $1`, [req.params.sale_number]);
+    const saleResult = await pool.query(`SELECT * FROM "${schema}".pos_sales WHERE sale_number = $1`, [req.params.sale_number]);
     const sale = saleResult.rows[0];
     if (!sale) return res.status(404).json({ error: "Sale not found" });
 
     const itemsResult = await pool.query(
       `SELECT si.*, p.name as product_name, p.sku 
-       FROM ${schema}.pos_sale_items si
-       JOIN ${schema}.products p ON si.product_id = p.id
+       FROM "${schema}".pos_sale_items si
+       JOIN "${schema}".products p ON si.product_id = p.id
        WHERE si.sale_id = $1`, 
       [sale.id]
     );
     const items = itemsResult.rows;
 
-    const companyResult = await pool.query(`SELECT * FROM ${schema}.company_settings WHERE id = 1`);
+    const companyResult = await pool.query(`SELECT * FROM "${schema}".company_settings WHERE id = 1`);
     const company = companyResult.rows[0] || {};
 
     res.json({
@@ -36,7 +50,7 @@ router.get("/verify/:sale_number", async (req, res) => {
         phone: company.phone,
         email: company.email,
         tax_id: company.tax_id,
-        logo: company.logo
+        logo: company.logo_url
       }
     });
   } catch (error) {
