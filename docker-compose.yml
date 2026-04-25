@@ -28,6 +28,8 @@ services:
       JWT_SECRET: change-me-to-a-strong-secret-min-32-chars!!
       APP_URL: http://localhost:3001
       DB_SSL: "false"
+      OFFLINE_MODE: "true"
+      MASTER_API_URL: "https://davinscs.onrender.com"
     depends_on:
       db:
         condition: service_healthy
