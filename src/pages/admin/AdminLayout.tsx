@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </button>
       </div>
       <div className="px-4 py-2 border-b border-admin-border/50 flex items-center justify-between">
-        <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">Admin Panel</p>
+        <p className="font-mono text-[9px] text-admin-text-secondary tracking-[0.3em] uppercase">{t('admin.panel')}</p>
         {user?.role_name && (
           <span className="flex items-center gap-1 text-[8px] font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded">
             <Shield size={8} />{user.role_name}
@@ -181,6 +181,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {TOP_ITEMS.filter(i => hasPermission(i.permission)).map(item => {
           const active = isActive(item.path);
+          // @ts-ignore
+          const label = item.label === 'Dashboard' ? t('admin.nav.dashboard') : t('admin.nav.pos');
           return (
             <Link key={item.path} to={tp(item.path)} onClick={closeSidebar}
               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors rounded ${
@@ -190,7 +192,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               }`}
             >
               <item.icon size={15} />
-              {item.label}
+              {label}
             </Link>
           );
         })}
@@ -202,6 +204,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           if (visibleItems.length === 0) return null;
           const isOpen = !!openGroups[group.label];
           const hasActive = groupHasActive(group);
+          // @ts-ignore
+          const groupLabel = t(`admin.groups.${group.label.toLowerCase().replace(' ', '_')}`);
           return (
             <div key={group.label}>
               <button
@@ -214,7 +218,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <span className="flex items-center gap-2.5">
                   <group.icon size={14} />
-                  {group.label}
+                  {groupLabel || group.label}
                 </span>
                 {isOpen
                   ? <ChevronDown size={12} className="opacity-60" />
@@ -226,6 +230,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <div className="ml-3 mt-0.5 mb-1 pl-3 border-l border-admin-border/50 space-y-0.5">
                   {visibleItems.map(item => {
                     const active = isActive(item.path);
+                    const navKey = item.label.toLowerCase().replace(' ', '_');
+                    // @ts-ignore
+                    const itemLabel = t(`admin.nav.${navKey}`);
                     return (
                       <Link key={item.path} to={tp(item.path)} onClick={closeSidebar}
                         className={`flex items-center gap-2.5 px-2.5 py-2 text-sm rounded transition-colors ${
@@ -235,7 +242,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         }`}
                       >
                         <item.icon size={13} />
-                        {item.label}
+                        {itemLabel || item.label}
                       </Link>
                     );
                   })}

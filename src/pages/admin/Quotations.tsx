@@ -7,6 +7,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { Plus, Search, Trash2, Edit2, X, Eye, FileText, ChevronRight, Printer, Download } from "lucide-react";
 import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
+import { useTranslation } from "react-i18next";
 
 const STATUS_OPTIONS = ["draft", "sent", "accepted", "rejected", "converted"];
 const STATUS_STYLE: Record<string, string> = {
@@ -34,6 +35,7 @@ function calcTotals(items: ReturnType<typeof emptyItem>[], discount: number) {
 
 export default function Quotations() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
 
@@ -289,12 +291,12 @@ export default function Quotations() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Sales</p>
-            <h1 className="text-2xl font-bold text-foreground">Quotations</h1>
+            <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">{t('admin.groups.sales')}</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('admin.quotes.title')}</h1>
           </div>
           <button onClick={openAdd}
             className="flex items-center gap-2 h-10 px-5 bg-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors">
-            <Plus size={14} /> New Quote
+            <Plus size={14} /> {t('admin.quotes.new_quote')}
           </button>
         </div>
 
@@ -324,8 +326,16 @@ export default function Quotations() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-subtle bg-chassis">
-                  {["Quote #","Customer","Date","Valid Until","Status","Total",""].map(h => (
-                    <th key={h} className={`px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest ${h === "Total" || h === "" ? "text-right" : "text-left"}`}>{h}</th>
+                  {[
+                    t('admin.quotes.quote_number'),
+                    t('admin.quotes.customer'),
+                    t('admin.quotes.date'),
+                    t('admin.quotes.valid_until'),
+                    t('admin.quotes.status'),
+                    t('admin.quotes.total'),
+                    ""
+                  ].map((h, i) => (
+                    <th key={i} className={`px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest ${i === 5 || i === 6 ? "text-right" : "text-left"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
