@@ -25,6 +25,7 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS tenant_slug VARCHAR(50) UNIQUE;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_start TIMESTAMPTZ;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_end TIMESTAMPTZ;
+    ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS expiry_reminder_sent_at TIMESTAMPTZ;
     CREATE TABLE IF NOT EXISTS public.tenant_db_snapshots (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER REFERENCES public.tenants(id) ON DELETE CASCADE,

@@ -6,6 +6,7 @@ import pool from '../db.js';
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache } from '../middleware/auth.js';
+import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail } from '../utils/email.js';
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
 function generateCustomerCode() {
@@ -108,6 +109,10 @@ router.post('/register', async (req, res) => {
       await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`).catch(() => {});
       throw provisionErr;
     }
+
+    try {
+      await sendWelcomeEmail(email, businessName, customerCode, schemaName);
+    } catch (e) { console.error('Welcome email error:', e); }
 
     res.status(201).json({ message: 'Instance created successfully', schemaName, customerCode, tenantSlug });
   } catch (err) {
@@ -478,6 +483,13 @@ router.post('/billing', requireSaasAdmin, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [invoiceNumber, tenant_id, plan_name || '', parseFloat(amount), currency, notes, billing_period]
     );
+
+    const tuRes = await pool.query('SELECT email FROM public.tenant_users WHERE tenant_id = $1 LIMIT 1', [tenant_id]);
+    const customerEmail = tuRes.rows[0]?.email;
+    if (customerEmail) {
+      sendInvoiceCreatedEmail(customerEmail, invoiceNumber, plan_name, amount).catch(console.error);
+    }
+
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error('Create invoice error:', err);
@@ -517,12 +529,19 @@ router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
       `UPDATE public.tenants
        SET status = 'active',
            subscription_start = CASE WHEN status <> 'active' THEN NOW() ELSE subscription_start END,
-           subscription_end = $1
+           subscription_end = $1,
+           expiry_reminder_sent_at = NULL
        WHERE id = $2`,
       [newEnd.toISOString(), inv.tenant_id]
     );
 
     await client.query('COMMIT');
+
+    const tuRes = await pool.query('SELECT email FROM public.tenant_users WHERE tenant_id = $1 LIMIT 1', [inv.tenant_id]);
+    const customerEmail = tuRes.rows[0]?.email;
+    if (customerEmail) {
+      sendInvoicePaidEmail(customerEmail, inv.invoice_number, inv.amount, newEnd).catch(console.error);
+    }
 
     // 4. Invalidate tenant status cache
     const tenantFull = (await pool.query('SELECT schema_name FROM public.tenants WHERE id=$1', [inv.tenant_id])).rows[0];
@@ -713,6 +732,8 @@ router.post('/customer/subscribe', requireCustomer, async (req, res) => {
       [invoiceNumber, tenantId, plan.name, priceNum, 'USD', `Subscription request via portal`, period]
     );
 
+    sendInvoiceCreatedEmail(req.customer.email, invoiceNumber, plan.name, priceNum).catch(console.error);
+
     res.json({ invoice: inv.rows[0], message: 'Subscription request submitted. Your account will be activated once payment is confirmed.' });
   } catch (err) {
     console.error('Customer subscribe error:', err);
@@ -776,6 +797,25 @@ export default router;
 // Runs every 15 minutes. Suspends expired trials and lapsed subscriptions.
 async function runSubscriptionSweep() {
   try {
+    // Send expiry reminders (7 days before expiry)
+    const reminderRes = await pool.query(
+      `SELECT t.id, t.business_name, t.trial_ends_at, t.subscription_end, t.status, tu.email
+       FROM public.tenants t
+       JOIN public.tenant_users tu ON t.id = tu.tenant_id
+       WHERE t.status IN ('active', 'trial')
+         AND (t.expiry_reminder_sent_at IS NULL OR t.expiry_reminder_sent_at < NOW() - INTERVAL '30 days')
+         AND (
+           (t.status = 'trial' AND t.trial_ends_at BETWEEN NOW() + INTERVAL '6 days' AND NOW() + INTERVAL '7 days') OR
+           (t.status = 'active' AND t.subscription_end BETWEEN NOW() + INTERVAL '6 days' AND NOW() + INTERVAL '7 days')
+         )`
+    );
+    for (const row of reminderRes.rows) {
+      const expiryDate = row.status === 'trial' ? row.trial_ends_at : row.subscription_end;
+      await sendExpiryReminderEmail(row.email, row.business_name, expiryDate);
+      await pool.query('UPDATE public.tenants SET expiry_reminder_sent_at = NOW() WHERE id = $1', [row.id]);
+      console.log(`[Subscription Sweep] Sent expiry reminder to ${row.email} (${row.business_name})`);
+    }
+
     // Suspend expired trials
     const trialRes = await pool.query(
       `UPDATE public.tenants SET status='suspended'
