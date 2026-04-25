@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ShoppingCart, Search, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Menu, X, ShoppingCart, Search, ChevronDown, Globe } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -10,8 +11,10 @@ const staticLinks = [
 ];
 
 const Navbar = () => {
+  const { t, i18n } = useTranslation();
   const { logo, companyName } = useLayout();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -25,9 +28,16 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+    document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+    setLangOpen(false);
+  };
+
   useEffect(() => {
+    document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr';
     api.categories.list().then(setCategories).catch(() => {});
-  }, []);
+  }, [i18n.language]);
 
   useEffect(() => {
     const loadCartCount = async () => {
@@ -146,7 +156,27 @@ const Navbar = () => {
             </span>
           )}
         </Link>
-        <span className="text-muted-foreground uppercase tracking-tighter">Status: Open</span>
+
+        {/* Language Switcher */}
+        <div className="relative">
+          <button 
+            type="button"
+            onClick={() => setLangOpen(!langOpen)} 
+            className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors p-1"
+          >
+            <Globe size={18} />
+            <span className="uppercase text-[10px]">{i18n.language.split('-')[0]}</span>
+          </button>
+          {langOpen && (
+            <div className="absolute right-0 mt-2 w-32 bg-chassis border border-border-subtle rounded-md shadow-xl overflow-hidden py-1 z-50">
+              <button onClick={() => changeLanguage('en')} className="block w-full text-left px-4 py-2 text-xs text-muted-foreground hover:bg-white/5 hover:text-primary">English</button>
+              <button onClick={() => changeLanguage('ar')} className="block w-full text-left px-4 py-2 text-xs text-muted-foreground hover:bg-white/5 hover:text-primary">العربية</button>
+              <button onClick={() => changeLanguage('fr')} className="block w-full text-left px-4 py-2 text-xs text-muted-foreground hover:bg-white/5 hover:text-primary">Français</button>
+            </div>
+          )}
+        </div>
+
+        <span className="text-muted-foreground uppercase tracking-tighter hidden md:inline">Status: Open</span>
         <div className="size-2 bg-primary animate-pulse" />
       </div>
       <button
@@ -168,6 +198,12 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
+          
+          <div className="pt-4 mt-2 border-t border-border-subtle flex gap-4 justify-center">
+            <button onClick={() => changeLanguage('en')} className={`text-xs ${i18n.language.startsWith('en') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>EN</button>
+            <button onClick={() => changeLanguage('ar')} className={`text-xs ${i18n.language.startsWith('ar') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>AR</button>
+            <button onClick={() => changeLanguage('fr')} className={`text-xs ${i18n.language.startsWith('fr') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>FR</button>
+          </div>
         </div>
       )}
     </nav>
