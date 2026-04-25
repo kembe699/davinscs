@@ -10,6 +10,7 @@ import {
   ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
   ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type NavItem = { label: string; path: string; icon: any; permission: string };
 type NavGroup = { label: string; icon: any; items: NavItem[] };
@@ -78,6 +79,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+
+  // Handle document direction for Arabic
+  useEffect(() => {
+    document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr';
+  }, [i18n.language]);
 
   useEffect(() => {
     if (user?.role_name?.toLowerCase() === 'cashier') {
@@ -113,10 +120,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <button
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        className="p-1.5 border border-admin-border text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors"
+        className="p-1.5 border border-admin-border text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors rounded"
       >
         {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
       </button>
+    );
+  }
+
+  function LanguageToggle({ direction = "up" }: { direction?: "up" | "down" }) {
+    const [open, setOpen] = useState(false);
+    
+    const changeLanguage = (lng: string) => {
+      i18n.changeLanguage(lng);
+      setOpen(false);
+    };
+
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setOpen(!open)}
+          className="p-1.5 flex items-center gap-1 border border-admin-border text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors rounded"
+        >
+          <Globe size={13} />
+          <span className="text-[10px] uppercase font-mono leading-none">{i18n.language.split('-')[0]}</span>
+        </button>
+        {open && (
+          <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 w-24 bg-admin-bg border border-admin-border shadow-xl z-50 rounded overflow-hidden`}>
+            <button onClick={() => changeLanguage('en')} className="block w-full text-left px-3 py-2 text-xs text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors">English</button>
+            <button onClick={() => changeLanguage('ar')} className="block w-full text-left px-3 py-2 text-xs text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors">العربية</button>
+            <button onClick={() => changeLanguage('fr')} className="block w-full text-left px-3 py-2 text-xs text-admin-text-secondary hover:text-admin-text hover:bg-admin-surface transition-colors">Français</button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -216,14 +251,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
           {user?.email}
         </p>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-2">
           <button onClick={handleLogout}
             className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
           >
             <LogOut size={14} />
             Sign Out
           </button>
-          <ThemeToggle />
+          <div className="flex items-center gap-1.5">
+            <LanguageToggle direction="up" />
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </div>
@@ -245,7 +283,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             : <span className="font-bold text-sm text-admin-text tracking-widest uppercase truncate">{companyName}</span>
           }
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageToggle direction="down" />
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
