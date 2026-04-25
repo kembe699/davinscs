@@ -58,23 +58,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false // disabled to not break external images
 }));
 
-const allowedOrigins = [
-  process.env.APP_URL,
-  "http://localhost:3001",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:3001"
-].filter(Boolean);
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Reflects the requesting origin (allows local network devices in offline mode)
   credentials: true
 }));
 
@@ -84,6 +69,10 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+// Custom rate limit handler to return JSON instead of text
+limiter.handler = (req, res, next, options) => {
+  res.status(options.statusCode).json({ error: options.message });
+};
 app.use("/api/", limiter);
 
 app.use(express.json({ limit: '2mb' }));
