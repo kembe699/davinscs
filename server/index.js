@@ -59,9 +59,36 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: true, // Reflects the requesting origin (allows local network devices in offline mode)
+  origin: (origin, callback) => {
+    // 1. Allow non-browser requests (no origin) or localhost
+    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    // 2. Allow local network access in OFFLINE_MODE
+    if (process.env.OFFLINE_MODE === 'true') {
+      return callback(null, true);
+    }
+    // 3. Allow production SaaS domains
+    if (
+      origin.endsWith('.flippedpos.com') || 
+      origin === 'https://flippedpos.com' || 
+      origin === process.env.APP_URL
+    ) {
+      return callback(null, true);
+    }
+    // Reject other origins securely without crashing the frontend with an HTML error
+    return callback(new Error('CORS_ERROR'), false);
+  },
   credentials: true
 }));
+
+// Error handler for CORS
+app.use((err, req, res, next) => {
+  if (err.message === 'CORS_ERROR') {
+    return res.status(403).json({ error: 'Origin not allowed by CORS' });
+  }
+  next(err);
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
