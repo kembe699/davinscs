@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams, useLocation, Outlet, Navigate } from "react-router-dom";
+import { setTenantSchema } from "@/lib/api";
+import { LayoutProvider } from "./LayoutContext";
 
 interface TenantInfo {
   tenantSlug: string;
@@ -31,13 +33,24 @@ export function TenantRoot() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!tenantSlug) return;
+    if (!tenantSlug) {
+      setTenantSchema(null);
+      return;
+    }
     setLoading(true);
     setError("");
     fetch(`/api/saas/tenant/${encodeURIComponent(tenantSlug)}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) { setError(d.error); return; }
+        if (d.error === "LICENSE_EXPIRED") {
+          window.location.replace("/license-expired");
+          return;
+        }
+        if (d.error) { 
+          setError(d.error); 
+          setTenantSchema(null);
+          return; 
+        }
 
         // ── Stale-token guard ────────────────────────────────────────────────
         // If a JWT from a DIFFERENT tenant is sitting in localStorage every API
@@ -60,6 +73,7 @@ export function TenantRoot() {
         }
         // ────────────────────────────────────────────────────────────────────
 
+        setTenantSchema(d.schemaName);
         setTenant({
           tenantSlug: d.tenantSlug,
           schemaName: d.schemaName,
@@ -67,7 +81,10 @@ export function TenantRoot() {
           needsSetup: d.needsSetup,
         });
       })
-      .catch(() => setError("Failed to load instance"))
+      .catch(() => {
+        setError("Failed to load instance");
+        setTenantSchema(null);
+      })
       .finally(() => setLoading(false));
   }, [tenantSlug]);
 
@@ -106,7 +123,9 @@ export function TenantRoot() {
 
   return (
     <TenantContext.Provider value={tenant}>
-      <Outlet />
+      <LayoutProvider>
+        <Outlet />
+      </LayoutProvider>
     </TenantContext.Provider>
   );
 }

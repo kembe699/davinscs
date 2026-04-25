@@ -55,20 +55,23 @@ export async function requireAuth(req, res, next) {
       const tenant = await getTenantStatus(schemaName);
       if (tenant) {
         const now = new Date();
+        const isOffline = process.env.OFFLINE_MODE === 'true';
+        const errorType = isOffline ? 'LICENSE_EXPIRED' : 'TENANT_SUSPENDED';
+
         if (tenant.status === 'suspended') {
-          return res.status(403).json({ error: 'TENANT_SUSPENDED' });
+          return res.status(403).json({ error: errorType });
         }
         if (tenant.status === 'trial' && new Date(tenant.trial_ends_at) < now) {
           // Lazy suspend
           await pool.query(`UPDATE public.tenants SET status='suspended' WHERE schema_name=$1`, [schemaName]);
-          tenantStatusCache.delete(schemaName);
-          return res.status(403).json({ error: 'TRIAL_EXPIRED' });
+          clearTenantCache(schemaName);
+          return res.status(403).json({ error: isOffline ? 'LICENSE_EXPIRED' : 'TRIAL_EXPIRED' });
         }
         if (tenant.status === 'active' && tenant.subscription_end && new Date(tenant.subscription_end) < now) {
           // Lazy suspend on subscription expiry
           await pool.query(`UPDATE public.tenants SET status='suspended' WHERE schema_name=$1`, [schemaName]);
-          tenantStatusCache.delete(schemaName);
-          return res.status(403).json({ error: 'TENANT_SUSPENDED' });
+          clearTenantCache(schemaName);
+          return res.status(403).json({ error: errorType });
         }
       }
     }

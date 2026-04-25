@@ -42,6 +42,7 @@ import customersRoutes from "./routes/customers.js";
 import quotationsRoutes, { migrateQuotations } from "./routes/quotations.js";
 import setupRoutes from "./routes/setup.js";
 import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
+import offlineRoutes from "./routes/offline.js";
 
 dotenv.config();
 
@@ -105,6 +106,10 @@ app.use("/api/customers", customersRoutes);
 app.use("/api/quotations", quotationsRoutes);
 app.use("/api/setup", setupRoutes);
 app.use("/api/saas", saasRoutes);
+
+if (process.env.OFFLINE_MODE === "true") {
+  app.use("/api/offline", offlineRoutes);
+}
 
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {

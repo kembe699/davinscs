@@ -9,6 +9,18 @@ export default function Portal() {
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
+    if (import.meta.env.VITE_OFFLINE_MODE === "true") {
+      fetch("/api/offline/status")
+        .then(res => res.json())
+        .then(data => {
+          if (data.configured && data.license?.tenant_slug) {
+            window.location.replace(`/${data.license.tenant_slug}/admin/login`);
+          }
+        })
+        .catch(console.error);
+      return;
+    }
+
     const savedSlug = localStorage.getItem("saved_tenant_slug");
     if (savedSlug) {
       window.location.replace(`/${savedSlug}/admin/login`);
@@ -50,6 +62,11 @@ export default function Portal() {
     
     if (rememberMe) {
       localStorage.setItem("saved_tenant_slug", found.tenantSlug);
+    }
+
+    if (import.meta.env.VITE_OFFLINE_MODE === "true" && found.needsSetup) {
+      window.location.href = `/offline-setup?code=${customerCode}`;
+      return;
     }
     
     const dest = found.needsSetup
