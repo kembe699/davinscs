@@ -58,37 +58,32 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false // disabled to not break external images
 }));
 
+const allowedOrigins = [
+  process.env.APP_URL,
+  // Production domains
+  "https://app.flippedpos.com",
+  "https://flippedpos.com",
+  "https://www.flippedpos.com",
+  // Render.com deployments
+  "https://davinscs.onrender.com",
+  // Local dev
+  "http://localhost:3001",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3001"
+].filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
-    // 1. Allow non-browser requests (no origin) or localhost
-    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-      return callback(null, true);
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    // 2. Allow local network access in OFFLINE_MODE
-    if (process.env.OFFLINE_MODE === 'true') {
-      return callback(null, true);
-    }
-    // 3. Allow production SaaS domains
-    if (
-      origin.endsWith('.flippedpos.com') || 
-      origin === 'https://flippedpos.com' || 
-      origin === process.env.APP_URL
-    ) {
-      return callback(null, true);
-    }
-    // Reject other origins securely without crashing the frontend with an HTML error
-    return callback(new Error('CORS_ERROR'), false);
   },
   credentials: true
 }));
-
-// Error handler for CORS
-app.use((err, req, res, next) => {
-  if (err.message === 'CORS_ERROR') {
-    return res.status(403).json({ error: 'Origin not allowed by CORS' });
-  }
-  next(err);
-});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -96,10 +91,6 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-// Custom rate limit handler to return JSON instead of text
-limiter.handler = (req, res, next, options) => {
-  res.status(options.statusCode).json({ error: options.message });
-};
 app.use("/api/", limiter);
 
 app.use(express.json({ limit: '2mb' }));
