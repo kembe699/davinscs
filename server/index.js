@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -51,17 +53,46 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PgSession = connectPgSimple(session);
 
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled to not break React inline scripts or external CDNs if any
+  crossOriginEmbedderPolicy: false // disabled to not break external images
+}));
+
+const allowedOrigins = [
+  process.env.APP_URL,
+  "http://localhost:3001",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3001"
+].filter(Boolean);
+
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // limit each IP to 500 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/", limiter);
+
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 app.use(session({
   store: new PgSession({ pool, tableName: "session" }),
   secret: process.env.JWT_SECRET || "fallback-secret-change-in-production",
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: { 
     maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: true,
