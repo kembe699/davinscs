@@ -123,17 +123,108 @@ router.post('/register', async (req, res) => {
 
 
 
+// ── Master API: Offline Sync Endpoint ────────────────────────────────────────
+// Central server endpoint: returns tenant and user details for offline provisioning
+router.post('/offline/sync-tenant', async (req, res) => {
+  const { customerCode } = req.body;
+  if (!customerCode) return res.status(400).json({ error: 'customerCode required' });
+
+  try {
+    const tRes = await pool.query(
+      'SELECT id, business_name, schema_name, customer_code, tenant_slug, status, trial_ends_at, subscription_start, subscription_end FROM public.tenants WHERE UPPER(customer_code) = UPPER($1)',
+      [customerCode.trim()]
+    );
+    const tenant = tRes.rows[0];
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+    const tuRes = await pool.query(
+      'SELECT email, password_hash FROM public.tenant_users WHERE tenant_id = $1',
+      [tenant.id]
+    );
+    const users = tuRes.rows;
+
+    res.json({ tenant, users });
+  } catch (err) {
+    console.error('Offline sync-tenant error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Universal Portal Lookup — validate customer code, return schema + setup status
 router.post('/lookup', async (req, res) => {
   const { customerCode } = req.body;
   if (!customerCode) return res.status(400).json({ error: 'Customer code is required' });
 
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       'SELECT * FROM public.tenants WHERE UPPER(customer_code) = UPPER($1)',
       [customerCode.trim()]
     );
-    const tenant = result.rows[0];
+    let tenant = result.rows[0];
+
+    // --- Offline Mode Interceptor ---
+    if (!tenant && process.env.OFFLINE_MODE === 'true' && process.env.MASTER_API_URL) {
+      try {
+        console.log(`[Offline] Fetching tenant ${customerCode} from Master API...`);
+        const syncResponse = await fetch(`${process.env.MASTER_API_URL}/api/saas/offline/sync-tenant`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerCode })
+        });
+        
+        if (syncResponse.ok) {
+          const { tenant: remoteTenant, users: remoteUsers } = await syncResponse.json();
+          if (remoteTenant) {
+            console.log(`[Offline] Provisioning local instance for ${remoteTenant.schema_name}...`);
+            
+            // Insert into local DB
+            const client = await pool.connect();
+            try {
+              await client.query('BEGIN');
+              
+              const newTRes = await client.query(
+                `INSERT INTO public.tenants (business_name, schema_name, customer_code, tenant_slug, status, trial_ends_at, subscription_start, subscription_end) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                [remoteTenant.business_name, remoteTenant.schema_name, remoteTenant.customer_code, remoteTenant.tenant_slug, remoteTenant.status, remoteTenant.trial_ends_at, remoteTenant.subscription_start, remoteTenant.subscription_end]
+              );
+              tenant = newTRes.rows[0];
+              
+              if (remoteUsers && remoteUsers.length > 0) {
+                for (const u of remoteUsers) {
+                  await client.query(
+                    `INSERT INTO public.tenant_users (email, tenant_id, schema_name, password_hash) VALUES ($1, $2, $3, $4)`,
+                    [u.email, tenant.id, tenant.schema_name, u.password_hash]
+                  );
+                }
+              }
+              
+              await client.query('COMMIT');
+            } catch (txErr) {
+              await client.query('ROLLBACK');
+              throw txErr;
+            } finally {
+              client.release();
+            }
+
+            // Create schema and run migrations
+            await pool.query(`CREATE SCHEMA IF NOT EXISTS "${tenant.schema_name}"`);
+            await tenantStorage.run(tenant.schema_name, async () => {
+              const { migrateTenant } = await import('../utils/schemaMigration.js');
+              await migrateTenant(tenant.schema_name);
+              const { autoSeed } = await import('../autoSeed.js');
+              await autoSeed();
+            });
+            console.log(`[Offline] Successfully synced and provisioned ${tenant.schema_name}`);
+          }
+        } else {
+          console.log(`[Offline] Master API returned status ${syncResponse.status}`);
+        }
+      } catch (syncErr) {
+        console.error('[Offline] Error fetching from Master API:', syncErr.message);
+      }
+    }
+    // --- End Offline Mode Interceptor ---
+
     if (!tenant) return res.status(404).json({ error: 'Invalid customer code. Please check and try again.' });
 
     if (tenant.status === 'suspended') {
