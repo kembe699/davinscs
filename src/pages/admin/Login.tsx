@@ -79,19 +79,6 @@ const Login = () => {
     }
   };
 
-  const handleSyncLicense = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/offline/sync", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to sync license.");
-      window.location.reload();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -103,36 +90,21 @@ const Login = () => {
         {accountStatus ? (
           <div className="border border-border-subtle p-8 space-y-5 bg-chassis text-center">
             <h1 className="text-xl font-bold text-red-500 tracking-tight uppercase">
-              {accountStatus === "TRIAL_EXPIRED" ? "Trial Expired" : "License Suspended"}
+              {accountStatus === "TRIAL_EXPIRED" ? "Trial Expired" : "Account Suspended"}
             </h1>
             <p className="text-sm text-muted-foreground mt-4">
-              {import.meta.env.VITE_OFFLINE_MODE === "true" 
-                ? "This local instance's license has expired. Please renew online, then sync your license here."
-                : accountStatus === "TRIAL_EXPIRED" 
-                  ? "Your 7-day free trial has come to an end. Your data is perfectly safe."
-                  : "This account has been temporarily suspended by an administrator."}
+              {accountStatus === "TRIAL_EXPIRED" 
+                ? "Your 7-day free trial has come to an end. Your data is perfectly safe."
+                : "This account has been temporarily suspended by an administrator."}
             </p>
-            {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="mt-6 pt-6 border-t border-border-subtle">
-              {import.meta.env.VITE_OFFLINE_MODE === "true" ? (
-                <button 
-                  onClick={handleSyncLicense}
-                  disabled={loading}
-                  className="w-full h-10 bg-primary text-background font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2"
-                >
-                  {loading ? "Syncing..." : "Sync License Online"}
-                </button>
-              ) : (
-                <>
-                  <p className="text-xs text-foreground mb-4">Please contact support or pay for a plan to restore your access.</p>
-                  <button 
-                    onClick={() => setAccountStatus("")}
-                    className="w-full h-10 border border-border-subtle text-muted-foreground hover:text-foreground text-xs uppercase tracking-widest transition-colors"
-                  >
-                    Back to Login
-                  </button>
-                </>
-              )}
+              <p className="text-xs text-foreground mb-4">Please contact support or pay for a plan to restore your access.</p>
+              <button 
+                onClick={() => setAccountStatus("")}
+                className="w-full h-10 border border-border-subtle text-muted-foreground hover:text-foreground text-xs uppercase tracking-widest transition-colors"
+              >
+                Back to Login
+              </button>
             </div>
           </div>
         ) : showForgot ? (

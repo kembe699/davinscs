@@ -29,23 +29,6 @@ function periodDays(period) {
 
 const router = express.Router();
 
-// License verification for offline instances
-router.get('/license/:customerCode', async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT business_name, schema_name, tenant_slug, status, trial_ends_at, subscription_end 
-       FROM public.tenants 
-       WHERE customer_code = $1`,
-      [req.params.customerCode.trim().toUpperCase()]
-    );
-    if (rows.length === 0) return res.status(404).json({ error: 'License not found' });
-    res.json(rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Customer Self-Registration Endpoint
 router.post('/register', async (req, res) => {
   const { businessName, email, password } = req.body;
@@ -145,29 +128,7 @@ router.post('/lookup', async (req, res) => {
       'SELECT * FROM public.tenants WHERE UPPER(customer_code) = UPPER($1)',
       [customerCode.trim()]
     );
-    let tenant = result.rows[0];
-
-    // If not found locally and we are in offline mode, check the master server
-    if (!tenant && process.env.OFFLINE_MODE === 'true') {
-      const masterUrl = process.env.MASTER_API_URL || 'https://davinscs.onrender.com';
-      try {
-        const response = await fetch(`${masterUrl}/api/saas/license/${encodeURIComponent(customerCode.trim())}`);
-        if (response.ok) {
-          const licenseData = await response.json();
-          return res.json({
-            businessName: licenseData.business_name,
-            schemaName: licenseData.schema_name,
-            tenantSlug: licenseData.tenant_slug,
-            needsSetup: true, // Always needs setup if not found locally
-            status: licenseData.status,
-            isOfflineUnconfigured: true
-          });
-        }
-      } catch (proxyErr) {
-        console.error('Failed to proxy lookup to master:', proxyErr);
-      }
-    }
-
+    const tenant = result.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Invalid customer code. Please check and try again.' });
 
     if (tenant.status === 'suspended') {
@@ -226,14 +187,13 @@ router.get('/tenant/:slug', async (req, res) => {
     const tenant = result.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
-    const isOffline = process.env.OFFLINE_MODE === 'true';
     if (tenant.status === 'suspended') {
-      return res.status(403).json({ error: isOffline ? 'LICENSE_EXPIRED' : 'This account has been suspended.' });
+      return res.status(403).json({ error: 'This account has been suspended.' });
     }
     if (tenant.status === 'trial') {
       const trialEnds = new Date(tenant.trial_ends_at);
       if (trialEnds < new Date()) {
-        return res.status(403).json({ error: isOffline ? 'LICENSE_EXPIRED' : 'Trial expired. Please contact support.' });
+        return res.status(403).json({ error: 'Trial expired. Please contact support.' });
       }
     }
 

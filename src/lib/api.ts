@@ -1,10 +1,4 @@
-let currentSchema: string | null = sessionStorage.getItem("tenant_schema");
-
-export function setTenantSchema(schema: string | null) {
-  currentSchema = schema;
-  if (schema) sessionStorage.setItem("tenant_schema", schema);
-  else sessionStorage.removeItem("tenant_schema");
-}
+const BASE = import.meta.env.VITE_API_URL || "";
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("cms_token");
@@ -12,14 +6,7 @@ function authHeaders(): Record<string, string> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  let finalPath = path;
-  if (currentSchema) {
-    const url = new URL(path, window.location.origin);
-    url.searchParams.set("schema", currentSchema);
-    finalPath = url.pathname + url.search;
-  }
-
-  const res = await fetch(`${BASE}${finalPath}`, {
+  const res = await fetch(`${BASE}${path}`, {
     ...options,
     credentials: 'include',
     headers: {
@@ -30,13 +17,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const error = body.error || `HTTP ${res.status}`;
-    
-    if (error === "LICENSE_EXPIRED") {
-      window.location.href = "/license-expired";
-    }
-    
-    throw new Error(error);
+    throw new Error(body.error || `HTTP ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
