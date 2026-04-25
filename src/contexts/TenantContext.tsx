@@ -73,20 +73,24 @@ export function TenantRoot() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
       </div>
     );
   }
 
   if (error || !tenant) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-4xl font-bold text-slate-600 mb-4">404</p>
-          <p className="text-white text-lg font-semibold mb-2">Instance not found</p>
-          <p className="text-slate-400 text-sm mb-6">{error || `No instance exists for "${tenantSlug}"`}</p>
-          <a href="/portal" className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
+          <p className="text-4xl font-bold text-foreground mb-4">404</p>
+          <p className="text-foreground text-lg font-semibold mb-2">Instance not found</p>
+          <p className="text-muted-foreground text-sm mb-6">{error || `No instance exists for "${tenantSlug}"`}</p>
+          <a href="/portal" className="text-primary hover:text-primary/80 text-sm transition-colors">
             ← Go to Portal
           </a>
         </div>
