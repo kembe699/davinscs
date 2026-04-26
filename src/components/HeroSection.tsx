@@ -10,6 +10,19 @@ const HeroSection = () => {
   const { storefrontSettings: sf, companyName } = useLayout();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
+  const tagline = sf.hero_tagline || "Your Vision / Our Gear";
+  const heading1 = sf.hero_heading_1 || "CAPTURE";
+  const heading2 = sf.hero_heading_2 || "EVERYTHING";
+  const subtext =
+    sf.hero_subtext ||
+    "Professional cameras, audio, and production gear — curated for creators who need reliability.";
+  const brandsCount = sf.hero_brands_count || "50+";
+  const productsCount = sf.hero_products_count || "2,400+";
+
+  const badge1 = sf.hero_badge_1 || "[AUTH] Authorized dealer for Sony, Canon, Rode.";
+  const badge2 = sf.hero_badge_2 || "[SHIP] Same-day dispatch on in-stock items.";
+  const badge3 = sf.hero_badge_3 || "[SUPPORT] Expert advice from working creators.";
+
   useEffect(() => {
     api.products.list(undefined, true)
       .then((products) => setFeatured(products.slice(0, 3)))
@@ -25,27 +38,27 @@ const HeroSection = () => {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-2 py-1 border border-primary/30 bg-primary/5">
               <span className="font-mono-tech text-[10px] text-primary font-bold uppercase tracking-widest">
-                {sf.hero_tagline || ""}
+                {tagline}
               </span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-light leading-[0.9] tracking-tighter text-foreground">
-              {sf.hero_heading_1 || ""}{" "}
+              {heading1}{" "}
               <br />
-              <span className="font-bold text-primary">{sf.hero_heading_2 || ""}</span>
+              <span className="font-bold text-primary">{heading2}</span>
             </h1>
             <p className="text-muted-foreground max-w-[30ch] text-sm leading-relaxed">
-              {sf.hero_subtext || ""}
+              {subtext}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 border-t border-border-subtle pt-8">
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Brands</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_brands_count || ""}</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{brandsCount}</p>
             </div>
             <div className="space-y-1">
               <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Products</span>
-              <p className="text-lg font-mono-tech font-medium text-foreground">{sf.hero_products_count || ""}</p>
+              <p className="text-lg font-mono-tech font-medium text-foreground">{productsCount}</p>
             </div>
           </div>
 
@@ -129,9 +142,9 @@ const HeroSection = () => {
 
           <div className="flex-1 border-l border-border-subtle pl-6 flex flex-col justify-end">
             <div className="font-mono-tech text-[10px] text-muted-foreground space-y-2 uppercase leading-relaxed">
-              {sf.hero_badge_1 && <p>{sf.hero_badge_1}</p>}
-              {sf.hero_badge_2 && <p>{sf.hero_badge_2}</p>}
-              {sf.hero_badge_3 && <p>{sf.hero_badge_3}</p>}
+              <p>{badge1}</p>
+              <p>{badge2}</p>
+              <p>{badge3}</p>
             </div>
           </div>
         </div>

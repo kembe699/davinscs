@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const faqs = [
   {
@@ -70,6 +71,9 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
 };
 
 const Support = () => {
+  const tp = useTenantPath();
+  const tenantLinks = links.map((l) => ({ ...l, to: tp(l.to) }));
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -100,7 +104,7 @@ const Support = () => {
               Quick Links
             </h2>
             <div className="space-y-2">
-              {links.map((link) => (
+              {tenantLinks.map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
@@ -143,7 +147,7 @@ const Support = () => {
                 <p className="text-sm text-muted-foreground">Our team typically responds within a few hours.</p>
               </div>
               <Link
-                to="/contact"
+                to={tp("/contact")}
                 className="shrink-0 h-11 px-6 bg-foreground text-background font-bold uppercase tracking-widest text-xs flex items-center hover:bg-primary transition-colors"
               >
                 Contact Us

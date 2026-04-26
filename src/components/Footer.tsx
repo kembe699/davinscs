@@ -97,7 +97,7 @@ const Footer = () => {
         </div>
         <div className="border-t border-border-subtle pt-8 flex items-center justify-center">
           <div className="font-mono-tech text-[10px] text-muted-foreground text-center">
-            © {new Date().getFullYear()} {company?.name || "Sega Business"}. All rights reserved.
+            © {new Date().getFullYear()} {company?.name || "Sega Bsiness"}. All rights reserved.
           </div>
         </div>
       </div>

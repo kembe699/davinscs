@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { RotateCcw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const steps = [
   {
@@ -43,6 +44,7 @@ const notEligible = [
 ];
 
 const Returns = () => {
+  const tp = useTenantPath();
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -156,7 +158,7 @@ const Returns = () => {
             <p className="text-sm text-muted-foreground">Our team will guide you through the process.</p>
           </div>
           <Link
-            to="/contact"
+            to={tp("/contact")}
             className="shrink-0 h-11 px-6 bg-foreground text-background font-bold uppercase tracking-widest text-xs flex items-center hover:bg-primary transition-colors"
           >
             Contact Support

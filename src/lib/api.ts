@@ -5,8 +5,45 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function getTenantSchemaForPublicRequests(): string | null {
+  // Only apply on tenant-routed pages: /:tenantSlug/...
+  const p = window.location.pathname || "";
+  const parts = p.split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+
+  // We intentionally treat any non-portal root path with at least 1 segment as tenant scope.
+  // TenantRoot also guards against stale tokens between tenants.
+  const tenantSlug = parts[0];
+  if (!tenantSlug || tenantSlug === "portal") return null;
+
+  try {
+    const schema = sessionStorage.getItem("tenant_schema_name");
+    return schema && schema.trim() ? schema : null;
+  } catch {
+    return null;
+  }
+}
+
+function withTenantSchemaQuery(path: string, schema: string): string {
+  if (!path.startsWith("/api/")) return path;
+  // Never attach schema to control-plane SaaS endpoints.
+  if (path.startsWith("/api/saas/")) return path;
+
+  // Avoid duplicating schema if already present.
+  const hasQuery = path.includes("?");
+  const [basePath, query = ""] = path.split("?", 2);
+  const params = new URLSearchParams(query);
+  if (!params.get("schema")) params.set("schema", schema);
+  const qs = params.toString();
+  return `${basePath}?${qs}`;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const token = localStorage.getItem("cms_token");
+  const schema = !token ? getTenantSchemaForPublicRequests() : null;
+  const finalPath = schema ? withTenantSchemaQuery(path, schema) : path;
+
+  const res = await fetch(`${BASE}${finalPath}`, {
     ...options,
     credentials: 'include',
     headers: {
@@ -579,6 +616,10 @@ export type StorefrontSettings = {
   ticker_items?: string[];
   ticker_bg?: string;
   ticker_text_color?: string;
+  instagram_url?: string;
+  youtube_url?: string;
+  twitter_url?: string;
+  newsletter_url?: string;
 };
 
 export type CompanySettings = {

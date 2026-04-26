@@ -11,6 +11,10 @@ import { useLayout } from "@/contexts/LayoutContext";
 const DEFAULT_STOREFRONT: StorefrontSettings = {
   ticker_bg: "#ffffff",
   ticker_text_color: "#000000",
+  instagram_url: "",
+  youtube_url: "",
+  twitter_url: "",
+  newsletter_url: "",
 };
 
 export default function Company() {
@@ -372,6 +376,52 @@ export default function Company() {
                   <button type="button" onClick={addTickerItem} className="flex items-center gap-2 text-xs text-primary hover:underline mt-2">
                     <Plus size={13} /> Add item
                   </button>
+                </div>
+              </div>
+
+              {/* Social Links */}
+              <div className="border-b border-border-subtle bg-chassis p-6">
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Social Links</h2>
+                <p className="text-xs text-muted-foreground mb-5">
+                  Only links you fill in here will appear in the storefront footer.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="field-label">Instagram URL</label>
+                    <input
+                      className="field-input"
+                      value={sf.instagram_url || ""}
+                      onChange={(e) => setSF({ instagram_url: e.target.value })}
+                      placeholder="https://instagram.com/yourpage"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">YouTube URL</label>
+                    <input
+                      className="field-input"
+                      value={sf.youtube_url || ""}
+                      onChange={(e) => setSF({ youtube_url: e.target.value })}
+                      placeholder="https://youtube.com/@yourchannel"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Twitter / X URL</label>
+                    <input
+                      className="field-input"
+                      value={sf.twitter_url || ""}
+                      onChange={(e) => setSF({ twitter_url: e.target.value })}
+                      placeholder="https://x.com/yourhandle"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Newsletter URL</label>
+                    <input
+                      className="field-input"
+                      value={sf.newsletter_url || ""}
+                      onChange={(e) => setSF({ newsletter_url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>

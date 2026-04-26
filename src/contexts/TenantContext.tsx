@@ -10,6 +10,8 @@ interface TenantInfo {
 
 const TenantContext = createContext<TenantInfo | null>(null);
 
+const TENANT_SCHEMA_STORAGE_KEY = "tenant_schema_name";
+
 export function useTenant(): TenantInfo {
   const ctx = useContext(TenantContext);
   if (!ctx) throw new Error("useTenant must be used inside TenantRoot");
@@ -60,6 +62,11 @@ export function TenantRoot() {
         }
         // ────────────────────────────────────────────────────────────────────
 
+        // Persist schemaName for public (non-JWT) API requests on this tenant route.
+        try {
+          sessionStorage.setItem(TENANT_SCHEMA_STORAGE_KEY, d.schemaName || "");
+        } catch {}
+
         setTenant({
           tenantSlug: d.tenantSlug,
           schemaName: d.schemaName,
@@ -69,6 +76,14 @@ export function TenantRoot() {
       })
       .catch(() => setError("Failed to load instance"))
       .finally(() => setLoading(false));
+  }, [tenantSlug]);
+
+  // Clear stored schema if we navigated away from a tenant route.
+  useEffect(() => {
+    if (tenantSlug) return;
+    try {
+      sessionStorage.removeItem(TENANT_SCHEMA_STORAGE_KEY);
+    } catch {}
   }, [tenantSlug]);
 
   if (loading) {

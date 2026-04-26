@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Shield, AlertTriangle, Wrench } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const covered = [
   "Manufacturing defects in materials and workmanship",
@@ -33,6 +34,7 @@ const brands = [
 ];
 
 const Warranty = () => {
+  const tp = useTenantPath();
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -153,7 +155,7 @@ const Warranty = () => {
             <p className="text-sm text-muted-foreground">We'll handle the process for you.</p>
           </div>
           <Link
-            to="/contact"
+            to={tp("/contact")}
             className="shrink-0 h-11 px-6 bg-foreground text-background font-bold uppercase tracking-widest text-xs flex items-center hover:bg-primary transition-colors"
           >
             Contact Support
