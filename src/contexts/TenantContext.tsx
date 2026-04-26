@@ -11,6 +11,7 @@ interface TenantInfo {
 const TenantContext = createContext<TenantInfo | null>(null);
 
 const TENANT_SCHEMA_STORAGE_KEY = "tenant_schema_name";
+const LAST_ACTIVE_TENANT_STORAGE_KEY = "last_active_tenant_slug";
 
 export function useTenant(): TenantInfo {
   const ctx = useContext(TenantContext);
@@ -66,6 +67,7 @@ export function TenantRoot() {
         // Persist schemaName for public (non-JWT) API requests on this tenant route.
         try {
           sessionStorage.setItem(TENANT_SCHEMA_STORAGE_KEY, d.schemaName || "");
+          sessionStorage.setItem(LAST_ACTIVE_TENANT_STORAGE_KEY, d.tenantSlug || "");
         } catch {}
 
         setTenant({
@@ -80,7 +82,10 @@ export function TenantRoot() {
   }, [tenantSlug]);
 
   // If the first path segment isn't a tenant (404), try to interpret the URL as a
-  // storefront path missing the tenant prefix and redirect using the remembered tenant.
+  // storefront path missing the tenant prefix and redirect using the active tenant.
+  // Priority:
+  // - last_active_tenant_slug (tab-scoped) so we don't jump tenants mid-browse
+  // - saved_tenant_slug (device-scoped) as a fallback
   useEffect(() => {
     if (loading) return;
     if (!tenantSlug) return;
@@ -88,10 +93,12 @@ export function TenantRoot() {
     if (redirectTried) return;
 
     try {
+      const active = sessionStorage.getItem(LAST_ACTIVE_TENANT_STORAGE_KEY);
       const saved = localStorage.getItem("saved_tenant_slug");
-      if (saved && saved !== tenantSlug) {
+      const target = (active && active !== tenantSlug) ? active : (saved && saved !== tenantSlug ? saved : null);
+      if (target) {
         setRedirectTried(true);
-        window.location.replace(`/${saved}${location.pathname}`);
+        window.location.replace(`/${target}${location.pathname}`);
       }
     } catch {
       // ignore
