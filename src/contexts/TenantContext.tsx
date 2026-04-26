@@ -31,6 +31,7 @@ export function TenantRoot() {
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [redirectTried, setRedirectTried] = useState(false);
 
   useEffect(() => {
     if (!tenantSlug) return;
@@ -77,6 +78,25 @@ export function TenantRoot() {
       .catch(() => setError("Failed to load instance"))
       .finally(() => setLoading(false));
   }, [tenantSlug]);
+
+  // If the first path segment isn't a tenant (404), try to interpret the URL as a
+  // storefront path missing the tenant prefix and redirect using the remembered tenant.
+  useEffect(() => {
+    if (loading) return;
+    if (!tenantSlug) return;
+    if (!error) return;
+    if (redirectTried) return;
+
+    try {
+      const saved = localStorage.getItem("saved_tenant_slug");
+      if (saved && saved !== tenantSlug) {
+        setRedirectTried(true);
+        window.location.replace(`/${saved}${location.pathname}`);
+      }
+    } catch {
+      // ignore
+    }
+  }, [loading, error, tenantSlug, redirectTried, location.pathname]);
 
   // Clear stored schema if we navigated away from a tenant route.
   useEffect(() => {
