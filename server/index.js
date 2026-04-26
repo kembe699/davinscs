@@ -48,6 +48,7 @@ import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

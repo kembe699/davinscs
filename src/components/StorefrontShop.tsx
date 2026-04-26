@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, X, SlidersHorizontal } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -25,6 +25,17 @@ export default function StorefrontShop({ initialCategory }: Props) {
   const [sort, setSort]                     = useState<SortOption>("default");
   const [showFilters, setShowFilters]       = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search).get("q");
+    if (query) {
+      setSearch(query);
+      setTimeout(() => {
+        sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     Promise.all([api.categories.list(), api.products.list()])

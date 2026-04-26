@@ -58,9 +58,12 @@ const Navbar = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    if (location.pathname !== "/") {
-      navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+    if (location.pathname !== tp("/")) {
+      navigate(tp(`/?q=${encodeURIComponent(searchQuery.trim())}`));
     } else {
+      const params = new URLSearchParams(location.search);
+      params.set("q", searchQuery.trim());
+      navigate(`${location.pathname}?${params.toString()}`);
       const el = document.getElementById("shop");
       if (el) el.scrollIntoView({ behavior: "smooth" });
     }

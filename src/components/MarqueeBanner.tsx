@@ -3,8 +3,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 const MarqueeBanner = () => {
   const { storefrontSettings: sf } = useLayout();
 
-  const defaultItems = ["Free Shipping", "4.9/5 Rated", "Authorized Dealer"];
-  const items = sf.ticker_items?.length ? sf.ticker_items : defaultItems;
+  const items = sf.ticker_items?.length ? sf.ticker_items : [];
   if (items.length === 0) return null;
 
   const bg = sf.ticker_bg || "#ffffff";

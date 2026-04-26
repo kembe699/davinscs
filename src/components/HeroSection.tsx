@@ -18,18 +18,27 @@ const HeroSection = () => {
   const subtext =
     sf.hero_subtext ||
     `${companyName || "Your store"} products and services for your customers.`;
-  const brandsCount = sf.hero_brands_count || "50+";
-  const productsCount = sf.hero_products_count || "2,400+";
+  const [brandsCount, setBrandsCount] = useState<number | string>(sf.hero_brands_count || 0);
+  const [productsCount, setProductsCount] = useState<number | string>(sf.hero_products_count || 0);
 
-  const badge1 = sf.hero_badge_1 || "[AUTH] Authorized dealer for Sony, Canon, Rode.";
-  const badge2 = sf.hero_badge_2 || "[SHIP] Same-day dispatch on in-stock items.";
-  const badge3 = sf.hero_badge_3 || "[SUPPORT] Expert advice from working creators.";
+  const badge1 = sf.hero_badge_1 || "";
+  const badge2 = sf.hero_badge_2 || "";
+  const badge3 = sf.hero_badge_3 || "";
 
   useEffect(() => {
-    api.products.list(undefined, true)
-      .then((products) => setFeatured(products.slice(0, 3)))
+    api.products.list()
+      .then((products) => {
+        setFeatured(products.filter(p => p.is_featured).slice(0, 3));
+        if (!sf.hero_brands_count) {
+          const uniqueBrands = new Set(products.map(p => p.brand).filter(Boolean)).size;
+          setBrandsCount(uniqueBrands);
+        }
+        if (!sf.hero_products_count) {
+          setProductsCount(products.length);
+        }
+      })
       .catch(() => {});
-  }, []);
+  }, [sf.hero_brands_count, sf.hero_products_count]);
 
   return (
     <section className="relative overflow-hidden">
@@ -68,7 +77,7 @@ const HeroSection = () => {
             href="#shop"
             className="group relative w-full h-14 bg-foreground text-background font-bold uppercase tracking-widest text-sm flex items-center justify-center overflow-hidden transition-all hover:bg-primary"
           >
-            <span className="relative z-10">Browse Equipment</span>
+            <span className="relative z-10">Browse Products</span>
           </a>
         </div>
 
@@ -144,9 +153,9 @@ const HeroSection = () => {
 
           <div className="flex-1 border-l border-border-subtle pl-6 flex flex-col justify-end">
             <div className="font-mono-tech text-[10px] text-muted-foreground space-y-2 uppercase leading-relaxed">
-              <p>{badge1}</p>
-              <p>{badge2}</p>
-              <p>{badge3}</p>
+              {badge1 && <p>{badge1}</p>}
+              {badge2 && <p>{badge2}</p>}
+              {badge3 && <p>{badge3}</p>}
             </div>
           </div>
         </div>

@@ -3,17 +3,17 @@ import { useLayout } from "@/contexts/LayoutContext";
 const AboutSection = () => {
   const { storefrontSettings: sf } = useLayout();
 
-  const tagline = sf.about_tagline || "About Davin's";
-  const heading = sf.about_heading || "Built for the modern creator";
-  const body =
-    sf.about_body ||
-    "We don't just sell equipment — we help creators build reliable, professional setups that work in the real world.";
-  const stat1Value = sf.about_stat_1_value || "7+";
-  const stat1Label = sf.about_stat_1_label || "Years";
-  const stat2Value = sf.about_stat_2_value || "12K+";
-  const stat2Label = sf.about_stat_2_label || "Customers";
-  const stat3Value = sf.about_stat_3_value || "4.9★";
-  const stat3Label = sf.about_stat_3_label || "Rating";
+  const tagline = sf.about_tagline || "";
+  const heading = sf.about_heading || "";
+  const body = sf.about_body || "";
+  const stat1Value = sf.about_stat_1_value || "";
+  const stat1Label = sf.about_stat_1_label || "";
+  const stat2Value = sf.about_stat_2_value || "";
+  const stat2Label = sf.about_stat_2_label || "";
+  const stat3Value = sf.about_stat_3_value || "";
+  const stat3Label = sf.about_stat_3_label || "";
+
+  if (!heading && !body && !sf.about_image) return null;
 
   return (
     <section id="about" className="max-w-[1440px] mx-auto px-6 lg:px-8 py-16 lg:py-32">
