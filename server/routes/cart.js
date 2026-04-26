@@ -5,15 +5,10 @@ import { optionalTenantContext } from "../middleware/auth.js";
 const router = express.Router();
 
 function getSessionId(req) {
-  if (!req.session.id) {
-    req.session.regenerate((err) => {
-      if (err) console.error("Session regeneration error:", err);
-    });
-  }
   if (!req.session.cartActive) {
     req.session.cartActive = true;
   }
-  return req.session.id;
+  return req.sessionID;
 }
 
 router.get("/", optionalTenantContext, async (req, res) => {
