@@ -107,8 +107,8 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
     .col-total { width: 20%; }
     .vat-table th { border-bottom: none; border-top: 1px dashed #000; padding-top: 4px; }
     .vat-table td { padding-bottom: 4px; border-bottom: 1px dashed #000; }
-    .qr-container { display: flex; flex-direction: column; align-items: flex-start; margin-top: 5px; }
-    .footer-line { margin-top: 10px; margin-bottom: 2px; }
+    .qr-container { display: flex; flex-direction: column; align-items: center; margin-top: 5px; }
+    .barcode-container { display: flex; justify-content: center; margin: 4px 0 8px; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
   `;
 
@@ -116,16 +116,16 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
 <style>${css}</style>
 ${co?.logo ? `<div class="center" style="margin-bottom:4px;"><img src="${co.logo}" style="max-height:48px;max-width:60mm;object-fit:contain;"></div>` : ''}
 <div class="center bold large" style="margin-bottom:4px;">${(co?.name || 'SUPERMARKET').toUpperCase()}</div>
-${co?.address ? `<div class="center">${co.address}, .</div>` : '<div class="center">Najjanankumbi, .</div>'}
-${co?.phone   ? `<div class="center">${co.phone}</div>` : '<div class="center">0770000000</div>'}
-${co?.email   ? `<div class="center">${co.email}</div>` : '<div class="center">info@store.com</div>'}
-<div class="center" style="margin-bottom: 4px;">TIN : ${co?.tax_id || '1000477621'}</div>
+${co?.address ? `<div class="center">${co.address}</div>` : ''}
+${co?.phone   ? `<div class="center">${co.phone}</div>` : ''}
+${co?.email   ? `<div class="center">${co.email}</div>` : ''}
+${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_id}</div>` : ''}
 
 <div class="dash">${dash}</div>
 <div class="center bold large" style="margin: 4px 0;">CASH SALE / TAX INVOICE</div>
 <div class="center" style="margin-bottom: 6px;">${sale.sale_number}</div>
 
-<div class="center" style="margin-bottom: 8px;">
+<div class="barcode-container">
   <img src="https://barcode.tec-it.com/barcode.ashx?data=${sale.sale_number}&code=Code128&dpi=96" style="max-width:100%;height:40px;" />
 </div>
 
@@ -180,11 +180,10 @@ ${co?.email   ? `<div class="center">${co.email}</div>` : '<div class="center">i
 </div>
 
 <div class="footer-line">Received By : _______________________</div>
-<div class="footer-line">You Were Served By : ${sale.userName || 'ADMIN'}</div>
+<div class="footer-line">You Were Served By : ${(sale as any).userName || 'ADMIN'}</div>
 <div class="footer-line bold">Thank You !!! Please Come Again....</div>
-<div class="center bold" style="margin: 4px 0;">*** Goods once sold are not returnable ***</div>
 
 <div class="footer-line">Powered by FlippedPOS (www.flippedpos.com)</div>
-<div class="footer-line">Email: info@flippedpos.com</div>
 `;
 }
+
