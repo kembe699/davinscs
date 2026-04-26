@@ -1,23 +1,40 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { api, type CompanySettings } from "@/lib/api";
+import { api, type ApiCategory, type CompanySettings } from "@/lib/api";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const Footer = () => {
   const [company, setCompany] = useState<CompanySettings | null>(null);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const tp = useTenantPath();
 
   useEffect(() => {
     api.company.get().then(setCompany).catch(() => {});
+    api.categories.list().then(setCategories).catch(() => {});
   }, []);
 
   const waNumber = company?.whatsapp || "256792149296";
   const waUrl    = `https://wa.me/${waNumber}`;
+  const sf = company?.storefront_settings || {};
+
+  const connectLinks = [
+    { label: "Instagram", url: (sf as any).instagram_url as string | undefined },
+    { label: "YouTube", url: (sf as any).youtube_url as string | undefined },
+    { label: "Twitter / X", url: (sf as any).twitter_url as string | undefined },
+    { label: "Newsletter", url: (sf as any).newsletter_url as string | undefined },
+  ].filter((l) => !!l.url);
+
+  const topCategories = categories
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .slice(0, 8);
 
   return (
     <footer className="border-t border-border-subtle">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center mb-4">
+            <Link to={tp("/")} className="flex items-center mb-4">
               {company?.logo
                 ? <img src={company.logo} alt={company.name} className="h-20 w-auto object-contain" />
                 : <span className="font-bold text-foreground tracking-widest uppercase">{company?.name}</span>
@@ -42,46 +59,45 @@ const Footer = () => {
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Equipment</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/cameras" className="hover:text-primary transition-colors">Cameras</Link></li>
-              <li><Link to="/lenses" className="hover:text-primary transition-colors">Lenses</Link></li>
-              <li><Link to="/microphones" className="hover:text-primary transition-colors">Microphones</Link></li>
-              <li><Link to="/teleprompters" className="hover:text-primary transition-colors">Teleprompters</Link></li>
-              <li><Link to="/lighting" className="hover:text-primary transition-colors">Lighting</Link></li>
+              {topCategories.length > 0 ? (
+                topCategories.map((c) => (
+                  <li key={c.slug}>
+                    <Link to={tp(`/${c.slug}`)} className="hover:text-primary transition-colors">
+                      {c.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground/70">No categories yet</li>
+              )}
             </ul>
           </div>
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Support</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
-              <li><Link to="/shipping" className="hover:text-primary transition-colors">Shipping Info</Link></li>
-              <li><Link to="/returns" className="hover:text-primary transition-colors">Returns</Link></li>
-              <li><Link to="/warranty" className="hover:text-primary transition-colors">Warranty</Link></li>
+              <li><Link to={tp("/contact")} className="hover:text-primary transition-colors">Contact</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Connect</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary transition-colors">Instagram</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">YouTube</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Twitter / X</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Newsletter</a></li>
+              {connectLinks.length > 0 ? (
+                connectLinks.map((l) => (
+                  <li key={l.label}>
+                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                      {l.label}
+                    </a>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground/70">No links configured</li>
+              )}
             </ul>
           </div>
         </div>
-        <div className="border-t border-border-subtle pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest flex flex-wrap gap-4 sm:gap-8 justify-center">
-            <div className="flex gap-2 items-center">
-              <span className="text-primary">•</span> Global Shipping
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="text-primary">•</span> 4.9/5 Rated
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="text-primary">•</span> Authorized Dealer
-            </div>
-          </div>
-          <div className="font-mono-tech text-[10px] text-muted-foreground">
-            © {new Date().getFullYear()} {company?.name || "Davin's Camera Store"}. All rights reserved.
+        <div className="border-t border-border-subtle pt-8 flex items-center justify-center">
+          <div className="font-mono-tech text-[10px] text-muted-foreground text-center">
+            © {new Date().getFullYear()} {company?.name || "Sega Business"}. All rights reserved.
           </div>
         </div>
       </div>
