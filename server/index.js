@@ -41,7 +41,7 @@ import invoicesRoutes from "./routes/invoices.js";
 import rolesRoutes from "./routes/roles.js";
 import auditLogsRoutes from "./routes/audit-logs.js";
 import customersRoutes from "./routes/customers.js";
-import quotationsRoutes, { migrateQuotations } from "./routes/quotations.js";
+import quotationsRoutes from "./routes/quotations.js";
 import setupRoutes from "./routes/setup.js";
 import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
 
@@ -167,7 +167,6 @@ migrateTenant("public")
       }
     }
   })
-  .then(() => migrateQuotations(pool))
   .then(() => autoSeed())
   .then(() => {
     initSaasSchedulers();

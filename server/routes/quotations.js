@@ -5,47 +5,15 @@ import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
 async function nextQuoteNumber() {
-  const { rows } = await pool.query("SELECT quote_number FROM quotations ORDER BY id DESC LIMIT 1");
-  if (!rows[0]) return "QUO-0001";
-  const num = parseInt(rows[0].quote_number.replace(/\D/g, ""), 10) || 0;
-  return `QUO-${String(num + 1).padStart(4, "0")}`;
-}
-
-// Migrate tables
-export async function migrateQuotations(pool) {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS quotations (
-      id SERIAL PRIMARY KEY,
-      quote_number VARCHAR(50) UNIQUE NOT NULL,
-      customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-      customer_name VARCHAR(255) NOT NULL,
-      customer_email VARCHAR(255),
-      customer_phone VARCHAR(100),
-      customer_address TEXT,
-      status VARCHAR(50) DEFAULT 'draft',
-      valid_until DATE,
-      subtotal INTEGER DEFAULT 0,
-      tax_amount INTEGER DEFAULT 0,
-      discount_amount INTEGER DEFAULT 0,
-      total_amount INTEGER DEFAULT 0,
-      notes TEXT,
-      converted_invoice_id INTEGER,
-      created_by INTEGER REFERENCES users(id),
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE TABLE IF NOT EXISTS quotation_items (
-      id SERIAL PRIMARY KEY,
-      quotation_id INTEGER REFERENCES quotations(id) ON DELETE CASCADE,
-      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
-      product_name VARCHAR(255) NOT NULL,
-      description TEXT,
-      quantity INTEGER NOT NULL DEFAULT 1,
-      unit_price INTEGER NOT NULL DEFAULT 0,
-      tax_rate NUMERIC(5,2) DEFAULT 0,
-      subtotal INTEGER NOT NULL DEFAULT 0
-    );
-  `);
+  const client = await getSchemaClient();
+  try {
+    const { rows } = await client.query("SELECT quote_number FROM quotations ORDER BY id DESC LIMIT 1");
+    if (!rows[0]) return "QUO-0001";
+    const num = parseInt(rows[0].quote_number.replace(/\D/g, ""), 10) || 0;
+    return `QUO-${String(num + 1).padStart(4, "0")}`;
+  } finally {
+    client.release();
+  }
 }
 
 // List quotations

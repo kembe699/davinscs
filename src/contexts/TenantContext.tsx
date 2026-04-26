@@ -84,6 +84,8 @@ export function TenantRoot() {
   // If the first path segment isn't a tenant (404), try to interpret the URL as a
   // storefront path missing the tenant prefix and redirect using only the active
   // tenant from this browser tab (never cross-jump to another remembered tenant).
+  const [willRedirect, setWillRedirect] = useState(false);
+
   useEffect(() => {
     if (loading) return;
     if (!tenantSlug) return;
@@ -91,10 +93,11 @@ export function TenantRoot() {
     if (redirectTried) return;
 
     try {
-      const active = sessionStorage.getItem(LAST_ACTIVE_TENANT_STORAGE_KEY);
+      const active = sessionStorage.getItem(LAST_ACTIVE_TENANT_STORAGE_KEY) || localStorage.getItem("saved_tenant_slug");
       const target = (active && active !== tenantSlug) ? active : null;
       if (target) {
         setRedirectTried(true);
+        setWillRedirect(true);
         window.location.replace(`/${target}${location.pathname}`);
       }
     } catch {
@@ -110,7 +113,7 @@ export function TenantRoot() {
     } catch {}
   }, [tenantSlug]);
 
-  if (loading) {
+  if (loading || willRedirect) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-1.5">

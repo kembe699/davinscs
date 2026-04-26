@@ -329,6 +329,39 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS quotations (
+      id SERIAL PRIMARY KEY,
+      quote_number VARCHAR(50) UNIQUE NOT NULL,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      customer_name VARCHAR(255) NOT NULL,
+      customer_email VARCHAR(255),
+      customer_phone VARCHAR(100),
+      customer_address TEXT,
+      status VARCHAR(50) DEFAULT 'draft',
+      valid_until DATE,
+      subtotal INTEGER DEFAULT 0,
+      tax_amount INTEGER DEFAULT 0,
+      discount_amount INTEGER DEFAULT 0,
+      total_amount INTEGER DEFAULT 0,
+      notes TEXT,
+      converted_invoice_id INTEGER,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS quotation_items (
+      id SERIAL PRIMARY KEY,
+      quotation_id INTEGER REFERENCES quotations(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      product_name VARCHAR(255) NOT NULL,
+      description TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      unit_price INTEGER NOT NULL DEFAULT 0,
+      tax_rate NUMERIC(5,2) DEFAULT 0,
+      subtotal INTEGER NOT NULL DEFAULT 0
+    );
     
     CREATE TABLE IF NOT EXISTS session (
       sid VARCHAR NOT NULL COLLATE "default",

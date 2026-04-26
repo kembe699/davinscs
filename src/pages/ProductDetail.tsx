@@ -10,16 +10,19 @@ import type { Category } from "@/data/products";
 import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const ProductDetail = () => {
   const { baseCurrency } = useCurrency();
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const tp = useTenantPath();
 
   const productSlug = slug || id || "";
   const pathSegments = location.pathname.split("/").filter(Boolean);
-  const rawCategory = pathSegments[0] as Category;
+  // pathSegments[0] is tenantSlug. pathSegments[1] is the category or "product".
+  const rawCategory = pathSegments[1] as Category;
   const category = rawCategory === "product" ? undefined : rawCategory;
 
   const [product, setProduct] = useState<ApiProduct | null>(null);
@@ -67,7 +70,7 @@ const ProductDetail = () => {
             Product not found
           </p>
           <Link
-            to="/"
+            to={tp("/")}
             className="font-mono-tech text-xs text-primary hover:underline uppercase tracking-widest"
           >
             ← Return Home
@@ -98,7 +101,7 @@ const ProductDetail = () => {
             <>
               <span className="text-border-subtle">|</span>
               <Link
-                to={`/${productCategory}`}
+                to={tp(`/${productCategory}`)}
                 className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
               >
                 {meta?.title || productCategory}
@@ -238,7 +241,7 @@ const ProductDetail = () => {
                 {product.in_stock ? "Order via WhatsApp" : "Enquire via WhatsApp"}
               </button>
               <Link
-                to="/contact"
+                to={tp("/contact")}
                 className="h-14 px-8 border border-border-subtle text-foreground font-mono-tech text-xs uppercase tracking-widest flex items-center justify-center hover:border-primary/60 hover:text-primary transition-colors"
               >
                 Ask an Expert
@@ -248,8 +251,8 @@ const ProductDetail = () => {
             {/* Shipping note */}
             <div className="font-mono-tech text-[10px] text-muted-foreground space-y-1 uppercase leading-relaxed">
               <p>[SHIP] Same-day dispatch on in-stock orders placed before 2PM.</p>
-              <p>[WARRANTY] All items include manufacturer warranty — see our <Link to="/warranty" className="text-primary hover:underline">Warranty page</Link>.</p>
-              <p>[RETURNS] 30-day hassle-free returns — see <Link to="/returns" className="text-primary hover:underline">Returns policy</Link>.</p>
+              <p>[WARRANTY] All items include manufacturer warranty — see our <Link to={tp("/warranty")} className="text-primary hover:underline">Warranty page</Link>.</p>
+              <p>[RETURNS] 30-day hassle-free returns — see <Link to={tp("/returns")} className="text-primary hover:underline">Returns policy</Link>.</p>
             </div>
 
             {/* Specs Table */}
@@ -292,7 +295,7 @@ const ProductDetail = () => {
               </div>
               {productCategory && (
                 <Link
-                  to={`/${productCategory}`}
+                  to={tp(`/${productCategory}`)}
                   className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest hidden sm:block"
                 >
                   View All →

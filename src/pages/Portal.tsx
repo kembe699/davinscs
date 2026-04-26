@@ -54,7 +54,7 @@ export default function Portal() {
 
     const dest = found.needsSetup
       ? `/${found.tenantSlug}/setup`
-      : `/${found.tenantSlug}`;
+      : `/${found.tenantSlug}/admin/login`;
     window.location.href = dest;
   };
 
@@ -153,7 +153,7 @@ export default function Portal() {
                 <>
                   <p className="font-mono-tech text-[10px] text-primary uppercase tracking-widest mb-1">Instance Active</p>
                   <p className="text-xs text-white">
-                    Ready to go. Proceed to your storefront.
+                    Ready to go. Proceed to your admin login.
                   </p>
                 </>
               )}
@@ -175,7 +175,7 @@ export default function Portal() {
               onClick={handleContinue}
               className="w-full h-11 bg-primary text-background font-bold uppercase tracking-widest text-xs hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             >
-              {found.needsSetup ? "Start Setup Wizard" : "Go to Storefront"}
+              {found.needsSetup ? "Start Setup Wizard" : "Go to Admin Login"}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
