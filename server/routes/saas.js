@@ -641,6 +641,90 @@ router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
   }
 });
 
+// SaaS Admin — Get all administrators
+router.get('/admins', requireSaasAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, email, name, created_at FROM public.saas_admins ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Get admins error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// SaaS Admin — Create a new administrator
+router.post('/admins', requireSaasAdmin, async (req, res) => {
+  const { email, name, password } = req.body;
+  if (!email || !name || !password) return res.status(400).json({ error: 'Missing required fields' });
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      'INSERT INTO public.saas_admins (email, name, password_hash) VALUES ($1, $2, $3) RETURNING id, email, name, created_at',
+      [email, name, passwordHash]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Email already exists' });
+    console.error('Create admin error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// SaaS Admin — Delete an administrator
+router.delete('/admins/:id', requireSaasAdmin, async (req, res) => {
+  try {
+    if (parseInt(req.params.id) === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    await pool.query('DELETE FROM public.saas_admins WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete admin error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// SaaS Admin — Get specific tenant details and DB history
+router.get('/tenants/:id/details', requireSaasAdmin, async (req, res) => {
+  try {
+    const tenantId = req.params.id;
+    const usersRes = await pool.query('SELECT id, email, created_at FROM public.tenant_users WHERE tenant_id = $1', [tenantId]);
+    const historyRes = await pool.query(
+      `SELECT size_bytes, recorded_at
+       FROM public.tenant_db_snapshots
+       WHERE tenant_id = $1
+       ORDER BY recorded_at ASC
+       LIMIT 90`,
+      [tenantId]
+    );
+    res.json({ users: usersRes.rows, history: historyRes.rows });
+  } catch (err) {
+    console.error('Tenant details error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// SaaS Admin — Global DB history
+router.get('/tenants/db-history-global', requireSaasAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DATE_TRUNC('day', recorded_at) AS date, SUM(size_bytes) AS total_size
+       FROM (
+         SELECT tenant_id, size_bytes, recorded_at,
+                ROW_NUMBER() OVER (PARTITION BY tenant_id, DATE_TRUNC('day', recorded_at) ORDER BY recorded_at DESC) as rn
+         FROM public.tenant_db_snapshots
+       ) t
+       WHERE rn = 1
+       GROUP BY DATE_TRUNC('day', recorded_at)
+       ORDER BY date ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Global DB history error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── Customer Portal Auth ─────────────────────────────────────────────────────
 
 const requireCustomer = (req, res, next) => {

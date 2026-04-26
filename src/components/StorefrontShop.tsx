@@ -276,6 +276,7 @@ export default function StorefrontShop({ initialCategory }: Props) {
 
 /* ── Inline product card (no external navigation for 404s) ── */
 function ShopProductCard({ product, sym, productPath }: { product: ApiProduct; sym: string; productPath: string }) {
+  const { t } = useTranslation();
   return (
     <Link
       to={productPath}
