@@ -283,15 +283,8 @@ router.get('/tenant/:slug', async (req, res) => {
     const tenant = result.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
-    if (tenant.status === 'suspended') {
-      return res.status(403).json({ error: 'This account has been suspended.' });
-    }
-    if (tenant.status === 'trial') {
-      const trialEnds = new Date(tenant.trial_ends_at);
-      if (trialEnds < new Date()) {
-        return res.status(403).json({ error: 'Trial expired. Please contact support.' });
-      }
-    }
+    const isExpiredTrial = tenant.status === 'trial' && new Date(tenant.trial_ends_at) < new Date();
+    const effectiveStatus = isExpiredTrial ? 'suspended' : tenant.status;
 
     let needsSetup = true;
     await tenantStorage.run(tenant.schema_name, async () => {
@@ -304,7 +297,7 @@ router.get('/tenant/:slug', async (req, res) => {
       schemaName: tenant.schema_name,
       tenantSlug: tenant.tenant_slug,
       needsSetup,
-      status: tenant.status,
+      status: effectiveStatus,
     });
   } catch (err) {
     console.error('Tenant slug lookup error:', err);

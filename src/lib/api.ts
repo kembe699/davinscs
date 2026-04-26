@@ -54,6 +54,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    if (res.status === 403 && (body.error === 'TENANT_SUSPENDED' || body.error === 'TRIAL_EXPIRED')) {
+      window.dispatchEvent(new Event("tenant_suspended"));
+    }
     throw new Error(body.error || `HTTP ${res.status}`);
   }
   return res.json() as Promise<T>;

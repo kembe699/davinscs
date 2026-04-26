@@ -7,6 +7,7 @@ interface TenantInfo {
   schemaName: string;
   businessName: string;
   needsSetup: boolean;
+  status: string;
 }
 
 const TenantContext = createContext<TenantInfo | null>(null);
@@ -78,6 +79,7 @@ export function TenantRoot() {
           schemaName: d.schemaName,
           businessName: d.businessName,
           needsSetup: d.needsSetup,
+          status: d.status,
         });
       })
       .catch(() => setError("Failed to load instance"))
@@ -116,6 +118,15 @@ export function TenantRoot() {
     } catch {}
   }, [tenantSlug]);
 
+  // Listen for mid-session suspensions from API calls
+  useEffect(() => {
+    const handleSuspended = () => {
+      setTenant(prev => prev ? { ...prev, status: "suspended" } : null);
+    };
+    window.addEventListener("tenant_suspended", handleSuspended);
+    return () => window.removeEventListener("tenant_suspended", handleSuspended);
+  }, []);
+
   if (loading || willRedirect) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -151,6 +162,45 @@ export function TenantRoot() {
 
   if (!tenant.needsSetup && isSetupPath) {
     return <Navigate to={`/${tenant.tenantSlug}/admin/login`} replace />;
+  }
+
+  const isAdminOrPosPath = location.pathname.startsWith(`/${tenant.tenantSlug}/admin`) || location.pathname.startsWith(`/${tenant.tenantSlug}/pos`);
+  const isLoginPage = location.pathname === `/${tenant.tenantSlug}/admin/login`;
+
+  if (tenant.status === "suspended" && isAdminOrPosPath && !isLoginPage) {
+    return (
+      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center px-4 font-sans">
+        <div className="max-w-md w-full bg-[#16191f] border border-red-500/30 p-8 text-center rounded-lg shadow-2xl">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Subscription Expired</h2>
+          <p className="text-gray-400 mb-8 text-sm leading-relaxed">
+            Your instance has been suspended due to an expired subscription. Please renew your subscription to restore access to your administration panel and POS. Your public storefront remains active.
+          </p>
+          <div className="flex flex-col gap-3">
+            <a 
+              href="https://flippedpos.com/account" 
+              className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white font-bold py-3 rounded transition-colors uppercase tracking-wider text-sm flex items-center justify-center"
+            >
+              Renew Subscription
+            </a>
+            <button 
+              onClick={() => {
+                localStorage.removeItem("cms_token");
+                localStorage.removeItem("cms_user");
+                window.location.href = `/${tenant.tenantSlug}/admin/login`;
+              }}
+              className="w-full bg-transparent border border-gray-700 text-gray-300 hover:bg-gray-800 font-bold py-3 rounded transition-colors uppercase tracking-wider text-sm"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
