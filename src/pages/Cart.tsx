@@ -4,6 +4,7 @@ import { api, ApiCartItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<ApiCartItem[]>([]);
@@ -11,6 +12,7 @@ export default function Cart() {
   const [updating, setUpdating] = useState<number | null>(null);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const tp = useTenantPath();
 
   const loadCart = async () => {
     try {
@@ -78,7 +80,7 @@ export default function Cart() {
               <h2 className="text-xl font-bold text-foreground mb-2">Your cart is empty</h2>
               <p className="text-muted-foreground mb-6">Add some products to get started</p>
               <Link
-                to="/"
+                to={tp("/")}
                 className="inline-block px-6 py-3 bg-primary text-background font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors"
               >
                 Continue Shopping
@@ -96,7 +98,7 @@ export default function Cart() {
                         className="w-24 h-24 object-cover border border-border-subtle"
                       />
                       <div className="flex-1">
-                        <Link to={`/${item.slug.split('-')[0]}s/${item.slug}`} className="font-bold text-foreground hover:text-primary transition-colors">
+                        <Link to={tp(`/product/${item.slug}`)} className="font-bold text-foreground hover:text-primary transition-colors">
                           {item.name}
                         </Link>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -167,14 +169,14 @@ export default function Cart() {
                   </div>
 
                   <button
-                    onClick={() => navigate("/checkout")}
+                    onClick={() => navigate(tp("/checkout"))}
                     className="w-full py-3 bg-primary text-background font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors mb-3"
                   >
                     Proceed to Checkout
                   </button>
 
                   <Link
-                    to="/"
+                    to={tp("/")}
                     className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Continue Shopping

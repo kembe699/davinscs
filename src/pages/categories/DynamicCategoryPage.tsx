@@ -8,7 +8,7 @@ import { type Category, categoryMeta } from "@/data/products";
 const knownCategories = Object.keys(categoryMeta) as Category[];
 
 export default function DynamicCategoryPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { categorySlug: slug } = useParams<{ categorySlug: string }>();
 
   if (!slug) return null;
 

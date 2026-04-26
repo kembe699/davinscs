@@ -10,6 +10,9 @@ function getSessionId(req) {
       if (err) console.error("Session regeneration error:", err);
     });
   }
+  if (!req.session.cartActive) {
+    req.session.cartActive = true;
+  }
   return req.session.id;
 }
 
@@ -46,7 +49,7 @@ router.post("/add", optionalTenantContext, async (req, res) => {
     const sessionId = getSessionId(req);
     
     const productResult = await pool.query(
-      "SELECT quantity_on_hand, quantity_reserved FROM products WHERE id = $1",
+      "SELECT quantity_on_hand, quantity_reserved, in_stock FROM products WHERE id = $1",
       [product_id]
     );
     
@@ -54,10 +57,8 @@ router.post("/add", optionalTenantContext, async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
     
-    const available = productResult.rows[0].quantity_on_hand - productResult.rows[0].quantity_reserved;
-    
-    if (available < quantity) {
-      return res.status(400).json({ error: "Insufficient stock" });
+    if (!productResult.rows[0].in_stock) {
+      return res.status(400).json({ error: "Product is out of stock" });
     }
     
     const existingResult = await pool.query(
@@ -67,10 +68,6 @@ router.post("/add", optionalTenantContext, async (req, res) => {
     
     if (existingResult.rows[0]) {
       const newQuantity = existingResult.rows[0].quantity + quantity;
-      
-      if (available < newQuantity) {
-        return res.status(400).json({ error: "Insufficient stock for total quantity" });
-      }
       
       const { rows } = await pool.query(
         "UPDATE cart_items SET quantity = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
@@ -110,14 +107,12 @@ router.put("/update/:id", optionalTenantContext, async (req, res) => {
     }
     
     const productResult = await pool.query(
-      "SELECT quantity_on_hand, quantity_reserved FROM products WHERE id = $1",
+      "SELECT in_stock FROM products WHERE id = $1",
       [cartItemResult.rows[0].product_id]
     );
     
-    const available = productResult.rows[0].quantity_on_hand - productResult.rows[0].quantity_reserved;
-    
-    if (available < quantity) {
-      return res.status(400).json({ error: "Insufficient stock" });
+    if (!productResult.rows[0].in_stock) {
+      return res.status(400).json({ error: "Product is out of stock" });
     }
     
     const { rows } = await pool.query(

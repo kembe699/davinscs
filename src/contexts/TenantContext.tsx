@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams, useLocation, Outlet, Navigate } from "react-router-dom";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface TenantInfo {
   tenantSlug: string;
@@ -28,6 +29,7 @@ export function useTenantPath() {
 export function TenantRoot() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const location = useLocation();
+  const { refreshLayout } = useLayout();
 
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,7 @@ export function TenantRoot() {
         try {
           sessionStorage.setItem(TENANT_SCHEMA_STORAGE_KEY, d.schemaName || "");
           sessionStorage.setItem(LAST_ACTIVE_TENANT_STORAGE_KEY, d.tenantSlug || "");
+          refreshLayout();
         } catch {}
 
         setTenant({
