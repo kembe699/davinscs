@@ -6,6 +6,37 @@ const resources = {
   en: {
     translation: {
       navbar: { home: 'Home', products: 'Products', about: 'About', contact: 'Contact', pos: 'POS', admin: 'Admin' },
+      storefront: {
+        hero: {
+          brands: 'Brands',
+          products: 'Products',
+          browse: 'Browse Products'
+        },
+        shop: {
+          searchPlaceholder: 'Search by name, brand, or category...',
+          searchBtn: 'Search Products',
+          allProducts: 'All Products',
+          filters: 'Filters',
+          order: 'Order'
+        },
+        about: {
+          title: 'About',
+          ourStore: 'Our Store',
+          bestQuality: 'Always get the best quality',
+          support: '24/7 Expert Support'
+        },
+        footer: {
+          thanks: 'Thank you for shopping at',
+          whatsapp: 'WhatsApp Us',
+          rights: 'All rights reserved'
+        },
+        product: {
+          inStock: 'IN STOCK',
+          outOfStock: 'OUT OF STOCK',
+          featuredGear: 'FEATURED GEAR',
+          addToCart: 'Add to Cart'
+        }
+      },
       admin: {
         panel: 'Admin Panel',
         groups: { sales: 'Sales', inventory: 'Inventory', finance: 'Finance', reports: 'Reports', settings: 'Settings' },
@@ -26,6 +57,37 @@ const resources = {
   ar: {
     translation: {
       navbar: { home: 'الرئيسية', products: 'المنتجات', about: 'من نحن', contact: 'اتصل بنا', pos: 'نقطة البيع', admin: 'الإدارة' },
+      storefront: {
+        hero: {
+          brands: 'العلامات التجارية',
+          products: 'المنتجات',
+          browse: 'تصفح المنتجات'
+        },
+        shop: {
+          searchPlaceholder: 'ابحث بالاسم، العلامة التجارية، أو الفئة...',
+          searchBtn: 'بحث',
+          allProducts: 'جميع المنتجات',
+          filters: 'تصفية',
+          order: 'اطلب'
+        },
+        about: {
+          title: 'من نحن',
+          ourStore: 'متجرنا',
+          bestQuality: 'احصل دائما على أفضل جودة',
+          support: 'دعم فني على مدار الساعة'
+        },
+        footer: {
+          thanks: 'شكراً لتسوقكم في',
+          whatsapp: 'راسلنا على واتساب',
+          rights: 'جميع الحقوق محفوظة'
+        },
+        product: {
+          inStock: 'متوفر في المخزون',
+          outOfStock: 'نفد من المخزون',
+          featuredGear: 'معدات مميزة',
+          addToCart: 'أضف إلى السلة'
+        }
+      },
       admin: {
         panel: 'لوحة الإدارة',
         groups: { sales: 'المبيعات', inventory: 'المخزون', finance: 'المالية', reports: 'التقارير', settings: 'الإعدادات' },
@@ -46,6 +108,37 @@ const resources = {
   fr: {
     translation: {
       navbar: { home: 'Accueil', products: 'Produits', about: 'À propos', contact: 'Contact', pos: 'Caisse', admin: 'Administration' },
+      storefront: {
+        hero: {
+          brands: 'Marques',
+          products: 'Produits',
+          browse: 'Parcourir les Produits'
+        },
+        shop: {
+          searchPlaceholder: 'Recherche par nom, marque ou catégorie...',
+          searchBtn: 'Rechercher',
+          allProducts: 'Tous les Produits',
+          filters: 'Filtres',
+          order: 'Commander'
+        },
+        about: {
+          title: 'À propos',
+          ourStore: 'Notre Boutique',
+          bestQuality: 'Obtenez toujours la meilleure qualité',
+          support: 'Support Expert 24/7'
+        },
+        footer: {
+          thanks: 'Merci pour vos achats chez',
+          whatsapp: 'Contactez-nous sur WhatsApp',
+          rights: 'Tous droits réservés'
+        },
+        product: {
+          inStock: 'EN STOCK',
+          outOfStock: 'RUPTURE DE STOCK',
+          featuredGear: 'ÉQUIPEMENT VEDETTE',
+          addToCart: 'Ajouter au Panier'
+        }
+      },
       admin: {
         panel: 'Panneau d\'Administration',
         groups: { sales: 'Ventes', inventory: 'Inventaire', finance: 'Finance', reports: 'Rapports', settings: 'Paramètres' },

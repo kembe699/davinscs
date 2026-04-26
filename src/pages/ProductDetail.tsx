@@ -11,6 +11,7 @@ import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useTranslation } from "react-i18next";
 
 const ProductDetail = () => {
   const { baseCurrency } = useCurrency();
@@ -18,6 +19,7 @@ const ProductDetail = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const tp = useTenantPath();
+  const { t } = useTranslation();
 
   const productSlug = slug || id || "";
   const pathSegments = location.pathname.split("/").filter(Boolean);
@@ -166,14 +168,14 @@ const ProductDetail = () => {
                   <>
                     <Check size={14} className="text-primary" />
                     <span className="font-mono-tech text-[10px] text-primary uppercase tracking-widest">
-                      In Stock
+                      {t('storefront.product.inStock')}
                     </span>
                   </>
                 ) : (
                   <>
                     <X size={14} className="text-muted-foreground" />
                     <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
-                      Out of Stock
+                      {t('storefront.product.outOfStock')}
                     </span>
                   </>
                 )}
@@ -228,7 +230,7 @@ const ProductDetail = () => {
                 className="flex-1 h-14 flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-background font-bold uppercase tracking-widest text-sm transition-colors disabled:opacity-50"
               >
                 <ShoppingCart size={18} />
-                {addingToCart ? "Adding..." : "Add to Cart"}
+                {addingToCart ? "Adding..." : t('storefront.product.addToCart')}
               </button>
             </div>
 

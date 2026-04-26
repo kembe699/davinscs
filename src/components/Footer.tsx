@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api, type ApiCategory, type CompanySettings } from "@/lib/api";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useTranslation } from "react-i18next";
 
 const Footer = () => {
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const tp = useTenantPath();
+  const { t } = useTranslation();
 
   useEffect(() => {
     api.company.get().then(setCompany).catch(() => {});
@@ -50,7 +52,7 @@ const Footer = () => {
               {company?.phone && (
                 <a href={`tel:${company.phone}`} className="block pt-1 hover:text-primary transition-colors">📞 {company.phone}</a>
               )}
-              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 WhatsApp Us</a>
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 {t('storefront.footer.whatsapp')}</a>
               {company?.email && (
                 <a href={`mailto:${company.email}`} className="block hover:text-primary transition-colors">✉️ {company.email}</a>
               )}
@@ -97,7 +99,7 @@ const Footer = () => {
         </div>
         <div className="border-t border-border-subtle pt-8 flex items-center justify-center">
           <div className="font-mono-tech text-[10px] text-muted-foreground text-center">
-            © {new Date().getFullYear()} {company?.name || "Sega Bsiness"}. All rights reserved.
+            © {new Date().getFullYear()} {company?.name || "Sega Bsiness"}. {t('storefront.footer.rights')}
           </div>
         </div>
       </div>

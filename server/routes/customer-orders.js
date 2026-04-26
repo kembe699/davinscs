@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendOrderStatusEmail } from "../utils/email.js";
 
 const router = express.Router();
 
@@ -161,6 +162,14 @@ router.put("/:id/status", requireAuth, async (req, res) => {
     
     await client.query("COMMIT");
     res.json(updateResult.rows[0]);
+    
+    // Send email notification in the background
+    const order = updateResult.rows[0];
+    if (order.customer_email) {
+      sendOrderStatusEmail(order.customer_email, order.order_number, status, order.tracking_number).catch(err => {
+        console.error("Failed to send order status email:", err);
+      });
+    }
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);
@@ -273,6 +282,14 @@ router.post("/:id/cancel", requireAuth, async (req, res) => {
     
     await client.query("COMMIT");
     res.json(updateResult.rows[0]);
+    
+    // Send cancellation email notification in the background
+    const cancelledOrder = updateResult.rows[0];
+    if (cancelledOrder.customer_email) {
+      sendOrderStatusEmail(cancelledOrder.customer_email, cancelledOrder.order_number, 'cancelled').catch(err => {
+        console.error("Failed to send order cancellation email:", err);
+      });
+    }
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);

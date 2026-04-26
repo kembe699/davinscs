@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api, ApiCustomerOrder } from "@/lib/api";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
@@ -17,6 +17,8 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updating, setUpdating] = useState(false);
+  const highestOrderId = useRef<number>(0);
+  const isFirstLoad = useRef<boolean>(true);
   
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -29,25 +31,51 @@ export default function Orders() {
     notes: ""
   });
 
-  const loadOrders = async () => {
-    setLoading(true);
-    setError("");
+  const loadOrders = async (isPolling = false) => {
+    if (!isPolling) setLoading(true);
+    if (!isPolling) setError("");
     try {
       const params: any = { limit: 100 };
       if (statusFilter !== "all") params.status = statusFilter;
       if (searchTerm) params.search = searchTerm;
       
       const data = await api.customerOrders.list(params);
+      
+      // Check for new orders
+      if (data.orders.length > 0) {
+        const currentMaxId = Math.max(...data.orders.map(o => o.id));
+        
+        if (!isFirstLoad.current && currentMaxId > highestOrderId.current) {
+          // Find the new orders to show in the toast
+          const newOrders = data.orders.filter(o => o.id > highestOrderId.current);
+          if (newOrders.length > 0) {
+            toast(`You have ${newOrders.length} new order(s)!`, "success", "New Order Received");
+            // Optional: play a subtle notification sound here if desired
+          }
+        }
+        
+        highestOrderId.current = currentMaxId;
+      }
+      
       setOrders(data.orders);
+      isFirstLoad.current = false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load orders");
+      if (!isPolling) setError(err instanceof Error ? err.message : "Failed to load orders");
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
   };
 
   useEffect(() => {
+    isFirstLoad.current = true;
     loadOrders();
+    
+    // Set up polling every 15 seconds
+    const intervalId = setInterval(() => {
+      loadOrders(true);
+    }, 15000);
+    
+    return () => clearInterval(intervalId);
   }, [statusFilter]);
 
   const handleSearch = () => {

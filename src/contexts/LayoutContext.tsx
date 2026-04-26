@@ -37,6 +37,13 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    // Prevent fetching default data if we are on a tenant route but haven't loaded the schema yet.
+    // TenantContext will call refreshLayout() once the schema is ready.
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    const isTenantRoute = pathParts.length > 0 && pathParts[0] !== "portal";
+    const hasSchema = !!sessionStorage.getItem("tenant_schema_name");
+    if (isTenantRoute && !hasSchema && tick === 0) return;
+
     setLoading(true);
     api.company.get()
       .then((data) => {

@@ -5,11 +5,13 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useTranslation } from "react-i18next";
 
 const HeroSection = () => {
   const { baseCurrency } = useCurrency();
   const { storefrontSettings: sf, companyName } = useLayout();
   const tp = useTenantPath();
+  const { t } = useTranslation();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   const tagline = sf.hero_tagline || "Your Vision / Our Gear";
@@ -64,11 +66,11 @@ const HeroSection = () => {
 
           <div className="grid grid-cols-2 gap-4 border-t border-border-subtle pt-8">
             <div className="space-y-1">
-              <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Brands</span>
+              <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">{t('storefront.hero.brands')}</span>
               <p className="text-lg font-mono-tech font-medium text-foreground">{brandsCount}</p>
             </div>
             <div className="space-y-1">
-              <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">Products</span>
+              <span className="font-mono-tech text-[9px] uppercase text-muted-foreground">{t('storefront.hero.products')}</span>
               <p className="text-lg font-mono-tech font-medium text-foreground">{productsCount}</p>
             </div>
           </div>
@@ -77,7 +79,7 @@ const HeroSection = () => {
             href="#shop"
             className="group relative w-full h-14 bg-foreground text-background font-bold uppercase tracking-widest text-sm flex items-center justify-center overflow-hidden transition-all hover:bg-primary"
           >
-            <span className="relative z-10">Browse Products</span>
+            <span className="relative z-10">{t('storefront.hero.browse')}</span>
           </a>
         </div>
 
@@ -103,7 +105,7 @@ const HeroSection = () => {
                 <div className="flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-primary" />
                   <span className="font-mono-tech text-xs text-foreground uppercase tracking-tighter">
-                    IN STOCK
+                    {t('storefront.product.inStock')}
                   </span>
                 </div>
               </div>
@@ -115,7 +117,7 @@ const HeroSection = () => {
         <div className="lg:col-span-3 flex flex-col gap-6 animate-fade-up animate-fade-up-delay-2">
           <div className="p-6 border border-border-subtle bg-grip/50">
             <span className="font-mono-tech text-[10px] text-primary block mb-4 tracking-widest">
-              FEATURED GEAR
+              {t('storefront.product.featuredGear')}
             </span>
             {featured.length === 0 ? (
               <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">

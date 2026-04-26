@@ -1,7 +1,9 @@
 import { useLayout } from "@/contexts/LayoutContext";
+import { useTranslation } from "react-i18next";
 
 const AboutSection = () => {
   const { storefrontSettings: sf } = useLayout();
+  const { t } = useTranslation();
 
   const tagline = sf.about_tagline || "";
   const heading = sf.about_heading || "";
@@ -57,7 +59,7 @@ const AboutSection = () => {
           <div className="absolute -bottom-6 -left-6 lg:-bottom-8 lg:-left-8 bg-primary p-6 lg:p-8 flex flex-col justify-end">
             <span className="text-3xl lg:text-4xl font-bold text-primary-foreground">24/7</span>
             <span className="font-mono-tech text-xs text-primary-foreground/80 uppercase tracking-tighter">
-              Expert Support
+              {t('storefront.about.support')}
             </span>
           </div>
         </div>
