@@ -3,6 +3,7 @@ import { ApiProduct } from "@/lib/api";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 type Props = {
   product: ApiProduct;
@@ -10,9 +11,10 @@ type Props = {
 
 const ProductCard = ({ product }: Props) => {
   const { baseCurrency } = useCurrency();
+  const tp = useTenantPath();
   return (
     <Link
-      to={`/product/${product.slug}`}
+      to={tp(`/product/${product.slug}`)}
       className="bg-chassis border border-border-subtle group flex flex-col hover:border-primary/40 transition-colors"
     >
       <div className="aspect-square bg-grip relative overflow-hidden">

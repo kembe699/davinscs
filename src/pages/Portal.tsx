@@ -11,7 +11,7 @@ export default function Portal() {
   useEffect(() => {
     const savedSlug = localStorage.getItem("saved_tenant_slug");
     if (savedSlug) {
-      window.location.replace(`/${savedSlug}/admin/login`);
+      window.location.replace(`/${savedSlug}`);
     }
   }, []);
 
@@ -54,7 +54,7 @@ export default function Portal() {
 
     const dest = found.needsSetup
       ? `/${found.tenantSlug}/setup`
-      : `/${found.tenantSlug}/admin/login`;
+      : `/${found.tenantSlug}`;
     window.location.href = dest;
   };
 
@@ -153,7 +153,7 @@ export default function Portal() {
                 <>
                   <p className="font-mono-tech text-[10px] text-primary uppercase tracking-widest mb-1">Instance Active</p>
                   <p className="text-xs text-white">
-                    Ready to go. Proceed to login with your admin credentials.
+                    Ready to go. Proceed to your storefront.
                   </p>
                 </>
               )}
@@ -175,7 +175,7 @@ export default function Portal() {
               onClick={handleContinue}
               className="w-full h-11 bg-primary text-background font-bold uppercase tracking-widest text-xs hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
             >
-              {found.needsSetup ? "Start Setup Wizard" : "Go to Login"}
+              {found.needsSetup ? "Start Setup Wizard" : "Go to Storefront"}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 

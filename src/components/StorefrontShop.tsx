@@ -5,6 +5,7 @@ import { api, ApiProduct, ApiCategory } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 type SortOption = "default" | "price-asc" | "price-desc" | "name";
 
@@ -14,6 +15,7 @@ interface Props {
 
 export default function StorefrontShop({ initialCategory }: Props) {
   const { baseCurrency } = useCurrency();
+  const tp = useTenantPath();
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [products, setProducts]     = useState<ApiProduct[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -249,7 +251,7 @@ export default function StorefrontShop({ initialCategory }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
             {filteredProducts.map(product => (
               <div key={product.id} className="bg-background">
-                <ShopProductCard product={product} sym={baseCurrency?.symbol || "SSP"} />
+                <ShopProductCard product={product} sym={baseCurrency?.symbol || "SSP"} productPath={tp(`/product/${product.slug}`)} />
               </div>
             ))}
           </div>
@@ -260,10 +262,10 @@ export default function StorefrontShop({ initialCategory }: Props) {
 }
 
 /* ── Inline product card (no external navigation for 404s) ── */
-function ShopProductCard({ product, sym }: { product: ApiProduct; sym: string }) {
+function ShopProductCard({ product, sym, productPath }: { product: ApiProduct; sym: string; productPath: string }) {
   return (
     <Link
-      to={`/product/${product.slug}`}
+      to={productPath}
       className="bg-chassis border border-border-subtle group flex flex-col hover:border-primary/40 transition-colors h-full"
     >
       <div className="aspect-square bg-grip relative overflow-hidden">

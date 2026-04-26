@@ -4,6 +4,7 @@ import { Menu, X, ShoppingCart, Search, ChevronDown, Globe } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const staticLinks = [
   { label: "Support", to: "/support" },
@@ -27,6 +28,7 @@ const Navbar = () => {
   const closeMega = () => { megaLeaveTimer.current = setTimeout(() => setMegaOpen(false), 120); };
   const location = useLocation();
   const navigate = useNavigate();
+  const tp = useTenantPath();
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -72,8 +74,9 @@ const Navbar = () => {
 
   const categoryLinks = categories.map((c) => ({
     label: c.name,
-    to: `/${c.slug}`,
+    to: tp(`/${c.slug}`),
   }));
+  const tenantStaticLinks = staticLinks.map((l) => ({ ...l, to: tp(l.to) }));
 
   const visibleCategoryLinks = categoryLinks.slice(0, 4);
   const overflowLinks = categoryLinks.slice(4);
@@ -84,7 +87,7 @@ const Navbar = () => {
     <div className="sticky top-0 z-50">
     <nav className="border-b border-border-subtle px-6 lg:px-8 h-16 flex items-center justify-between bg-chassis/95 backdrop-blur-md relative">
       <div className="flex items-center gap-8 lg:gap-12">
-        <Link to="/" className="flex items-center">
+        <Link to={tp("/")} className="flex items-center">
           {logo
             ? <img src={logo} alt={companyName || "Logo"} className="h-14 w-auto object-contain" />
             : <span className="font-bold text-sm text-foreground tracking-widest uppercase">{companyName}</span>
@@ -111,7 +114,7 @@ const Navbar = () => {
             </div>
           )}
           <div className="w-px h-4 bg-border-subtle" />
-          {staticLinks.map((link) => (
+          {tenantStaticLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -148,7 +151,7 @@ const Navbar = () => {
             </button>
           )}
         </form>
-        <Link to="/cart" className="relative text-foreground hover:text-primary transition-colors">
+        <Link to={tp("/cart")} className="relative text-foreground hover:text-primary transition-colors">
           <ShoppingCart size={20} />
           {cartCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-primary text-background text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -188,7 +191,7 @@ const Navbar = () => {
 
       {mobileOpen && (
         <div className="absolute top-16 left-0 right-0 bg-chassis border-b border-border-subtle p-6 flex flex-col gap-4 lg:hidden z-50">
-          {[...visibleCategoryLinks, ...overflowLinks, ...staticLinks].map((link) => (
+          {[...visibleCategoryLinks, ...overflowLinks, ...tenantStaticLinks].map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -225,7 +228,7 @@ const Navbar = () => {
             {overflowCategories.map((cat) => (
               <Link
                 key={cat.id}
-                to={`/${cat.slug}`}
+                to={tp(`/${cat.slug}`)}
                 className="group/cat flex flex-col gap-3 hover:text-primary transition-colors"
               >
                 <div className="aspect-square overflow-hidden border border-border-subtle bg-grip group-hover/cat:border-primary/40 transition-colors">

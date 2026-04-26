@@ -4,18 +4,20 @@ import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useTenantPath } from "@/contexts/TenantContext";
 
 const HeroSection = () => {
   const { baseCurrency } = useCurrency();
   const { storefrontSettings: sf, companyName } = useLayout();
+  const tp = useTenantPath();
   const [featured, setFeatured] = useState<ApiProduct[]>([]);
 
   const tagline = sf.hero_tagline || "Your Vision / Our Gear";
-  const heading1 = sf.hero_heading_1 || "CAPTURE";
-  const heading2 = sf.hero_heading_2 || "EVERYTHING";
+  const heading1 = sf.hero_heading_1 || (companyName ? companyName.toUpperCase() : "WELCOME");
+  const heading2 = sf.hero_heading_2 || "STORE";
   const subtext =
     sf.hero_subtext ||
-    "Professional cameras, audio, and production gear — curated for creators who need reliability.";
+    `${companyName || "Your store"} products and services for your customers.`;
   const brandsCount = sf.hero_brands_count || "50+";
   const productsCount = sf.hero_products_count || "2,400+";
 
@@ -115,7 +117,7 @@ const HeroSection = () => {
                 {featured.map((p) => (
                   <Link
                     key={p.id}
-                    to={`/product/${p.slug}`}
+                    to={tp(`/product/${p.slug}`)}
                     className="flex gap-4 items-start group"
                   >
                     <div className="size-16 shrink-0 bg-chassis border border-border-subtle overflow-hidden">

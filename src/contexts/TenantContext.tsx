@@ -82,10 +82,8 @@ export function TenantRoot() {
   }, [tenantSlug]);
 
   // If the first path segment isn't a tenant (404), try to interpret the URL as a
-  // storefront path missing the tenant prefix and redirect using the active tenant.
-  // Priority:
-  // - last_active_tenant_slug (tab-scoped) so we don't jump tenants mid-browse
-  // - saved_tenant_slug (device-scoped) as a fallback
+  // storefront path missing the tenant prefix and redirect using only the active
+  // tenant from this browser tab (never cross-jump to another remembered tenant).
   useEffect(() => {
     if (loading) return;
     if (!tenantSlug) return;
@@ -94,8 +92,7 @@ export function TenantRoot() {
 
     try {
       const active = sessionStorage.getItem(LAST_ACTIVE_TENANT_STORAGE_KEY);
-      const saved = localStorage.getItem("saved_tenant_slug");
-      const target = (active && active !== tenantSlug) ? active : (saved && saved !== tenantSlug ? saved : null);
+      const target = (active && active !== tenantSlug) ? active : null;
       if (target) {
         setRedirectTried(true);
         window.location.replace(`/${target}${location.pathname}`);
