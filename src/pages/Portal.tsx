@@ -47,11 +47,11 @@ export default function Portal() {
       setError("Instance URL not available. Please contact support.");
       return;
     }
-    
+
     if (rememberMe) {
       localStorage.setItem("saved_tenant_slug", found.tenantSlug);
     }
-    
+
     const dest = found.needsSetup
       ? `/${found.tenantSlug}/setup`
       : `/${found.tenantSlug}/admin/login`;
@@ -160,9 +160,9 @@ export default function Portal() {
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer pt-2 pb-1 justify-center">
-              <input 
-                type="checkbox" 
-                checked={rememberMe} 
+              <input
+                type="checkbox"
+                checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-3.5 h-3.5 bg-background border border-border-subtle rounded-none text-primary focus:ring-primary focus:ring-offset-background"
               />
@@ -193,7 +193,7 @@ export default function Portal() {
       <p className="text-center text-[10px] font-mono-tech text-white/70 mt-6 uppercase tracking-widest">
         No account?{" "}
         <a
-          href="https://flippedpos-website.onrender.com/register"
+          href="https://flippedpos.com/register"
           className="text-white underline hover:text-white/80 transition-colors"
         >
           Register at flippedpos.com
