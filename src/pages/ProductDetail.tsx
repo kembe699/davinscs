@@ -13,6 +13,10 @@ import { formatCurrencySync } from "@/utils/currency";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useTranslation } from "react-i18next";
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const ProductDetail = () => {
   const { baseCurrency } = useCurrency();
   const { id, slug } = useParams<{ id?: string; slug?: string }>();
@@ -216,10 +220,23 @@ const ProductDetail = () => {
                   setAddingToCart(true);
                   setCartMessage("");
                   try {
-                    await api.cart.add(product.id, quantity);
-                    const cartItems = await api.cart.get();
-                    const hasAddedProduct = cartItems.some((item) => item.product_id === product.id);
+                    const added = await api.cart.add(product.id, quantity);
+                    const addConfirmed =
+                      typeof (added as any)?.product_id === "number" &&
+                      Number((added as any).product_id) === Number(product.id);
+
+                    // Readback can occasionally lag one request behind when a session cookie
+                    // has just been initialized. Retry once before declaring failure.
+                    let cartItems = await api.cart.get();
+                    let hasAddedProduct = cartItems.some((item) => Number(item.product_id) === Number(product.id));
                     if (!hasAddedProduct) {
+                      await sleep(150);
+                      cartItems = await api.cart.get();
+                      hasAddedProduct = cartItems.some((item) => Number(item.product_id) === Number(product.id));
+                    }
+
+                    const readbackConfirmed = hasAddedProduct || cartItems.length > 0;
+                    if (!addConfirmed && !readbackConfirmed) {
                       throw new Error("Cart could not be verified for this store. Please refresh and try again.");
                     }
                     setCartMessage(`Added ${quantity} item(s) to cart!`);
