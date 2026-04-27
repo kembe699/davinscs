@@ -43,7 +43,7 @@ export function optionalTenantContext(req, res, next) {
   if (parts.length > 0 && parts[0] !== "api" && parts[0] !== "portal") {
     const tenantSlug = parts[0];
     return pool
-      .query("SELECT schema_name FROM public.tenants WHERE slug = $1 LIMIT 1", [tenantSlug])
+      .query("SELECT schema_name FROM public.tenants WHERE tenant_slug = $1 LIMIT 1", [tenantSlug])
       .then(({ rows }) => runWith(rows[0]?.schema_name || "public"))
       .catch(() => runWith("public"));
   }
