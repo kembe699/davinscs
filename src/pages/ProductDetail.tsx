@@ -217,6 +217,11 @@ const ProductDetail = () => {
                   setCartMessage("");
                   try {
                     await api.cart.add(product.id, quantity);
+                    const cartItems = await api.cart.get();
+                    const hasAddedProduct = cartItems.some((item) => item.product_id === product.id);
+                    if (!hasAddedProduct) {
+                      throw new Error("Cart could not be verified for this store. Please refresh and try again.");
+                    }
                     setCartMessage(`Added ${quantity} item(s) to cart!`);
                     setQuantity(1);
                     setTimeout(() => setCartMessage(""), 3000);

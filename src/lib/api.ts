@@ -5,16 +5,27 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function getTenantSchemaForPublicRequests(): string | null {
-  // Only apply on tenant-routed pages: /:tenantSlug/...
+function getTenantSlugFromPath(): string | null {
   const p = window.location.pathname || "";
   const parts = p.split("/").filter(Boolean);
   if (parts.length === 0) return null;
+  const slug = parts[0];
+  if (!slug || slug === "portal") return null;
+  return slug;
+}
 
-  // We intentionally treat any non-portal root path with at least 1 segment as tenant scope.
-  // TenantRoot also guards against stale tokens between tenants.
-  const tenantSlug = parts[0];
-  if (!tenantSlug || tenantSlug === "portal") return null;
+function isTenantStorefrontRoute(): boolean {
+  const p = window.location.pathname || "";
+  const parts = p.split("/").filter(Boolean);
+  if (parts.length === 0) return false;
+  if (parts[0] === "portal") return false;
+  // Tenant admin/setup pages should keep JWT behavior.
+  return parts[1] !== "admin" && parts[1] !== "setup";
+}
+
+function getTenantSchemaForPublicRequests(): string | null {
+  // Only apply on tenant-routed pages: /:tenantSlug/...
+  if (!getTenantSlugFromPath()) return null;
 
   try {
     const schema = sessionStorage.getItem("tenant_schema_name");
@@ -40,8 +51,10 @@ function withTenantSchemaQuery(path: string, schema: string): string {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("cms_token");
-  const schema = !token ? getTenantSchemaForPublicRequests() : null;
+  const onTenantStorefront = isTenantStorefrontRoute();
+  const schema = onTenantStorefront ? getTenantSchemaForPublicRequests() : (!token ? getTenantSchemaForPublicRequests() : null);
   const finalPath = schema ? withTenantSchemaQuery(path, schema) : path;
+  const includeAuthHeader = !!token && !onTenantStorefront;
 
   const res = await fetch(`${BASE}${finalPath}`, {
     ...options,
@@ -49,7 +62,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     cache: 'no-store',
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders(),
+      ...(includeAuthHeader ? authHeaders() : {}),
       ...(options.headers as Record<string, string> || {}),
     },
   });

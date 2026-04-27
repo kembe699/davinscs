@@ -25,17 +25,30 @@ async function getTenantStatus(schemaName) {
 // Reads schema_name from Bearer token (if present) or ?schema= query param.
 // Never rejects — falls back to 'public' when neither is available.
 export function optionalTenantContext(req, res, next) {
-  let schemaName = req.query.schema || 'public';
+  const runWith = (schema) => tenantStorage.run(schema || "public", () => next());
+  const explicitSchema = typeof req.query.schema === "string" ? req.query.schema.trim() : "";
+  if (explicitSchema) return runWith(explicitSchema);
 
   const header = req.headers.authorization;
-  if (header && header.startsWith('Bearer ')) {
+  if (header && header.startsWith("Bearer ")) {
     try {
       const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
-      if (payload.schema_name) schemaName = payload.schema_name;
+      if (payload.schema_name) return runWith(payload.schema_name);
     } catch (_) {}
   }
 
-  tenantStorage.run(schemaName, () => next());
+  // For tenant-prefixed storefront routes (/:tenantSlug/...), derive schema from slug
+  // before falling back to public. This keeps cart requests deterministic.
+  const parts = (req.path || "").split("/").filter(Boolean);
+  if (parts.length > 0 && parts[0] !== "api" && parts[0] !== "portal") {
+    const tenantSlug = parts[0];
+    return pool
+      .query("SELECT schema_name FROM public.tenants WHERE slug = $1 LIMIT 1", [tenantSlug])
+      .then(({ rows }) => runWith(rows[0]?.schema_name || "public"))
+      .catch(() => runWith("public"));
+  }
+
+  return runWith("public");
 }
 
 export async function requireAuth(req, res, next) {
