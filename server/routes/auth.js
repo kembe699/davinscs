@@ -21,9 +21,9 @@ router.post("/login", async (req, res) => {
     const tuRes = await pool.query("SELECT * FROM public.tenant_users WHERE email = $1", [email.toLowerCase()]);
     const tenantUser = tuRes.rows[0];
 
-    // Fall back to the schema the frontend told us (e.g. newly-created user whose
-    // tenant_users row was never inserted), otherwise default to 'public'.
-    let schemaName = tenantUser?.schema_name || clientSchema || 'public';
+    // Use the schema the frontend told us (e.g. logging into specific tenant),
+    // otherwise fall back to the one in tenant_users mapping.
+    let schemaName = clientSchema || tenantUser?.schema_name || 'public';
     let tenantId   = tenantUser?.tenant_id   || null;
 
     // 2. Enforce SaaS Trial Status (only when we have a real tenant mapping)

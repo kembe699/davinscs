@@ -19,8 +19,8 @@ function isTenantStorefrontRoute(): boolean {
   const parts = p.split("/").filter(Boolean);
   if (parts.length === 0) return false;
   if (parts[0] === "portal") return false;
-  // Tenant admin/setup pages should keep JWT behavior.
-  return parts[1] !== "admin" && parts[1] !== "setup";
+  // Tenant admin/setup/pos pages should keep JWT behavior.
+  return parts[1] !== "admin" && parts[1] !== "setup" && parts[1] !== "pos";
 }
 
 function getTenantSchemaForPublicRequests(): string | null {
