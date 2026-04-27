@@ -9,10 +9,19 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === "false" ? false : (process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false),
 });
 
-
 import { tenantStorage } from './tenantStorage.js';
 
 const originalQuery = pool.query.bind(pool);
+
+// rawPool: exposes the original unpatched query method.
+// MUST be used by any store (e.g. session store) that needs to always
+// target the public schema regardless of the current tenant context.
+export const rawPool = {
+  ...pool,
+  query: originalQuery,
+  connect: pool.connect.bind(pool),
+  on: pool.on.bind(pool),
+};
 
 pool.query = async function (text, params) {
   const schemaName = tenantStorage.getStore() || 'public';
@@ -43,4 +52,3 @@ export async function getSchemaClient() {
 }
 
 export default pool;
-

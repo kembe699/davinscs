@@ -7,7 +7,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import pool from "./db.js";
+import pool, { rawPool } from "./db.js";
 import { migrateTenant } from "./utils/schemaMigration.js";
 import { autoSeed } from "./autoSeed.js";
 import authRoutes from "./routes/auth.js";
@@ -97,7 +97,7 @@ app.use("/api/", limiter);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 app.use(session({
-  store: new PgSession({ pool, tableName: "session" }),
+  store: new PgSession({ pool: rawPool, tableName: "session" }),
   secret: process.env.JWT_SECRET || "fallback-secret-change-in-production",
   resave: false,
   saveUninitialized: false,
