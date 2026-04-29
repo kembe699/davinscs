@@ -11,6 +11,70 @@ const staticLinks = [
   { label: "Contact", to: "/contact" },
 ];
 
+/* ── Mobile nav tab item ─────────────────────────────────── */
+interface MobileNavTabProps {
+  icon: React.ReactNode;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  id: string;
+}
+
+const MobileNavTab = ({ icon, label, isActive, onClick, id }: MobileNavTabProps) => {
+  const [ripple, setRipple] = useState(false);
+
+  const handleClick = () => {
+    setRipple(true);
+    setTimeout(() => setRipple(false), 400);
+    onClick();
+  };
+
+  return (
+    <button
+      id={id}
+      type="button"
+      onClick={handleClick}
+      className="relative flex-1 flex flex-col items-center justify-center gap-[3px] overflow-hidden select-none focus:outline-none"
+      style={{ WebkitTapHighlightColor: "transparent" }}
+      aria-label={label}
+    >
+      {/* Ripple */}
+      {ripple && (
+        <span
+          className="absolute inset-0 m-auto w-12 h-12 rounded-full animate-ping"
+          style={{ background: "rgba(0,139,139,0.18)", animationDuration: "0.4s", animationIterationCount: 1 }}
+        />
+      )}
+
+      {/* Icon wrapper — scales up & brightens when active */}
+      <span
+        className="transition-all duration-300"
+        style={{
+          transform: isActive ? "scale(1.22) translateY(-1px)" : "scale(1) translateY(0)",
+          filter: isActive
+            ? "drop-shadow(0 0 6px rgba(0,139,139,0.7))"
+            : "none",
+          color: isActive ? "#00d4d4" : "hsl(var(--muted-foreground))",
+        }}
+      >
+        {icon}
+      </span>
+
+      {/* Label */}
+      <span
+        className="font-mono-tech text-[9px] uppercase tracking-[0.12em] transition-all duration-300"
+        style={{
+          color: isActive ? "#00d4d4" : "hsl(var(--muted-foreground))",
+          fontWeight: isActive ? 700 : 400,
+          letterSpacing: isActive ? "0.16em" : "0.12em",
+        }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+};
+
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const { logo, companyName } = useLayout();
@@ -29,6 +93,16 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const tp = useTenantPath();
+
+  // Determine active bottom-nav tab (0=Home, 1=Shop, 2=Search, 3=Cart)
+  const activeTabIndex = (() => {
+    const p = location.pathname;
+    if (p === tp("/cart")) return 3;
+    if (searchOpen) return 2;
+    // any category / product page is still "Shop"
+    if (p !== tp("/") && p !== "/") return 1;
+    return 0; // home
+  })();
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -57,7 +131,8 @@ const Navbar = () => {
 
   useEffect(() => {
     const prev = document.body.style.paddingBottom;
-    document.body.style.paddingBottom = "72px";
+    // Account for safe-area-inset-bottom too
+    document.body.style.paddingBottom = "calc(64px + env(safe-area-inset-bottom, 0px))";
     return () => {
       document.body.style.paddingBottom = prev;
     };
@@ -259,44 +334,116 @@ const Navbar = () => {
       </div>
     )}
 
-    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
-      <div className="mx-auto max-w-[480px] px-4 pb-4">
-        <div className="h-[72px] bg-chassis/95 backdrop-blur-md border border-border-subtle shadow-2xl flex items-center justify-between px-5">
-          <Link
-            to={tp("/cart")}
-            className={`relative flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest transition-colors ${location.pathname === tp("/cart") ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            aria-label="Cart"
-            title="Cart"
-          >
-            <ShoppingCart size={18} />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-primary text-background text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-            Cart
-          </Link>
+    {/* ── Mobile Search Drawer (slides up above bottom nav) ─── */}
+    <div
+      className="fixed left-0 right-0 z-[49] lg:hidden"
+      style={{
+        bottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
+        transform: searchOpen ? "translateY(0)" : "translateY(100%)",
+        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        pointerEvents: searchOpen ? "auto" : "none",
+      }}
+    >
+      <form
+        onSubmit={handleSearch}
+        className="bg-chassis/95 backdrop-blur-xl border-t border-border-subtle shadow-[0_-4px_24px_rgba(0,0,0,0.35)] px-4 py-3 flex items-center gap-3"
+      >
+        <Search size={16} className="text-muted-foreground shrink-0" style={{ color: searchOpen ? "#00d4d4" : undefined }} />
+        <input
+          ref={searchRef}
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search products…"
+          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none py-1"
+        />
+        {searchQuery && (
+          <button type="submit" className="font-mono-tech text-[10px] uppercase tracking-widest px-3 py-1.5 border border-[#00d4d4]/40 text-[#00d4d4] hover:bg-[#00d4d4]/10 transition-colors">
+            Go
+          </button>
+        )}
+        <button type="button" onClick={() => setSearchOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors ml-1">
+          <X size={16} />
+        </button>
+      </form>
+    </div>
 
-          <Link
-            to={tp("/")}
-            className={`flex flex-col items-center justify-center gap-1 -mt-6 w-16 h-16 bg-primary text-background border border-primary/40 shadow-xl transition-transform active:scale-95 ${location.pathname === tp("/") ? "" : "hover:bg-primary/90"}`}
-            aria-label="Home"
-            title="Home"
-          >
-            <Home size={20} />
-            <span className="text-[10px] font-mono-tech uppercase tracking-widest">Home</span>
-          </Link>
+    {/* ── Modern Mobile Bottom Nav ──────────────────────────── */}
+    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* Frosted glass bar — full width, no outer padding */}
+      <div
+        className="relative flex items-stretch bg-chassis/80 backdrop-blur-xl border-t border-border-subtle shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+        style={{ height: "64px" }}
+      >
+        {/* Sliding active pill indicator */}
+        <div
+          className="absolute bottom-0 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+          style={{
+            left: `${activeTabIndex * 25}%`,
+            width: "25%",
+            height: "3px",
+            background: "linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%)",
+          }}
+        />
 
-          <a
-            href="#shop"
-            className="flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Categories"
-            title="Categories"
-          >
-            <LayoutGrid size={18} />
-            Categories
-          </a>
-        </div>
+        {/* Home Tab */}
+        <MobileNavTab
+          icon={<Home size={20} />}
+          label="Home"
+          isActive={activeTabIndex === 0}
+          onClick={() => navigate(tp("/"))}
+          id="bottom-nav-home"
+        />
+
+        {/* Shop Tab */}
+        <MobileNavTab
+          icon={<LayoutGrid size={20} />}
+          label="Shop"
+          isActive={activeTabIndex === 1}
+          onClick={() => {
+            if (location.pathname !== tp("/")) {
+              navigate(tp("/"));
+              setTimeout(() => {
+                const el = document.getElementById("shop");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }, 300);
+            } else {
+              const el = document.getElementById("shop");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+          id="bottom-nav-shop"
+        />
+
+        {/* Search Tab */}
+        <MobileNavTab
+          icon={<Search size={20} />}
+          label="Search"
+          isActive={activeTabIndex === 2}
+          onClick={toggleSearch}
+          id="bottom-nav-search"
+        />
+
+        {/* Cart Tab */}
+        <MobileNavTab
+          icon={
+            <span className="relative inline-flex">
+              <ShoppingCart size={20} />
+              {cartCount > 0 && (
+                <span
+                  className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none text-black px-0.5"
+                  style={{ background: "linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%)" }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </span>
+          }
+          label="Cart"
+          isActive={activeTabIndex === 3}
+          onClick={() => navigate(tp("/cart"))}
+          id="bottom-nav-cart"
+        />
       </div>
     </div>
     </div>
