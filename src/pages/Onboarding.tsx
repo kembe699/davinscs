@@ -15,16 +15,15 @@ interface FormData {
   business_type: string;
   // Step 2 – Business info
   company_name: string;
-  tagline: string;
   address: string;
   city: string;
   country: string;
   phone: string;
   email: string;
-  website: string;
   tax_id: string;
   whatsapp: string;
   // Step 2 – Currency
+  primary_currency: string;
   secondary_currency: string;
   // Step 3 – Branding
   logo: string;
@@ -41,7 +40,7 @@ interface FormData {
 
 // Common secondary currencies
 const CURRENCY_OPTIONS = [
-  { code: "", name: "None (USD only)", symbol: "" },
+  { code: "USD", name: "US Dollar (USD)", symbol: "$" },
   { code: "SSP", name: "South Sudanese Pound (SSP)", symbol: "SSP" },
   { code: "UGX", name: "Ugandan Shilling (UGX)", symbol: "UGX" },
   { code: "KES", name: "Kenyan Shilling (KES)", symbol: "KES" },
@@ -58,6 +57,11 @@ const CURRENCY_OPTIONS = [
   { code: "INR", name: "Indian Rupee (INR)", symbol: "₹" },
   { code: "CNY", name: "Chinese Yuan (CNY)", symbol: "¥" },
   { code: "AED", name: "UAE Dirham (AED)", symbol: "AED" },
+];
+
+const SECONDARY_CURRENCY_OPTIONS = [
+  { code: "", name: "None", symbol: "" },
+  ...CURRENCY_OPTIONS,
 ];
 
 const BUSINESS_TYPES = [
@@ -105,15 +109,14 @@ export default function Onboarding() {
   const [form, setForm] = useState<FormData>({
     business_type: "",
     company_name: "",
-    tagline: "",
     address: "",
     city: "",
     country: "South Sudan",
     phone: "",
     email: "",
-    website: "",
     tax_id: "",
     whatsapp: "",
+    primary_currency: "",
     secondary_currency: "",
     logo: "",
     brand_color_start: "#004A99",
@@ -139,7 +142,7 @@ export default function Onboarding() {
 
   const canAdvance = (): boolean => {
     if (step === 1) return !!form.business_type;
-    if (step === 2) return !!form.company_name.trim();
+    if (step === 2) return !!form.company_name.trim() && !!form.primary_currency;
     if (step === 3) return true;
     if (step === 4) {
       return (
@@ -183,7 +186,6 @@ export default function Onboarding() {
           country: form.country,
           phone: form.phone,
           email: form.email,
-          website: form.website,
           tax_id: form.tax_id,
           whatsapp: form.whatsapp,
           logo: form.logo,
@@ -191,7 +193,7 @@ export default function Onboarding() {
           brand_color_mid: form.brand_color_mid,
           brand_color_end: form.brand_color_end,
           site_layout: form.site_layout,
-          tagline: form.tagline,
+          primary_currency: form.primary_currency,
           secondary_currency: form.secondary_currency || null,
         }),
       });
@@ -307,20 +309,11 @@ export default function Onboarding() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Tagline / Slogan</label>
-                  <input
-                    className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
-                    placeholder="e.g. Your Vision / Our Gear"
-                    value={form.tagline}
-                    onChange={(e) => set("tagline", e.target.value)}
-                  />
-                </div>
                 <Field icon={Phone} label="Phone" placeholder="+211 92 000 0000" value={form.phone} onChange={(v) => set("phone", v)} />
                 <Field icon={Mail} label="Email" placeholder="info@yourbusiness.com" value={form.email} onChange={(v) => set("email", v)} />
                 <Field icon={MapPin} label="Address" placeholder="Street address" value={form.address} onChange={(v) => set("address", v)} />
                 <Field icon={MapPin} label="City" placeholder="Juba" value={form.city} onChange={(v) => set("city", v)} />
                 <Field icon={Globe} label="Country" placeholder="South Sudan" value={form.country} onChange={(v) => set("country", v)} />
-                <Field icon={Globe} label="Website" placeholder="https://yourbusiness.com" value={form.website} onChange={(v) => set("website", v)} />
                 <Field icon={Hash} label="Tax / TIN Number" placeholder="Optional" value={form.tax_id} onChange={(v) => set("tax_id", v)} />
                 <Field icon={Phone} label="WhatsApp" placeholder="+211 92 000 0000" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
               </div>
@@ -330,13 +323,20 @@ export default function Onboarding() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Currency Settings</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Primary Currency</label>
-                    <div className="w-full bg-chassis border border-border-subtle rounded-none px-3 py-2.5 text-foreground/80 text-sm flex items-center gap-2">
-                      <span className="text-lg">$</span>
-                      <span>USD — US Dollar</span>
-                      <span className="ml-auto text-xs text-muted-foreground/70 bg-background px-2 py-0.5 rounded">Default</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground/70 mt-1">USD is the system base currency.</p>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                      Primary Currency <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={form.primary_currency}
+                      onChange={(e) => set("primary_currency", e.target.value)}
+                      className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
+                    >
+                      <option value="" disabled>Select primary currency</option>
+                      {CURRENCY_OPTIONS.map(c => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground/70 mt-1">This will be used across your storefront, invoices and receipts.</p>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">Secondary Currency <span className="text-muted-foreground/70 normal-case">(optional)</span></label>
@@ -345,7 +345,7 @@ export default function Onboarding() {
                       onChange={(e) => set("secondary_currency", e.target.value)}
                       className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
                     >
-                      {CURRENCY_OPTIONS.map(c => (
+                      {SECONDARY_CURRENCY_OPTIONS.map(c => (
                         <option key={c.code} value={c.code}>{c.name}</option>
                       ))}
                     </select>

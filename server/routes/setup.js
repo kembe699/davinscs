@@ -66,12 +66,13 @@ router.post("/complete", async (req, res) => {
       // Storefront headline (optional quick-set)
       tagline,
       // Currency
+      primary_currency,
       secondary_currency,
     } = req.body;
 
     // Validate required fields
-    if (!admin_email || !admin_password || !company_name) {
-      return res.status(400).json({ error: "admin_email, admin_password, and company_name are required" });
+    if (!admin_email || !admin_password || !company_name || !primary_currency) {
+      return res.status(400).json({ error: "admin_email, admin_password, company_name, and primary_currency are required" });
     }
     if (admin_password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
@@ -144,6 +145,8 @@ router.post("/complete", async (req, res) => {
 
         // 3. Create company settings
         const storefrontSettings = tagline ? { hero_tagline: tagline } : {};
+        const baseCurrency = String(primary_currency || "").trim().toUpperCase();
+
         await client.query(
           `INSERT INTO company_settings
              (company_name, address, city, country, phone, email, website, tax_id,
@@ -163,7 +166,7 @@ router.post("/complete", async (req, res) => {
             whatsapp || "",
             logo || "",
             site_layout || "tech_grid",
-            "USD",
+            baseCurrency,
             brand_color_start || "#004A99",
             brand_color_mid || "#008B8B",
             brand_color_end || "#32CD32",
@@ -183,6 +186,7 @@ router.post("/complete", async (req, res) => {
 
       // ── Post-transaction: seed optional reference data (safe to fail) ──────
       const KNOWN_CURRENCIES = {
+        USD: { name: "US Dollar",              symbol: "$"   },
         SSP: { name: "South Sudanese Pound",  symbol: "SSP" },
         UGX: { name: "Ugandan Shilling",      symbol: "UGX" },
         KES: { name: "Kenyan Shilling",        symbol: "KES" },
@@ -204,18 +208,25 @@ router.post("/complete", async (req, res) => {
       try {
         const { rows: currRows } = await pool.query("SELECT COUNT(*) FROM currencies");
         if (parseInt(currRows[0].count) === 0) {
+          const baseCode = String(primary_currency || "").trim().toUpperCase();
+          const base = KNOWN_CURRENCIES[baseCode] || { name: baseCode || "Currency", symbol: baseCode || "" };
+
           await pool.query(
             `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
-             VALUES ('USD', 'US Dollar', '$', true, 1.0, true)
-             ON CONFLICT (code) DO NOTHING`
+             VALUES ($1, $2, $3, true, 1.0, true)
+             ON CONFLICT (code) DO NOTHING`,
+            [baseCode, base.name, base.symbol]
           );
-          if (secondary_currency && KNOWN_CURRENCIES[secondary_currency]) {
-            const sc = KNOWN_CURRENCIES[secondary_currency];
+
+          const secondaryCodeRaw = String(secondary_currency || "").trim().toUpperCase();
+          const secondaryCode = secondaryCodeRaw && secondaryCodeRaw !== baseCode ? secondaryCodeRaw : "";
+          if (secondaryCode) {
+            const sc = KNOWN_CURRENCIES[secondaryCode] || { name: secondaryCode, symbol: secondaryCode };
             await pool.query(
               `INSERT INTO currencies (code, name, symbol, is_base, exchange_rate, is_active)
                VALUES ($1, $2, $3, false, 1.0, true)
                ON CONFLICT (code) DO NOTHING`,
-              [secondary_currency, sc.name, sc.symbol]
+              [secondaryCode, sc.name, sc.symbol]
             );
           }
         }
