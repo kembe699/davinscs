@@ -289,7 +289,7 @@ export default function Company() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="field-label">Section Tagline</label>
-                    <input className="field-input" value={sf.about_tagline || ""} onChange={e => setSF({ about_tagline: e.target.value })} placeholder="About Davin's" />
+                    <input className="field-input" value={sf.about_tagline || ""} onChange={e => setSF({ about_tagline: e.target.value })} placeholder="About Us" />
                   </div>
                   <div>
                     <label className="field-label">Section Heading</label>

@@ -264,7 +264,7 @@ export default function EndOfDay() {
 
             {/* Report header (shows on print) */}
             <div className="hidden print:block text-center mb-4">
-              <div className="text-xl font-bold">{companyData?.name || "Davin's Camera Store"}</div>
+              <div className="text-xl font-bold">{companyData?.name || ""}</div>
               <div className="text-sm">{companyData?.address || ""}</div>
               <div className="text-lg font-bold mt-2">END OF DAY REPORT</div>
               <div className="text-sm">Date: {selectedDate}</div>

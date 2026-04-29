@@ -15,8 +15,8 @@ const Footer = () => {
     api.categories.list().then(setCategories).catch(() => {});
   }, []);
 
-  const waNumber = company?.whatsapp || "256792149296";
-  const waUrl    = `https://wa.me/${waNumber}`;
+  const waNumber = (company?.whatsapp || "").replace(/\D/g, "");
+  const waUrl = waNumber ? `https://wa.me/${waNumber}` : "";
   const sf = company?.storefront_settings || {};
 
   const connectLinks = [
@@ -52,7 +52,9 @@ const Footer = () => {
               {company?.phone && (
                 <a href={`tel:${company.phone}`} className="block pt-1 hover:text-primary transition-colors">📞 {company.phone}</a>
               )}
-              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 {t('storefront.footer.whatsapp')}</a>
+              {waUrl && (
+                <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block text-[#25D366] hover:text-[#1ebe5d] transition-colors">💬 {t('storefront.footer.whatsapp')}</a>
+              )}
               {company?.email && (
                 <a href={`mailto:${company.email}`} className="block hover:text-primary transition-colors">✉️ {company.email}</a>
               )}

@@ -4,39 +4,40 @@ import { ChevronDown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useLayout } from "@/contexts/LayoutContext";
 
 const faqs = [
   {
     q: "How do I place an order?",
-    a: "Browse our category pages, click on a product, and hit 'Add to Cart'. Checkout via our secure payment portal. You'll receive an order confirmation email immediately after.",
+    a: "Browse products, choose what you need, and place your order. If WhatsApp ordering is enabled by the store, you can also order directly via WhatsApp.",
   },
   {
     q: "Do you offer expert advice before I buy?",
-    a: "Yes — every staff member at Davin's is a working filmmaker or content creator. Use our Contact page or call us directly. We'll match you to the right gear for your specific workflow.",
+    a: "Yes. Use our Contact page or call us directly and we will guide you on the right option for your business.",
   },
   {
     q: "What payment methods do you accept?",
-    a: "We accept all major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and bank transfer for orders over UGX 408,000. Financing is available through Affirm.",
+    a: "Payment methods depend on the store configuration. Contact the store for supported options and payment instructions.",
   },
   {
     q: "Can I pick up my order in-store?",
-    a: "Yes. Select 'In-Store Pickup' at checkout. Orders are typically ready within 2–4 hours on business days.",
+    a: "Pickup availability depends on the store. Contact the store to confirm pickup options and timelines.",
   },
   {
     q: "Do you ship internationally?",
-    a: "We ship to over 80 countries. International orders may be subject to import duties and taxes. See our Shipping Info page for full details.",
+    a: "Shipping options depend on the store. Contact the store for delivery coverage and timelines.",
   },
   {
     q: "What is your return policy?",
-    a: "We offer a 30-day return window on all unused, unopened items in original packaging. See our Returns page for the full policy and instructions.",
+    a: "Return policies depend on the store. Contact the store for return or exchange instructions.",
   },
   {
     q: "Are the products covered by warranty?",
-    a: "All products carry the manufacturer's standard warranty. Davin's also offers extended warranty plans on select items. See our Warranty page for details.",
+    a: "Warranty coverage depends on the product and the store policy. See the Warranty page for details.",
   },
   {
     q: "Do you offer rental or hire services?",
-    a: "Currently we are a retail-only operation. However, we can recommend trusted rental partners in the LA area — reach out via the Contact page.",
+    a: "Availability of rentals depends on the store. Contact the store to confirm.",
   },
 ];
 
@@ -72,6 +73,7 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
 
 const Support = () => {
   const tp = useTenantPath();
+  const { company, companyName } = useLayout();
   const tenantLinks = links.map((l) => ({ ...l, to: tp(l.to) }));
 
   return (
@@ -122,11 +124,15 @@ const Support = () => {
 
             <div className="mt-8 border border-border-subtle p-6 bg-grip/20">
               <p className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-3">
-                24/7 Expert Line
+                Support Line
               </p>
-              <p className="text-2xl font-bold text-foreground mb-1">+1 (310) 555-0198</p>
+              {company?.phone ? (
+                <a href={`tel:${company.phone}`} className="text-2xl font-bold text-foreground mb-1 block hover:text-primary transition-colors">{company.phone}</a>
+              ) : (
+                <p className="text-2xl font-bold text-foreground mb-1">{companyName || "Support"}</p>
+              )}
               <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
-                Mon – Sat, 9AM – 6PM PST
+                Contact us during business hours
               </p>
             </div>
           </div>

@@ -118,7 +118,7 @@ describe("AboutSection — defaults", () => {
   it("renders fallback tagline when no setting set", async () => {
     const { default: AboutSection } = await import("@/components/AboutSection");
     render(<AboutSection />);
-    expect(screen.getByText("About Davin's")).toBeInTheDocument();
+    expect(screen.getByText("About Us")).toBeInTheDocument();
   });
 
   it("renders fallback stat values", async () => {

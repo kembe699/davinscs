@@ -46,7 +46,7 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <img src="/logo.jpeg" alt="Davin's" className="h-14 mx-auto mb-4 object-contain" />
+          <img src="/logo.jpeg" alt="FlippedPOS" className="h-14 mx-auto mb-4 object-contain" />
           <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase">Reset Password</p>
         </div>
 

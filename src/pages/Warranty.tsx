@@ -3,6 +3,7 @@ import { Shield, AlertTriangle, Wrench } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useLayout } from "@/contexts/LayoutContext";
 
 const covered = [
   "Manufacturing defects in materials and workmanship",
@@ -35,6 +36,7 @@ const brands = [
 
 const Warranty = () => {
   const tp = useTenantPath();
+  const { companyName } = useLayout();
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -50,7 +52,7 @@ const Warranty = () => {
             <span className="font-bold text-primary">Policy</span>
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed max-w-[50ch]">
-            All products sold at Davin's Camera Store carry the full manufacturer's warranty. As an authorized dealer, we can process warranty claims directly.
+            All products sold by {companyName || "our store"} carry the manufacturer's warranty where applicable. Contact us if you need help with a warranty claim.
           </p>
         </div>
       </section>
@@ -62,7 +64,7 @@ const Warranty = () => {
           <div>
             <p className="font-semibold text-foreground mb-1">Authorized Dealer — Full Warranty Protected</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Buying from Davin's means your product's manufacturer warranty is fully valid. All our products ship with official receipts to support warranty claims.
+              Buying from {companyName || "our store"} means you receive official receipts to support warranty claims where applicable.
             </p>
           </div>
         </div>

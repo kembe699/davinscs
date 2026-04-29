@@ -3,10 +3,13 @@ import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download } from "lucide-react";
+import { useToast } from "@/contexts/ToastContext";
+import { companyHeaderHTML, downloadDocument, printDocument } from "@/utils/printUtils";
 
 type Tab = "suppliers" | "purchase-orders" | "grn" | "bills" | "payments";
 
 export default function ProcurementEnhanced() {
+  const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("suppliers");
   const [suppliers, setSuppliers] = useState<ApiSupplier[]>([]);
   const [pos, setPOs] = useState<ApiPurchaseOrder[]>([]);
@@ -151,15 +154,19 @@ export default function ProcurementEnhanced() {
     try {
       if (editingSupplierId) {
         await api.procurement.suppliers.update(editingSupplierId, supplierForm);
+        toast("Supplier updated successfully.", "success", "Saved");
       } else {
         await api.procurement.suppliers.create(supplierForm);
+        toast("Supplier created successfully.", "success", "Saved");
       }
       await loadSuppliers();
       setEditingSupplierId(null);
       setAddingSupplier(false);
       setSupplierForm({ name: "", contact_person: "", email: "", phone: "", address: "" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
     } finally {
       setSaving(false);
     }
@@ -172,8 +179,11 @@ export default function ProcurementEnhanced() {
         try {
           await api.procurement.suppliers.delete(id);
           await loadSuppliers();
+          toast("Supplier deleted.", "success", "Deleted");
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Delete failed");
+          const msg = err instanceof Error ? err.message : "Delete failed";
+          setError(msg);
+          toast(msg, "error", "Failed");
         }
       },
     });
@@ -188,6 +198,7 @@ export default function ProcurementEnhanced() {
     setError("");
     try {
       await api.procurement.purchaseOrders.create(poForm);
+      toast("Purchase Order created successfully.", "success", "Created");
       await loadPOs();
       setCreatingPO(false);
       setPoForm({
@@ -197,7 +208,9 @@ export default function ProcurementEnhanced() {
         items: []
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create PO");
+      const msg = err instanceof Error ? err.message : "Failed to create PO";
+      setError(msg);
+      toast(msg, "error", "Failed");
     } finally {
       setSaving(false);
     }
@@ -247,8 +260,15 @@ export default function ProcurementEnhanced() {
     setSaving(true);
     setError("");
     try {
-      await api.procurement.grn.create(grnForm);
+      const created = await api.procurement.grn.create(grnForm);
       await Promise.all([loadGRNs(), loadPOs()]);
+      toast(
+        created?.grn_number
+          ? `GRN ${created.grn_number} created successfully.`
+          : "GRN created successfully.",
+        "success",
+        "Created"
+      );
       setCreatingGRN(false);
       setSelectedPOForGRN(null);
       setGRNForm({
@@ -258,7 +278,9 @@ export default function ProcurementEnhanced() {
         items: []
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create GRN");
+      const msg = err instanceof Error ? err.message : "Failed to create GRN";
+      setError(msg);
+      toast(msg, "error", "Failed");
     } finally {
       setSaving(false);
     }
@@ -273,6 +295,7 @@ export default function ProcurementEnhanced() {
     setError("");
     try {
       await api.procurement.bills.create(billForm);
+      toast("Supplier bill created successfully.", "success", "Created");
       await loadBills();
       setCreatingBill(false);
       setBillForm({
@@ -285,7 +308,9 @@ export default function ProcurementEnhanced() {
         notes: ""
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create bill");
+      const msg = err instanceof Error ? err.message : "Failed to create bill";
+      setError(msg);
+      toast(msg, "error", "Failed");
     } finally {
       setSaving(false);
     }
@@ -301,6 +326,7 @@ export default function ProcurementEnhanced() {
     try {
       await api.procurement.payments.create(paymentForm);
       await Promise.all([loadPayments(), loadBills()]);
+      toast("Payment recorded successfully.", "success", "Created");
       setCreatingPayment(false);
       setPaymentForm({
         supplier_id: 0,
@@ -312,7 +338,9 @@ export default function ProcurementEnhanced() {
         notes: ""
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create payment");
+      const msg = err instanceof Error ? err.message : "Failed to create payment";
+      setError(msg);
+      toast(msg, "error", "Failed");
     } finally {
       setSaving(false);
     }
@@ -320,29 +348,273 @@ export default function ProcurementEnhanced() {
 
   const handlePrintPO = async (id: number) => {
     try {
-      const data = await api.procurement.purchaseOrders.print(id);
-      // Open print dialog with data
-      window.print();
+      const [co, po] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.purchaseOrders.print(id),
+      ]);
+
+      const sym = po.currency_symbol || po.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (po.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || it.item_name || ""}</td>
+          <td class="num">${Number(it.quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+
+      const body = `
+        ${companyHeaderHTML(co, "PURCHASE ORDER", po.po_number || String(po.id), `<div class="doc-date">Date: ${po.order_date ? new Date(po.order_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${po.supplier_name || ""}</div>
+          ${po.supplier_phone ? `<div class="info-detail">Phone: ${po.supplier_phone}</div>` : ""}
+          ${po.supplier_email ? `<div class="info-detail">Email: ${po.supplier_email}</div>` : ""}
+          ${po.supplier_address ? `<div class="info-detail">Address: ${po.supplier_address}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="5" class="center" style="color:#888">No items</td></tr>`}</tbody>
+          <tfoot>
+            <tr><td colspan="4" class="right">Total</td><td class="num">${fmt(Number(po.total_amount || 0))}</td></tr>
+          </tfoot>
+        </table>
+        ${po.notes ? `<div class="notes-box"><strong>Notes:</strong> ${po.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+
+      printDocument(`Purchase Order ${po.po_number || id}`, body);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Print failed");
+      const msg = err instanceof Error ? err.message : "Print failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
+    }
+  };
+
+  const handleDownloadPO = async (id: number) => {
+    try {
+      const [co, po] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.purchaseOrders.print(id),
+      ]);
+
+      const sym = po.currency_symbol || po.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (po.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || it.item_name || ""}</td>
+          <td class="num">${Number(it.quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+
+      const body = `
+        ${companyHeaderHTML(co, "PURCHASE ORDER", po.po_number || String(po.id), `<div class="doc-date">Date: ${po.order_date ? new Date(po.order_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${po.supplier_name || ""}</div>
+          ${po.supplier_phone ? `<div class="info-detail">Phone: ${po.supplier_phone}</div>` : ""}
+          ${po.supplier_email ? `<div class="info-detail">Email: ${po.supplier_email}</div>` : ""}
+          ${po.supplier_address ? `<div class="info-detail">Address: ${po.supplier_address}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="5" class="center" style="color:#888">No items</td></tr>`}</tbody>
+          <tfoot>
+            <tr><td colspan="4" class="right">Total</td><td class="num">${fmt(Number(po.total_amount || 0))}</td></tr>
+          </tfoot>
+        </table>
+        ${po.notes ? `<div class="notes-box"><strong>Notes:</strong> ${po.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+
+      downloadDocument(`PurchaseOrder_${po.po_number || id}`, body);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Download failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
     }
   };
 
   const handlePrintGRN = async (id: number) => {
     try {
-      const data = await api.procurement.grn.print(id);
-      window.print();
+      const [co, grn] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.grn.print(id),
+      ]);
+      const sym = grn.currency_symbol || grn.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (grn.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || ""}</td>
+          <td class="num">${Number(it.ordered_quantity || 0)}</td>
+          <td class="num">${Number(it.received_quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.received_quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+      const body = `
+        ${companyHeaderHTML(co, "GOODS RECEIVED NOTE", grn.grn_number || String(grn.id), `<div class="doc-date">Date: ${grn.received_date ? new Date(grn.received_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${grn.supplier_name || ""}</div>
+          ${grn.po_number ? `<div class="info-detail">PO: ${grn.po_number}</div>` : ""}
+          ${grn.supplier_phone ? `<div class="info-detail">Phone: ${grn.supplier_phone}</div>` : ""}
+          ${grn.supplier_email ? `<div class="info-detail">Email: ${grn.supplier_email}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Ordered</th><th class="right">Received</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="6" class="center" style="color:#888">No items</td></tr>`}</tbody>
+        </table>
+        ${grn.notes ? `<div class="notes-box"><strong>Notes:</strong> ${grn.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+      printDocument(`GRN ${grn.grn_number || id}`, body);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Print failed");
+      const msg = err instanceof Error ? err.message : "Print failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
+    }
+  };
+
+  const handleDownloadGRN = async (id: number) => {
+    try {
+      const [co, grn] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.grn.print(id),
+      ]);
+      const sym = grn.currency_symbol || grn.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (grn.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || ""}</td>
+          <td class="num">${Number(it.ordered_quantity || 0)}</td>
+          <td class="num">${Number(it.received_quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.received_quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+      const body = `
+        ${companyHeaderHTML(co, "GOODS RECEIVED NOTE", grn.grn_number || String(grn.id), `<div class="doc-date">Date: ${grn.received_date ? new Date(grn.received_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${grn.supplier_name || ""}</div>
+          ${grn.po_number ? `<div class="info-detail">PO: ${grn.po_number}</div>` : ""}
+          ${grn.supplier_phone ? `<div class="info-detail">Phone: ${grn.supplier_phone}</div>` : ""}
+          ${grn.supplier_email ? `<div class="info-detail">Email: ${grn.supplier_email}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Ordered</th><th class="right">Received</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="6" class="center" style="color:#888">No items</td></tr>`}</tbody>
+        </table>
+        ${grn.notes ? `<div class="notes-box"><strong>Notes:</strong> ${grn.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+      downloadDocument(`GRN_${grn.grn_number || id}`, body);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Download failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
     }
   };
 
   const handlePrintBill = async (id: number) => {
     try {
-      const data = await api.procurement.bills.print(id);
-      window.print();
+      const [co, bill] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.bills.print(id),
+      ]);
+      const sym = bill.currency_symbol || bill.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (bill.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || ""}</td>
+          <td class="num">${Number(it.received_quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.received_quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+      const body = `
+        ${companyHeaderHTML(co, "SUPPLIER BILL", bill.bill_number || String(bill.id), `<div class="doc-date">Date: ${bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${bill.supplier_name || ""}</div>
+          ${bill.grn_number ? `<div class="info-detail">GRN: ${bill.grn_number}</div>` : ""}
+          ${bill.po_number ? `<div class="info-detail">PO: ${bill.po_number}</div>` : ""}
+          ${bill.supplier_phone ? `<div class="info-detail">Phone: ${bill.supplier_phone}</div>` : ""}
+          ${bill.supplier_email ? `<div class="info-detail">Email: ${bill.supplier_email}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="5" class="center" style="color:#888">No items</td></tr>`}</tbody>
+          <tfoot>
+            <tr><td colspan="4" class="right">Total</td><td class="num">${fmt(Number(bill.total_amount || 0))}</td></tr>
+            <tr><td colspan="4" class="right">Paid</td><td class="num">${fmt(Number(bill.paid_amount || 0))}</td></tr>
+            <tr><td colspan="4" class="right">Balance</td><td class="num">${fmt(Number(bill.balance || 0))}</td></tr>
+          </tfoot>
+        </table>
+        ${bill.notes ? `<div class="notes-box"><strong>Notes:</strong> ${bill.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+      printDocument(`Bill ${bill.bill_number || id}`, body);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Print failed");
+      const msg = err instanceof Error ? err.message : "Print failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
+    }
+  };
+
+  const handleDownloadBill = async (id: number) => {
+    try {
+      const [co, bill] = await Promise.all([
+        api.company.get().catch(() => ({})),
+        api.procurement.bills.print(id),
+      ]);
+      const sym = bill.currency_symbol || bill.currency_code || (currencies.find(c => c.is_base)?.symbol ?? "UGX");
+      const fmt = (n: number) => `${sym}${Number(n || 0).toLocaleString()}`;
+      const itemRows = (bill.items || []).map((it: any, i: number) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${it.product_name || ""}</td>
+          <td class="num">${Number(it.received_quantity || 0)}</td>
+          <td class="num">${fmt(Number(it.unit_price || 0))}</td>
+          <td class="num">${fmt(Number(it.received_quantity || 0) * Number(it.unit_price || 0))}</td>
+        </tr>`).join("");
+      const body = `
+        ${companyHeaderHTML(co, "SUPPLIER BILL", bill.bill_number || String(bill.id), `<div class="doc-date">Date: ${bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : ""}</div>`)}
+        <div class="info-box">
+          <div class="info-label">Supplier</div>
+          <div class="info-name">${bill.supplier_name || ""}</div>
+          ${bill.grn_number ? `<div class="info-detail">GRN: ${bill.grn_number}</div>` : ""}
+          ${bill.po_number ? `<div class="info-detail">PO: ${bill.po_number}</div>` : ""}
+          ${bill.supplier_phone ? `<div class="info-detail">Phone: ${bill.supplier_phone}</div>` : ""}
+          ${bill.supplier_email ? `<div class="info-detail">Email: ${bill.supplier_email}</div>` : ""}
+        </div>
+        <div class="section-title">Items</div>
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+          <tbody>${itemRows || `<tr><td colspan="5" class="center" style="color:#888">No items</td></tr>`}</tbody>
+          <tfoot>
+            <tr><td colspan="4" class="right">Total</td><td class="num">${fmt(Number(bill.total_amount || 0))}</td></tr>
+            <tr><td colspan="4" class="right">Paid</td><td class="num">${fmt(Number(bill.paid_amount || 0))}</td></tr>
+            <tr><td colspan="4" class="right">Balance</td><td class="num">${fmt(Number(bill.balance || 0))}</td></tr>
+          </tfoot>
+        </table>
+        ${bill.notes ? `<div class="notes-box"><strong>Notes:</strong> ${bill.notes}</div>` : ""}
+        <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+      `;
+      downloadDocument(`Bill_${bill.bill_number || id}`, body);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Download failed";
+      setError(msg);
+      toast(msg, "error", "Failed");
     }
   };
 
@@ -365,6 +637,9 @@ export default function ProcurementEnhanced() {
       setError(err instanceof Error ? err.message : "Failed to load PO");
     }
   };
+
+  const grnAnyReceiveQty = grnForm.items.some((it) => Number(it.received_quantity || 0) > 0);
+  const grnStep = saving ? 3 : selectedPOForGRN ? (grnAnyReceiveQty ? 2 : 1) : 0;
 
   return (
     <AdminLayout>
@@ -758,6 +1033,13 @@ export default function ProcurementEnhanced() {
                         >
                           <Printer size={14} />
                         </button>
+                        <button
+                          onClick={() => handleDownloadPO(po.id)}
+                          className="px-2 py-1 text-xs text-primary hover:underline ml-2"
+                          title="Download PO (PDF)"
+                        >
+                          <Download size={14} />
+                        </button>
                         {po.status !== 'completed' && (
                           <button
                             onClick={() => startGRNFromPO(po.id)}
@@ -793,6 +1075,29 @@ export default function ProcurementEnhanced() {
             {creatingGRN && (
               <div className="border border-border-subtle p-4 mb-4 bg-chassis">
                 <h3 className="text-sm font-bold mb-4">{selectedPOForGRN ? `Create GRN for PO: ${selectedPOForGRN.po_number}` : "Create GRN"}</h3>
+
+                <div className="mb-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className={`px-3 py-2 border text-[10px] font-mono-tech uppercase tracking-widest ${grnStep >= 1 ? "border-primary/30 text-primary bg-primary/5" : "border-border-subtle text-muted-foreground"}`}>
+                      1. Select PO
+                    </div>
+                    <div className={`px-3 py-2 border text-[10px] font-mono-tech uppercase tracking-widest ${grnStep >= 2 ? "border-primary/30 text-primary bg-primary/5" : "border-border-subtle text-muted-foreground"}`}>
+                      2. Enter Qty
+                    </div>
+                    <div className={`px-3 py-2 border text-[10px] font-mono-tech uppercase tracking-widest ${grnStep >= 3 ? "border-primary/30 text-primary bg-primary/5" : "border-border-subtle text-muted-foreground"}`}>
+                      3. Create GRN
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {saving
+                      ? "Creating GRN..."
+                      : !selectedPOForGRN
+                        ? "Select a purchase order to begin."
+                        : !grnAnyReceiveQty
+                          ? "Enter received quantities for at least one item."
+                          : "Ready to create the GRN."}
+                  </div>
+                </div>
 
                 {/* PO selector */}
                 <div className="mb-4">
@@ -888,7 +1193,7 @@ export default function ProcurementEnhanced() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateGRN}
-                    disabled={saving || !selectedPOForGRN}
+                    disabled={saving || !selectedPOForGRN || !grnAnyReceiveQty}
                     className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50"
                   >
                     {saving ? "Creating..." : "Create GRN"}
@@ -930,6 +1235,13 @@ export default function ProcurementEnhanced() {
                           title="Print GRN"
                         >
                           <Printer size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadGRN(grn.id)}
+                          className="px-2 py-1 text-xs text-primary hover:underline ml-2"
+                          title="Download GRN (PDF)"
+                        >
+                          <Download size={14} />
                         </button>
                       </td>
                     </tr>
@@ -1055,6 +1367,13 @@ export default function ProcurementEnhanced() {
                           title="Print Bill"
                         >
                           <Printer size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadBill(bill.id)}
+                          className="px-2 py-1 text-xs text-primary hover:underline ml-2"
+                          title="Download Bill (PDF)"
+                        >
+                          <Download size={14} />
                         </button>
                       </td>
                     </tr>

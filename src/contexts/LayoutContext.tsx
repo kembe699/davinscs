@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { api, StorefrontSettings } from "@/lib/api";
+import { api, StorefrontSettings, type CompanySettings } from "@/lib/api";
 
 export type SiteLayout = "tech_grid" | "magazine" | "minimal" | "showcase" | "bold" | "boutique";
 
@@ -7,6 +7,7 @@ interface LayoutContextType {
   layout: SiteLayout;
   logo: string;
   companyName: string;
+  company: CompanySettings | null;
   storefrontSettings: StorefrontSettings;
   loading: boolean;
   refreshLayout: () => void;
@@ -16,6 +17,7 @@ const LayoutContext = createContext<LayoutContextType>({
   layout: "tech_grid",
   logo: "",
   companyName: "",
+  company: null,
   storefrontSettings: {},
   loading: true,
   refreshLayout: () => {},
@@ -32,6 +34,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [layout, setLayout] = useState<SiteLayout>("tech_grid");
   const [logo, setLogo] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [company, setCompany] = useState<CompanySettings | null>(null);
   const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>({});
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
@@ -47,6 +50,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     api.company.get()
       .then((data) => {
+        setCompany(data || null);
         if (data?.site_layout) setLayout(data.site_layout as SiteLayout);
         if (data?.logo) setLogo(data.logo);
         if (data?.name) setCompanyName(data.name);
@@ -64,7 +68,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const refreshLayout = () => setTick(t => t + 1);
 
   return (
-    <LayoutContext.Provider value={{ layout, logo, companyName, storefrontSettings, loading, refreshLayout }}>
+    <LayoutContext.Provider value={{ layout, logo, companyName, company, storefrontSettings, loading, refreshLayout }}>
       {children}
     </LayoutContext.Provider>
   );
