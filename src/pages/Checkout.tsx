@@ -4,8 +4,11 @@ import { api, ApiCartItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Lock } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 export default function Checkout() {
+  const { baseCurrency } = useCurrency();
   const [cartItems, setCartItems] = useState<ApiCartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +60,7 @@ export default function Checkout() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = 0;
   const total = subtotal + shipping;
+  const sym = baseCurrency?.symbol || "UGX";
 
   if (loading) {
     return (
@@ -207,7 +211,7 @@ export default function Checkout() {
                           {item.name} × {item.quantity}
                         </span>
                         <span className="font-mono-tech text-foreground">
-                          {(item.price * item.quantity).toLocaleString()}
+                          {formatCurrencySync(item.price * item.quantity, sym, false)}
                         </span>
                       </div>
                     ))}
@@ -216,7 +220,7 @@ export default function Checkout() {
                   <div className="border-t border-border-subtle pt-4 space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono-tech text-foreground">{subtotal.toLocaleString()}</span>
+                      <span className="font-mono-tech text-foreground">{formatCurrencySync(subtotal, sym, false)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Shipping</span>
@@ -227,7 +231,7 @@ export default function Checkout() {
                   <div className="border-t border-border-subtle pt-4 mb-6">
                     <div className="flex justify-between">
                       <span className="font-bold text-foreground">Total</span>
-                      <span className="font-bold text-primary text-xl">{total.toLocaleString()}</span>
+                      <span className="font-bold text-primary text-xl">{formatCurrencySync(total, sym, false)}</span>
                     </div>
                   </div>
 

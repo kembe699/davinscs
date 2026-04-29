@@ -5,8 +5,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatCurrencySync } from "@/utils/currency";
 
 export default function Cart() {
+  const { baseCurrency } = useCurrency();
   const [cartItems, setCartItems] = useState<ApiCartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -55,6 +58,7 @@ export default function Cart() {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = 0;
   const total = subtotal + shipping;
+  const sym = baseCurrency?.symbol || "UGX";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -102,7 +106,7 @@ export default function Cart() {
                           {item.name}
                         </Link>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {item.price.toLocaleString()} each
+                          {formatCurrencySync(item.price, sym, false)} each
                         </p>
                         {item.available < item.quantity && (
                           <p className="text-xs text-red-500 mt-1">
@@ -129,7 +133,7 @@ export default function Cart() {
                           </button>
                         </div>
                         <p className="font-bold text-foreground">
-                          {(item.price * item.quantity).toLocaleString()}
+                          {formatCurrencySync(item.price * item.quantity, sym, false)}
                         </p>
                         <button
                           onClick={() => removeItem(item.id)}
@@ -151,7 +155,7 @@ export default function Cart() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono-tech text-foreground">{subtotal.toLocaleString()}</span>
+                      <span className="font-mono-tech text-foreground">{formatCurrencySync(subtotal, sym, false)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Shipping</span>
@@ -164,7 +168,7 @@ export default function Cart() {
                   <div className="border-t border-border-subtle pt-4 mb-6">
                     <div className="flex justify-between">
                       <span className="font-bold text-foreground">Total</span>
-                      <span className="font-bold text-primary text-xl">{total.toLocaleString()}</span>
+                      <span className="font-bold text-primary text-xl">{formatCurrencySync(total, sym, false)}</span>
                     </div>
                   </div>
 

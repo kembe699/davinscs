@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Menu, X, ShoppingCart, Search, ChevronDown, Globe } from "lucide-react";
+import { Menu, X, ShoppingCart, Search, ChevronDown, Globe, Home, LayoutGrid, LifeBuoy } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -54,6 +54,14 @@ const Navbar = () => {
     const interval = setInterval(loadCartCount, 5000);
     return () => clearInterval(interval);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const prev = document.body.style.paddingBottom;
+    document.body.style.paddingBottom = "72px";
+    return () => {
+      document.body.style.paddingBottom = prev;
+    };
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,12 +193,25 @@ const Navbar = () => {
         <span className="text-muted-foreground uppercase tracking-tighter hidden md:inline">Status: Open</span>
         <div className="size-2 bg-primary animate-pulse" />
       </div>
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden text-foreground"
-      >
-        {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+
+      <div className="flex lg:hidden items-center gap-4">
+        <Link to={tp("/cart")} className="relative text-foreground hover:text-primary transition-colors" aria-label="Cart" title="Cart">
+          <ShoppingCart size={20} />
+          {cartCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-primary text-background text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </Link>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="lg:hidden text-foreground"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          title={mobileOpen ? "Close" : "Menu"}
+        >
+          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
 
       {mobileOpen && (
         <div className="absolute top-16 left-0 right-0 bg-chassis border-b border-border-subtle p-6 flex flex-col gap-4 lg:hidden z-50">
@@ -198,18 +219,12 @@ const Navbar = () => {
             <Link
               key={link.to}
               to={link.to}
-              className={`text-sm font-medium uppercase tracking-widest hover:text-primary transition-colors ${location.pathname.startsWith(link.to) ? "text-primary" : "text-muted-foreground"}`}
+              className={`hover:text-primary transition-colors whitespace-nowrap ${location.pathname.startsWith(link.to) ? "text-primary" : ""}`}
               onClick={() => setMobileOpen(false)}
             >
               {link.label}
             </Link>
           ))}
-          
-          <div className="pt-4 mt-2 border-t border-border-subtle flex gap-4 justify-center">
-            <button onClick={() => changeLanguage('en')} className={`text-xs ${i18n.language.startsWith('en') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>EN</button>
-            <button onClick={() => changeLanguage('ar')} className={`text-xs ${i18n.language.startsWith('ar') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>AR</button>
-            <button onClick={() => changeLanguage('fr')} className={`text-xs ${i18n.language.startsWith('fr') ? 'text-primary font-bold' : 'text-muted-foreground'}`}>FR</button>
-          </div>
         </div>
       )}
     </nav>
@@ -259,6 +274,44 @@ const Navbar = () => {
         </div>
       </div>
     )}
+
+    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-chassis/95 backdrop-blur-md border-t border-border-subtle">
+      <div className="max-w-[1440px] mx-auto px-6 h-[72px] flex items-center justify-around">
+        <Link
+          to={tp("/")}
+          className={`flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest transition-colors ${location.pathname === tp("/") ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Home size={18} />
+          Home
+        </Link>
+        <a
+          href="#shop"
+          className="flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <LayoutGrid size={18} />
+          Shop
+        </a>
+        <Link
+          to={tp("/cart")}
+          className={`relative flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest transition-colors ${location.pathname === tp("/cart") ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <ShoppingCart size={18} />
+          {cartCount > 0 && (
+            <span className="absolute -top-1 right-3 bg-primary text-background text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+          Cart
+        </Link>
+        <Link
+          to={tp("/support")}
+          className={`flex flex-col items-center gap-1 text-[10px] font-mono-tech uppercase tracking-widest transition-colors ${location.pathname.startsWith(tp("/support")) ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <LifeBuoy size={18} />
+          Support
+        </Link>
+      </div>
+    </div>
     </div>
   );
 };
