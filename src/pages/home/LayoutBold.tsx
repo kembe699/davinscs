@@ -6,7 +6,6 @@ import { formatCurrencySync } from "@/utils/currency";
 import Navbar from "@/components/Navbar";
 import { useLayout } from "@/contexts/LayoutContext";
 import MarqueeBanner from "@/components/MarqueeBanner";
-import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 
 export default function LayoutBold() {
@@ -67,7 +66,6 @@ export default function LayoutBold() {
 
       <MarqueeBanner />
       <StorefrontShop />
-      <Footer />
     </div>
   );
 }

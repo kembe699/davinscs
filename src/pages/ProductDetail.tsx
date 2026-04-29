@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { orderViaWhatsApp } from "@/utils/whatsapp";
 import { ArrowLeft, Check, X, ShoppingCart, Plus, Minus } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { categoryMeta } from "@/data/products";
 import type { Category } from "@/data/products";
@@ -58,11 +57,10 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <p className="font-mono-tech text-muted-foreground uppercase tracking-widest text-sm animate-pulse">
+          <p className="text-muted-foreground font-mono-tech text-sm tracking-widest uppercase animate-pulse">
             Loading…
           </p>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -71,18 +69,16 @@ const ProductDetail = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center flex-col gap-6">
-          <p className="font-mono-tech text-muted-foreground uppercase tracking-widest text-sm">
-            Product not found
-          </p>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-3">Product not found</h1>
+          <p className="text-muted-foreground mb-6">The product you’re looking for doesn’t exist.</p>
           <Link
             to={tp("/")}
-            className="font-mono-tech text-xs text-primary hover:underline uppercase tracking-widest"
+            className="inline-flex items-center gap-2 font-mono-tech text-[10px] uppercase tracking-widest text-primary hover:underline"
           >
             ← Return Home
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -292,25 +288,18 @@ const ProductDetail = () => {
       {related.length > 0 && (
         <section className="border-t border-border-subtle">
           <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-12 lg:py-16">
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-2">
-                  You May Also Like
-                </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                  Related {meta?.title || productCategory || "Products"}
-                </h2>
-              </div>
-              {productCategory && (
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-foreground">Related Products</h2>
+              {category && (
                 <Link
-                  to={tp(`/${productCategory}`)}
-                  className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest hidden sm:block"
+                  to={tp(`/${category}`)}
+                  className="font-mono-tech text-[10px] text-primary uppercase tracking-widest hover:underline"
                 >
-                  View All →
+                  View more
                 </Link>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
               {related.map((p) => (
                 <div key={p.slug} className="bg-background">
                   <ProductCard product={p} />
@@ -320,8 +309,6 @@ const ProductDetail = () => {
           </div>
         </section>
       )}
-
-      <Footer />
     </div>
   );
 };

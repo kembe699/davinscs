@@ -6,7 +6,6 @@ import { formatCurrencySync } from "@/utils/currency";
 import Navbar from "@/components/Navbar";
 import { useLayout } from "@/contexts/LayoutContext";
 import MarqueeBanner from "@/components/MarqueeBanner";
-import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 
 export default function LayoutMagazine() {
@@ -85,7 +84,6 @@ export default function LayoutMagazine() {
 
       <MarqueeBanner />
       <StorefrontShop />
-      <Footer />
     </div>
   );
 }

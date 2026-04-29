@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { RotateCcw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useTenantPath } from "@/contexts/TenantContext";
 
 const steps = [
@@ -166,7 +165,6 @@ const Returns = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

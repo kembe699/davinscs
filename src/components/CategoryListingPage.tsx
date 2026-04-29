@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { useState, useEffect } from "react";
 import type { Category } from "@/data/products";
@@ -135,7 +134,7 @@ const CategoryListingPage = ({ category }: Props) => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
             {filtered.map((product) => (
               <div key={product.slug} className="bg-background">
                 <ProductCard product={product} />
@@ -144,8 +143,6 @@ const CategoryListingPage = ({ category }: Props) => {
           </div>
         )}
       </div>
-
-      <Footer />
     </div>
   );
 };

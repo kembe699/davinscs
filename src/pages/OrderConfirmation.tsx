@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api, ApiCustomerOrder } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { CheckCircle, Mail, Package } from "lucide-react";
 
 export default function OrderConfirmation() {
@@ -33,7 +32,6 @@ export default function OrderConfirmation() {
         <main className="flex-1 flex items-center justify-center">
           <p className="text-muted-foreground animate-pulse">Loading order...</p>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -50,7 +48,6 @@ export default function OrderConfirmation() {
             </Link>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -168,8 +165,6 @@ export default function OrderConfirmation() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

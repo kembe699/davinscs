@@ -2,7 +2,6 @@ import { useParams } from "react-router-dom";
 import CategoryListingPage from "@/components/CategoryListingPage";
 import StorefrontShop from "@/components/StorefrontShop";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { type Category, categoryMeta } from "@/data/products";
 
 const knownCategories = Object.keys(categoryMeta) as Category[];
@@ -31,7 +30,6 @@ export default function DynamicCategoryPage() {
         </div>
       </section>
       <StorefrontShop initialCategory={slug} />
-      <Footer />
     </div>
   );
 }

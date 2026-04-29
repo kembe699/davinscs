@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Shield, AlertTriangle, Wrench } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -165,7 +164,6 @@ const Warranty = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

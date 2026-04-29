@@ -4,7 +4,6 @@ import { api, ApiProduct } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 import { useLayout } from "@/contexts/LayoutContext";
 
@@ -76,7 +75,6 @@ export default function LayoutBoutique() {
         </section>
       )}
       <StorefrontShop />
-      <Footer />
     </div>
   );
 }

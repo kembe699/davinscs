@@ -2,7 +2,6 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import MarqueeBanner from "@/components/MarqueeBanner";
 import AboutSection from "@/components/AboutSection";
-import Footer from "@/components/Footer";
 import LayoutMagazine from "@/pages/home/LayoutMagazine";
 import LayoutMinimal from "@/pages/home/LayoutMinimal";
 import LayoutShowcase from "@/pages/home/LayoutShowcase";
@@ -19,7 +18,6 @@ const LayoutTechGrid = () => (
     <StorefrontShop />
     <AboutSection />
     <MarqueeBanner />
-    <Footer />
   </div>
 );
 

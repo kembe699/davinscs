@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Mail, MapPin, Clock, Phone } from "lucide-react";
 import { api, type CompanySettings } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -236,7 +235,6 @@ const Contact = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

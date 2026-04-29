@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiCartItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Lock } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
@@ -69,7 +68,6 @@ export default function Checkout() {
         <main className="flex-1 flex items-center justify-center">
           <p className="text-muted-foreground animate-pulse">Loading...</p>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -255,8 +253,6 @@ export default function Checkout() {
           </form>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

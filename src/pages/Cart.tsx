@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiCartItem } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -56,14 +55,36 @@ export default function Cart() {
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = 0;
+  const shipping: number = 0;
   const total = subtotal + shipping;
   const sym = baseCurrency?.symbol || "UGX";
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center py-24">
+          <div className="max-w-5xl mx-auto">
+            <h1 className="text-3xl font-bold text-foreground mb-8">Shopping Cart</h1>
+
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 mb-6">
+                {error}
+              </div>
+            )}
+
+            <div className="text-center py-12">
+              <p className="text-muted-foreground animate-pulse">Loading cart...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      
       <main className="flex-1 container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold text-foreground mb-8">Shopping Cart</h1>
@@ -160,7 +181,7 @@ export default function Cart() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Shipping</span>
                       <span className="font-mono-tech text-foreground">
-                        {shipping === 0 ? "FREE" : shipping.toLocaleString()}
+                        {shipping === 0 ? "FREE" : formatCurrencySync(shipping, sym, false)}
                       </span>
                     </div>
                   </div>
@@ -191,8 +212,6 @@ export default function Cart() {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

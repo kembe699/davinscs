@@ -262,7 +262,7 @@ export default function StorefrontShop({ initialCategory }: Props) {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
             {filteredProducts.map(product => (
               <div key={product.id} className="bg-background">
                 <ShopProductCard product={product} sym={baseCurrency?.symbol || "SSP"} productPath={tp(`/product/${product.slug}`)} />

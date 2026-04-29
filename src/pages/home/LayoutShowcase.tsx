@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import { useLayout } from "@/contexts/LayoutContext";
 import MarqueeBanner from "@/components/MarqueeBanner";
-import Footer from "@/components/Footer";
 import StorefrontShop from "@/components/StorefrontShop";
 import { Link } from "react-router-dom";
 
@@ -29,7 +28,6 @@ export default function LayoutShowcase() {
       </section>
       <MarqueeBanner />
       <StorefrontShop />
-      <Footer />
     </div>
   );
 }
