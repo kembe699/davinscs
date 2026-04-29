@@ -308,7 +308,6 @@ export default function Onboarding() {
                     onChange={(e) => set("company_name", e.target.value)}
                   />
                 </div>
-                <div className="sm:col-span-2">
                 <Field icon={Phone} label="Phone" placeholder="+211 92 000 0000" value={form.phone} onChange={(v) => set("phone", v)} />
                 <Field icon={Mail} label="Email" placeholder="info@yourbusiness.com" value={form.email} onChange={(v) => set("email", v)} />
                 <Field icon={MapPin} label="Address" placeholder="Street address" value={form.address} onChange={(v) => set("address", v)} />
