@@ -140,24 +140,20 @@ export default function Onboarding() {
 
   // ── Validation ───────────────────────────────────────────────────────────────
 
-  const canAdvance = (): boolean => {
-    if (step === 1) return !!form.business_type;
-    if (step === 2) return !!form.company_name.trim() && !!form.primary_currency;
-    if (step === 3) return true;
-    if (step === 4) {
-      return (
-        !!form.admin_email.trim() &&
-        form.admin_password.length >= 8 &&
-        form.admin_password === form.admin_confirm
-      );
-    }
-    return true;
-  };
+
 
   const stepError = (): string => {
+    if (step === 1) {
+      if (!form.business_type) return "Please select a business type.";
+    }
+    if (step === 2) {
+      if (!form.company_name.trim()) return "Business Name is required.";
+      if (!form.primary_currency) return "Primary Currency is required.";
+    }
     if (step === 4) {
       if (!form.admin_email.trim()) return "Admin email is required";
       if (form.admin_password.length < 8) return "Password must be at least 8 characters";
+      if (!form.admin_confirm) return "Please confirm your password";
       if (form.admin_password !== form.admin_confirm) return "Passwords do not match";
     }
     return "";
@@ -609,7 +605,7 @@ export default function Onboarding() {
             <button
               type="button"
               onClick={next}
-              disabled={!canAdvance() || loading}
+              disabled={loading}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-background uppercase tracking-widest text-xs font-bold rounded-none text-sm font-semibold transition-colors ml-auto"
             >
               {loading
