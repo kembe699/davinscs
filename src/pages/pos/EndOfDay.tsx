@@ -193,23 +193,23 @@ export default function EndOfDay() {
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-admin-bg">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-gray-900">
       {/* Top bar */}
-      <div className="bg-admin-surface border-b border-admin-border px-6 py-4 flex items-center gap-3 print:hidden">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center gap-3 print:hidden">
         <button
           onClick={() => navigate(tp("/pos"))}
-          className="flex items-center gap-2 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+          className="flex items-center gap-2 px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800"
         >
           <ArrowLeft size={15} /> Back to POS
         </button>
-        <h1 className="text-xl font-bold text-admin-text flex-1">End of Day Report</h1>
+        <h1 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100 flex-1">End of Day Report</h1>
         <input
           type="date"
           value={selectedDate}
           onChange={e => setSelectedDate(e.target.value)}
-          className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+          className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm"
         />
-        <button onClick={loadAll} className="flex items-center gap-2 px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface">
+        <button onClick={loadAll} className="flex items-center gap-2 px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800">
           <RefreshCw size={14} /> Refresh
         </button>
         <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-admin-text text-admin-bg text-sm hover:opacity-90">
@@ -255,7 +255,7 @@ export default function EndOfDay() {
         )}
 
         {loading ? (
-          <div className="bg-admin-surface border border-admin-border p-12 text-center text-admin-text-secondary text-sm">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400 text-sm">
             Loading report…
           </div>
         ) : (
@@ -275,14 +275,14 @@ export default function EndOfDay() {
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Transactions",    value: ss?.total_transactions ?? 0,  icon: ShoppingBag,  mono: false, color: "text-admin-text" },
+                { label: "Transactions",    value: ss?.total_transactions ?? 0,  icon: ShoppingBag,  mono: false, color: "text-[#1A1A2E] dark:text-gray-100" },
                 { label: "Total Revenue",   value: ss?.total_sales ?? 0,         icon: DollarSign,   mono: true,  color: "text-emerald-400" },
                 { label: "Tax Collected",   value: ss?.total_tax ?? 0,           icon: TrendingUp,   mono: true,  color: "text-blue-400" },
                 { label: "Discounts Given", value: ss?.total_discounts ?? 0,     icon: Tag,          mono: true,  color: "text-red-400" },
               ].map(({ label, value, icon: Icon, mono, color }) => (
-                <div key={label} className="bg-admin-surface border border-admin-border p-4">
+                <div key={label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-admin-text-secondary uppercase tracking-widest">{label}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest">{label}</span>
                     <Icon size={15} className={color} />
                   </div>
                   <div className={`text-2xl font-bold ${color} ${mono ? "font-mono" : ""}`}>
@@ -309,27 +309,27 @@ export default function EndOfDay() {
             </div>
 
             {/* Cashier breakdown */}
-            <div className="bg-admin-surface border border-admin-border">
-              <div className="px-4 py-3 border-b border-admin-border">
-                <h2 className="font-bold text-admin-text flex items-center gap-2"><Users size={15} /> Sales by Cashier</h2>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2"><Users size={15} /> Sales by Cashier</h2>
               </div>
               <table className="w-full text-sm">
-                <thead className="bg-admin-bg border-b border-admin-border">
+                <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-4 py-2 text-admin-text">Cashier</th>
-                    <th className="text-left px-4 py-2 text-admin-text">Email</th>
-                    <th className="text-right px-4 py-2 text-admin-text">Txns</th>
-                    <th className="text-right px-4 py-2 text-admin-text">Discounts</th>
-                    <th className="text-right px-4 py-2 text-admin-text">Revenue</th>
+                    <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Cashier</th>
+                    <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Email</th>
+                    <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Txns</th>
+                    <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Discounts</th>
+                    <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report?.cashier_breakdown?.length > 0 ? (
                     report.cashier_breakdown.map((c: any, i: number) => (
-                      <tr key={i} className="border-b border-admin-border">
-                        <td className="px-4 py-2 text-admin-text font-medium">{c.cashier_name}</td>
-                        <td className="px-4 py-2 text-admin-text-secondary text-xs">{c.email}</td>
-                        <td className="px-4 py-2 text-admin-text text-right">{c.total_transactions}</td>
+                      <tr key={i} className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 font-medium">{c.cashier_name}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{c.email}</td>
+                        <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{c.total_transactions}</td>
                         <td className="px-4 py-2 text-red-400 text-right font-mono">
                           -{formatCurrencySync(Number(c.total_discounts), sym, false)}
                         </td>
@@ -339,7 +339,7 @@ export default function EndOfDay() {
                       </tr>
                     ))
                   ) : (
-                    <tr><td colSpan={5} className="px-4 py-4 text-center text-admin-text-secondary">No transactions recorded</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">No transactions recorded</td></tr>
                   )}
                 </tbody>
               </table>
@@ -349,39 +349,39 @@ export default function EndOfDay() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               {/* Payment breakdown */}
-              <div className="bg-admin-surface border border-admin-border">
-                <div className="px-4 py-3 border-b border-admin-border">
-                  <h2 className="font-bold text-admin-text">Payment Methods</h2>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100">Payment Methods</h2>
                 </div>
                 <table className="w-full text-sm">
-                  <thead className="bg-admin-bg border-b border-admin-border">
+                  <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                     <tr>
-                      <th className="text-left px-4 py-2 text-admin-text">Method</th>
-                      <th className="text-right px-4 py-2 text-admin-text">Txns</th>
-                      <th className="text-right px-4 py-2 text-admin-text">Amount</th>
+                      <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Method</th>
+                      <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Txns</th>
+                      <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {report?.payment_breakdown?.length > 0 ? (
                       report.payment_breakdown.map((pm: any, i: number) => (
-                        <tr key={i} className="border-b border-admin-border">
-                          <td className="px-4 py-2 text-admin-text">{pm.name}</td>
-                          <td className="px-4 py-2 text-admin-text text-right">{pm.count}</td>
-                          <td className="px-4 py-2 text-admin-text text-right font-mono">
+                        <tr key={i} className="border-b border-gray-200 dark:border-gray-700">
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100">{pm.name}</td>
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{pm.count}</td>
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
                             {formatCurrencySync(Number(pm.total), sym, false)}
                           </td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={3} className="px-4 py-4 text-center text-admin-text-secondary">No sales recorded</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">No sales recorded</td></tr>
                     )}
                   </tbody>
                   {report?.payment_breakdown?.length > 0 && (
-                    <tfoot className="bg-admin-bg border-t border-admin-border">
+                    <tfoot className="bg-[#F8F9FA] dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
                       <tr>
-                        <td className="px-4 py-2 font-bold text-admin-text">Total</td>
-                        <td className="px-4 py-2 font-bold text-admin-text text-right">{ss?.total_transactions ?? 0}</td>
-                        <td className="px-4 py-2 font-bold text-admin-text text-right font-mono">
+                        <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100">Total</td>
+                        <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100 text-right">{ss?.total_transactions ?? 0}</td>
+                        <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
                           {formatCurrencySync(Number(ss?.total_sales ?? 0), sym, false)}
                         </td>
                       </tr>
@@ -391,31 +391,31 @@ export default function EndOfDay() {
               </div>
 
               {/* Top products */}
-              <div className="bg-admin-surface border border-admin-border">
-                <div className="px-4 py-3 border-b border-admin-border">
-                  <h2 className="font-bold text-admin-text flex items-center gap-2"><Package size={15} /> Top Products</h2>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2"><Package size={15} /> Top Products</h2>
                 </div>
                 <table className="w-full text-sm">
-                  <thead className="bg-admin-bg border-b border-admin-border">
+                  <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                     <tr>
-                      <th className="text-left px-4 py-2 text-admin-text">Product</th>
-                      <th className="text-right px-4 py-2 text-admin-text">Qty</th>
-                      <th className="text-right px-4 py-2 text-admin-text">Revenue</th>
+                      <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Product</th>
+                      <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Qty</th>
+                      <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Revenue</th>
                     </tr>
                   </thead>
                   <tbody>
                     {report?.top_products?.length > 0 ? (
                       report.top_products.map((p: any, i: number) => (
-                        <tr key={i} className="border-b border-admin-border">
-                          <td className="px-4 py-2 text-admin-text truncate max-w-[140px]">{p.product_name}</td>
-                          <td className="px-4 py-2 text-admin-text text-right">{p.quantity}</td>
-                          <td className="px-4 py-2 text-admin-text text-right font-mono">
+                        <tr key={i} className="border-b border-gray-200 dark:border-gray-700">
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 truncate max-w-[140px]">{p.product_name}</td>
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{p.quantity}</td>
+                          <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
                             {formatCurrencySync(Number(p.revenue), sym, false)}
                           </td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={3} className="px-4 py-4 text-center text-admin-text-secondary">No products sold</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">No products sold</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -423,12 +423,12 @@ export default function EndOfDay() {
             </div>
 
             {/* Hourly sales bar chart */}
-            <div className="bg-admin-surface border border-admin-border">
-              <div className="px-4 py-3 border-b border-admin-border">
-                <h2 className="font-bold text-admin-text">Hourly Sales Breakdown</h2>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100">Hourly Sales Breakdown</h2>
               </div>
               {hourly.length === 0 ? (
-                <p className="text-center text-admin-text-secondary text-sm py-6">No hourly data for this date</p>
+                <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-6">No hourly data for this date</p>
               ) : (
                 <div className="p-4">
                   <div className="flex items-end gap-1 h-28">
@@ -444,7 +444,7 @@ export default function EndOfDay() {
                             style={{ height: `${Math.max(pct, amt > 0 ? 4 : 0)}%` }}
                           />
                           {cnt > 0 && (
-                            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-admin-bg border border-admin-border text-xs text-admin-text px-2 py-1 whitespace-nowrap z-10">
+                            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs text-[#1A1A2E] dark:text-gray-100 px-2 py-1 whitespace-nowrap z-10">
                               {h}:00 — {cnt} sale{cnt !== 1 ? "s" : ""}<br />{formatCurrencySync(amt, sym, false)}
                             </div>
                           )}
@@ -452,7 +452,7 @@ export default function EndOfDay() {
                       );
                     })}
                   </div>
-                  <div className="flex justify-between text-xs text-admin-text-secondary mt-1">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <span>00:00</span>
                     <span>06:00</span>
                     <span>12:00</span>
@@ -461,10 +461,10 @@ export default function EndOfDay() {
                   </div>
                   <div className="mt-3 grid grid-cols-6 gap-2">
                     {hourly.map((h: any, i: number) => (
-                      <div key={i} className="bg-admin-bg border border-admin-border p-2 text-center">
-                        <div className="text-xs text-admin-text-secondary">{String(h.hour).padStart(2,"0")}:00</div>
-                        <div className="text-sm font-bold text-admin-text">{h.sales_count}</div>
-                        <div className="text-xs font-mono text-admin-text-secondary">
+                      <div key={i} className="bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 text-center">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{String(h.hour).padStart(2,"0")}:00</div>
+                        <div className="text-sm font-bold text-[#1A1A2E] dark:text-gray-100">{h.sales_count}</div>
+                        <div className="text-xs font-mono text-gray-500 dark:text-gray-400">
                           {formatCurrencySync(Number(h.total_amount), sym, false)}
                         </div>
                       </div>
@@ -486,30 +486,30 @@ export default function EndOfDay() {
       {/* ── Close Shift Modal ─────────────────────────────────────────────── */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-admin-surface border border-admin-border w-full max-w-sm shadow-2xl">
-            <div className="px-6 py-4 border-b border-admin-border flex items-center justify-between">
-              <h2 className="font-bold text-admin-text flex items-center gap-2"><Lock size={16} /> Close Shift</h2>
-              <button onClick={() => setShowCloseModal(false)} className="text-admin-text-secondary hover:text-admin-text text-xl leading-none">×</button>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 w-full max-w-sm shadow-2xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2"><Lock size={16} /> Close Shift</h2>
+              <button onClick={() => setShowCloseModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-[#1A1A2E] dark:text-gray-100 text-xl leading-none">×</button>
             </div>
             <div className="px-6 py-5 space-y-4">
               {session && (
-                <div className="bg-admin-bg border border-admin-border p-3 text-sm space-y-1">
+                <div className="bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-3 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-admin-text-secondary">Opened at</span>
-                    <span className="text-admin-text">{new Date(session.opened_at).toLocaleTimeString()}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Opened at</span>
+                    <span className="text-[#1A1A2E] dark:text-gray-100">{new Date(session.opened_at).toLocaleTimeString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-admin-text-secondary">Opening cash</span>
-                    <span className="text-admin-text font-mono">{formatCurrencySync(session.opening_cash, sym, false)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Opening cash</span>
+                    <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(session.opening_cash, sym, false)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-admin-text-secondary">Sales today</span>
+                    <span className="text-gray-500 dark:text-gray-400">Sales today</span>
                     <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(ss?.total_sales ?? 0), sym, false)}</span>
                   </div>
                 </div>
               )}
               <div>
-                <label className="block text-xs text-admin-text-secondary uppercase tracking-widest mb-1.5">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">
                   Closing Cash Amount <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -518,23 +518,23 @@ export default function EndOfDay() {
                   value={closingCash}
                   onChange={e => setClosingCash(e.target.value)}
                   placeholder="Enter physical cash in drawer"
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm focus:outline-none focus:border-admin-text placeholder:text-admin-text-secondary"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm focus:outline-none focus:border-admin-text placeholder:text-gray-500 dark:text-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-admin-text-secondary uppercase tracking-widest mb-1.5">Notes (optional)</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Notes (optional)</label>
                 <textarea
                   rows={2}
                   value={closeNotes}
                   onChange={e => setCloseNotes(e.target.value)}
                   placeholder="Any notes for this shift…"
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm resize-none focus:outline-none focus:border-admin-text placeholder:text-admin-text-secondary"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm resize-none focus:outline-none focus:border-admin-text placeholder:text-gray-500 dark:text-gray-400"
                 />
               </div>
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => setShowCloseModal(false)}
-                  className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+                  className="flex-1 px-4 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800"
                 >
                   Cancel
                 </button>

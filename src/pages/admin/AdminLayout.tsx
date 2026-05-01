@@ -132,6 +132,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     
     const changeLanguage = (lng: string) => {
       i18n.changeLanguage(lng);
+      if (user) {
+        localStorage.setItem(`i18nextLng_${user.id}`, lng);
+      }
       setOpen(false);
     };
 

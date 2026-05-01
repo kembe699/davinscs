@@ -56,7 +56,26 @@ import Quotations from "./pages/admin/Quotations.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Portal from "./pages/Portal.tsx";
 
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+
 const queryClient = new QueryClient();
+
+function UserPreferencesSync() {
+  const { user } = useAuth();
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    if (user) {
+      const savedLang = localStorage.getItem(`i18nextLng_${user.id}`);
+      if (savedLang && i18n.language !== savedLang) {
+        i18n.changeLanguage(savedLang);
+      }
+    }
+  }, [user, i18n]);
+
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -71,13 +90,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import { useTheme } from "./contexts/ThemeContext.tsx";
+import { Outlet } from "react-router-dom";
+
+function ThemeWrapper() {
+  const { theme } = useTheme();
+  return (
+    <div className={theme === "dark" ? "dark bg-background text-foreground min-h-screen" : "bg-background text-foreground min-h-screen"}>
+      <Outlet />
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <AuthProvider>
+        <UserPreferencesSync />
       <ThemeProvider>
       <ToastProvider>
         <ToastContainer />
-      <AuthProvider>
         <LayoutProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
@@ -88,29 +120,43 @@ const App = () => (
 
             {/* All tenant routes live under /:tenantSlug */}
             <Route path="/:tenantSlug" element={<TenantRoot />}>
-              {/* Storefront */}
-              <Route index element={<Index />} />
-              <Route path="setup" element={<Onboarding />} />
-              <Route path="cameras" element={<CamerasPage />} />
-              <Route path="lenses" element={<LensesPage />} />
-              <Route path="microphones" element={<MicrophonesPage />} />
-              <Route path="teleprompters" element={<TelepromptersPage />} />
-              <Route path="lighting" element={<LightingPage />} />
-              <Route path="cameras/:id" element={<ProductDetail />} />
-              <Route path="lenses/:id" element={<ProductDetail />} />
-              <Route path="microphones/:id" element={<ProductDetail />} />
-              <Route path="teleprompters/:id" element={<ProductDetail />} />
-              <Route path="lighting/:id" element={<ProductDetail />} />
-              <Route path="contact" element={<Contact />} />
-              <Route path="support" element={<Support />} />
-              <Route path="shipping" element={<Shipping />} />
-              <Route path="returns" element={<Returns />} />
-              <Route path="warranty" element={<Warranty />} />
-              <Route path="cart" element={<Cart />} />
-              <Route path="checkout" element={<Checkout />} />
-              <Route path="order-confirmation/:id" element={<OrderConfirmation />} />
-              <Route path="product/:slug" element={<ProductDetail />} />
-              {/* Admin CMS */}
+              
+              <Route element={<ThemeWrapper />}>
+                {/* Storefront */}
+                <Route index element={<Index />} />
+                <Route path="setup" element={<Onboarding />} />
+                <Route path="cameras" element={<CamerasPage />} />
+                <Route path="lenses" element={<LensesPage />} />
+                <Route path="microphones" element={<MicrophonesPage />} />
+                <Route path="teleprompters" element={<TelepromptersPage />} />
+                <Route path="lighting" element={<LightingPage />} />
+                <Route path="cameras/:id" element={<ProductDetail />} />
+                <Route path="lenses/:id" element={<ProductDetail />} />
+                <Route path="microphones/:id" element={<ProductDetail />} />
+                <Route path="teleprompters/:id" element={<ProductDetail />} />
+                <Route path="lighting/:id" element={<ProductDetail />} />
+                <Route path="contact" element={<Contact />} />
+                <Route path="support" element={<Support />} />
+                <Route path="shipping" element={<Shipping />} />
+                <Route path="returns" element={<Returns />} />
+                <Route path="warranty" element={<Warranty />} />
+                <Route path="cart" element={<Cart />} />
+                <Route path="checkout" element={<Checkout />} />
+                <Route path="order-confirmation/:id" element={<OrderConfirmation />} />
+                <Route path="product/:slug" element={<ProductDetail />} />
+                
+                {/* POS */}
+                <Route path="pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
+                <Route path="pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
+                <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
+                <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
+                <Route path="verify/:saleNumber" element={<ReceiptVerify />} />
+                
+                {/* Dynamic category catch-all — must be last inside wrapper */}
+                <Route path=":categorySlug" element={<DynamicCategoryPage />} />
+              </Route>
+
+              {/* Admin CMS (Not wrapped in ThemeWrapper so it doesn't get .dark) */}
               <Route path="admin/login" element={<AdminLogin />} />
               <Route path="admin/reset-password" element={<ResetPassword />} />
               <Route path="admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -136,14 +182,6 @@ const App = () => (
               <Route path="admin/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
               <Route path="admin/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
               <Route path="admin/quotations" element={<ProtectedRoute><Quotations /></ProtectedRoute>} />
-              {/* POS */}
-              <Route path="pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
-              <Route path="pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
-              <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
-              <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
-              <Route path="verify/:saleNumber" element={<ReceiptVerify />} />
-              {/* Dynamic category catch-all — must be last */}
-              <Route path=":categorySlug" element={<DynamicCategoryPage />} />
             </Route>
 
             {/* Catch-all */}
@@ -151,9 +189,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
         </LayoutProvider>
-      </AuthProvider>
       </ToastProvider>
       </ThemeProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

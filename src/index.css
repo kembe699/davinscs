@@ -49,7 +49,7 @@
     --popover: 0 0% 15%;
     --popover-foreground: 0 0% 93%;
 
-    --primary: 211 100% 30%;
+    --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 18%;
@@ -58,7 +58,7 @@
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 58%;
 
-    --accent: 211 100% 30%;
+    --accent: 160 84% 39%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -66,52 +66,52 @@
 
     --border: 0 0% 24%;
     --input: 0 0% 20%;
-    --ring: 211 100% 30%;
+    --ring: 160 84% 39%;
 
     --radius: 0rem;
 
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 211 100% 30%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 17%;
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 24%;
-    --sidebar-ring: 211 100% 30%;
+    --sidebar-ring: 160 84% 39%;
 
-    --indicator: 211 100% 30%;
+    --indicator: 160 84% 39%;
     --chassis: 0 0% 15%;
     --grip: 0 0% 18%;
     --metal: 0 0% 90%;
     --border-subtle: 0 0% 24%;
-    --brand-gradient: linear-gradient(90deg, #004A99 0%, #008B8B 50%, #32CD32 100%);
-    --brand-start: #004A99;
-    --brand-mid: #008B8B;
-    --brand-end: #32CD32;
+    --brand-gradient: linear-gradient(90deg, #064E3B 0%, #059669 50%, #10B981 100%);
+    --brand-start: #064E3B;
+    --brand-mid: #059669;
+    --brand-end: #10B981;
   }
 
   [data-theme="light"] {
-    --background: 210 20% 98%;
-    --foreground: 220 10% 20%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 25%;
+    --card-foreground: 0 0% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 25%;
-    --secondary: 210 15% 94%;
-    --secondary-foreground: 220 10% 20%;
-    --muted: 210 15% 95%;
-    --muted-foreground: 220 10% 45%;
-    --border: 220 10% 88%;
-    --input: 220 10% 88%;
-    --sidebar-background: 210 20% 97%;
-    --sidebar-foreground: 220 10% 25%;
-    --sidebar-accent: 210 15% 92%;
-    --sidebar-accent-foreground: 220 10% 20%;
-    --sidebar-border: 220 10% 88%;
-    --border-subtle: 220 10% 90%;
-    --chassis: 210 20% 97%;
+    --popover-foreground: 0 0% 15%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 45%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 88%;
+    --border-subtle: 0 0% 90%;
+    --chassis: 0 0% 97%;
     --grip: 0 0% 100%;
-    --metal: 220 10% 25%;
+    --metal: 0 0% 25%;
   }
 }
 

@@ -89,6 +89,53 @@ function buildFullHTML(title: string, bodyHTML: string): string {
   </head><body>${bodyHTML}</body></html>`;
 }
 
+function waitForImagesAndPrint(iframe: HTMLIFrameElement) {
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+
+  const images = Array.from(doc.images);
+  if (images.length === 0) {
+    setTimeout(() => {
+      iframe.contentWindow!.print();
+      setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
+    }, 100);
+    return;
+  }
+
+  let loadedCount = 0;
+  let hasPrinted = false;
+
+  const doPrint = () => {
+    if (hasPrinted) return;
+    hasPrinted = true;
+    iframe.contentWindow!.print();
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
+  };
+
+  images.forEach(img => {
+    if (img.complete) {
+      loadedCount++;
+    } else {
+      img.onload = () => {
+        loadedCount++;
+        if (loadedCount === images.length) doPrint();
+      };
+      img.onerror = () => {
+        // Fallback for failed images
+        loadedCount++;
+        if (loadedCount === images.length) doPrint();
+      };
+    }
+  });
+
+  if (loadedCount === images.length) {
+    doPrint();
+  } else {
+    // Fallback timeout to ensure it prints even if an image hangs
+    setTimeout(doPrint, 1500);
+  }
+}
+
 /** Print directly — opens the OS print dialog without opening a new tab */
 export function printDocument(title: string, bodyHTML: string): void {
   const html = buildFullHTML(title, bodyHTML);
@@ -100,10 +147,7 @@ export function printDocument(title: string, bodyHTML: string): void {
   doc.write(html);
   doc.close();
   iframe.contentWindow!.focus();
-  setTimeout(() => {
-    iframe.contentWindow!.print();
-    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
-  }, 300);
+  waitForImagesAndPrint(iframe);
 }
 
 /** Download as PDF — opens a print-ready window and triggers the browser print dialog.
@@ -119,7 +163,31 @@ export function downloadDocument(filename: string, bodyHTML: string): void {
   }
   win.document.write(html);
   win.document.close();
-  setTimeout(() => { win.print(); }, 400);
+  
+  const images = Array.from(win.document.images);
+  if (images.length === 0) {
+    setTimeout(() => { win.print(); }, 400);
+    return;
+  }
+  
+  let loadedCount = 0;
+  let hasPrinted = false;
+  const doPrint = () => {
+    if (hasPrinted) return;
+    hasPrinted = true;
+    win.print();
+  };
+  
+  images.forEach(img => {
+    if (img.complete) loadedCount++;
+    else {
+      img.onload = () => { loadedCount++; if (loadedCount === images.length) doPrint(); };
+      img.onerror = () => { loadedCount++; if (loadedCount === images.length) doPrint(); };
+    }
+  });
+  
+  if (loadedCount === images.length) doPrint();
+  else setTimeout(doPrint, 1500);
 }
 
 /** Print a thermal (80mm) receipt — uses NO shared A4 CSS so the caller's
@@ -134,10 +202,7 @@ export function printThermal(title: string, bodyHTML: string): void {
   doc.write(html);
   doc.close();
   iframe.contentWindow!.focus();
-  setTimeout(() => {
-    iframe.contentWindow!.print();
-    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
-  }, 300);
+  waitForImagesAndPrint(iframe);
 }
 
 /** @deprecated use printDocument instead */

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "./AuthContext";
 
 export type Theme = "dark" | "light";
 
@@ -16,25 +17,34 @@ function applyTheme(t: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const { user } = useAuth();
+  
+  const getThemeKey = useCallback(() => {
+    return user ? `app_theme_${user.id}` : "app_theme";
+  }, [user]);
+
+  const [theme, setThemeState] = useState<Theme>(() => {
+    // Initial load will use null user if not available yet, but we will sync it in useEffect
+    return (localStorage.getItem("app_theme") as Theme) || "light";
+  });
+
   const [saving, setSaving] = useState(false);
 
-  // Force dark mode on mount and ignore any old light mode settings
+  // Sync theme when user changes (login/logout)
   useEffect(() => {
-    applyTheme("dark");
-    setThemeState("dark");
-    localStorage.setItem("app_theme", "dark");
-  }, []);
+    const savedTheme = (localStorage.getItem(getThemeKey()) as Theme) || "light";
+    setThemeState(savedTheme);
+    applyTheme(savedTheme);
+  }, [getThemeKey]);
 
   const setTheme = useCallback(async (t: Theme) => {
-    // Force dark mode ALWAYS
-    applyTheme("dark");
-    setThemeState("dark");
-    localStorage.setItem("app_theme", "dark");
-  }, []);
+    applyTheme(t);
+    setThemeState(t);
+    localStorage.setItem(getThemeKey(), t);
+  }, [getThemeKey]);
 
   return (
-    <ThemeContext.Provider value={{ theme: "dark", setTheme, saving: false }}>
+    <ThemeContext.Provider value={{ theme, setTheme, saving }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -97,179 +97,158 @@ export default function StorefrontShop({ initialCategory }: Props) {
   ).sort();
 
   return (
-    <section ref={sectionRef} id="shop" className="border-t border-border-subtle">
-      {/* ── Search hero bar ────────────────────────────── */}
-      <div className="bg-chassis border-b border-border-subtle">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-8">
-          <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-3">
-            {t('storefront.shop.searchBtn')}
-          </p>
-          <div className="relative max-w-2xl">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t('storefront.shop.searchPlaceholder')}
-              className="w-full h-14 pl-11 pr-10 bg-admin-bg border border-border-subtle text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary transition-colors"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          {search && (
-            <p className="font-mono-tech text-[10px] text-muted-foreground mt-2 uppercase tracking-widest">
-              {filteredProducts.length} result{filteredProducts.length !== 1 ? "s" : ""} for &quot;{search}&quot;
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Category tabs ──────────────────────────────── */}
-      <div className="bg-chassis border-b border-border-subtle overflow-x-auto">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-8">
-          <div className="flex items-center gap-0 min-w-max">
-            <button
-              onClick={() => handleCategoryClick("all")}
-              className={`px-5 py-4 font-mono-tech text-[10px] uppercase tracking-widest border-b-2 transition-colors whitespace-nowrap ${
-                activeCategory === "all"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t('storefront.shop.allProducts')}
-              <span className="ml-2 text-[9px] opacity-60">({products.length})</span>
-            </button>
-            {categories.map(cat => {
-              const count = products.filter(p => p.category === cat.slug).length;
-              return (
+    <section ref={sectionRef} id="shop" className="border-t border-border-subtle bg-background">
+      <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row min-h-[800px]">
+        {/* ── Left Sidebar (Search, Categories, Filters) ── */}
+        <aside className="w-full md:w-72 shrink-0 bg-chassis border-b md:border-b-0 md:border-r border-border-subtle flex flex-col sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto hidden-scrollbar">
+          {/* Search */}
+          <div className="p-6 border-b border-border-subtle">
+            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-4">
+              {t('storefront.shop.searchBtn')}
+            </h2>
+            <div className="relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t('storefront.shop.searchPlaceholder')}
+                className="w-full h-12 pl-11 pr-10 bg-background border border-border-subtle text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary transition-colors"
+              />
+              {search && (
                 <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.slug)}
-                  className={`px-5 py-4 font-mono-tech text-[10px] uppercase tracking-widest border-b-2 transition-colors whitespace-nowrap ${
-                    activeCategory === cat.slug
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {cat.name}
-                  <span className="ml-2 text-[9px] opacity-60">({count})</span>
+                  <X size={14} />
                 </button>
-              );
-            })}
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* ── Filter / sort bar ──────────────────────────── */}
-      <div className="bg-grip/20 border-b border-border-subtle">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(f => !f)}
-              className={`flex items-center gap-1.5 font-mono-tech text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors ${
-                showFilters
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-border-subtle text-muted-foreground hover:border-primary/40"
-              }`}
-            >
-              <SlidersHorizontal size={11} />
-              {t('storefront.shop.filters')}
-            </button>
-            {(activeBrand !== "all" || sort !== "default") && (
+          {/* Categories */}
+          <div className="p-6 border-b border-border-subtle">
+            <h2 className="font-mono-tech text-[10px] text-muted-foreground tracking-[0.2em] uppercase mb-4">
+              Categories
+            </h2>
+            <div className="flex flex-col gap-1">
               <button
-                onClick={() => { setActiveBrand("all"); setSort("default"); }}
-                className="font-mono-tech text-[10px] text-muted-foreground hover:text-primary uppercase tracking-widest"
+                onClick={() => handleCategoryClick("all")}
+                className={`flex items-center justify-between px-4 py-3 font-mono-tech text-xs uppercase tracking-widest border-l-2 transition-colors ${
+                  activeCategory === "all"
+                    ? "border-primary bg-primary/10 text-primary font-bold"
+                    : "border-transparent text-muted-foreground hover:bg-chassis/80 hover:text-foreground"
+                }`}
               >
-                Clear ×
+                {t('storefront.shop.allProducts')}
+                <span className="text-[10px] opacity-60">({products.length})</span>
               </button>
-            )}
+              {categories.map(cat => {
+                const count = products.filter(p => p.category === cat.slug).length;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryClick(cat.slug)}
+                    className={`flex items-center justify-between px-4 py-3 font-mono-tech text-xs uppercase tracking-widest border-l-2 transition-colors ${
+                      activeCategory === cat.slug
+                        ? "border-primary bg-primary/10 text-primary font-bold"
+                        : "border-transparent text-muted-foreground hover:bg-chassis/80 hover:text-foreground"
+                    }`}
+                  >
+                    {cat.name}
+                    <span className="text-[10px] opacity-60">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
-            {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
-          </span>
-        </div>
 
-        {showFilters && (
-          <div className="max-w-[1440px] mx-auto px-6 lg:px-8 pb-4 flex flex-col sm:flex-row gap-6">
-            {/* Brand filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">Brand:</span>
+          {/* Filters (Brand) */}
+          <div className="p-6 border-b border-border-subtle">
+            <h2 className="font-mono-tech text-[10px] text-muted-foreground tracking-[0.2em] uppercase mb-4 flex items-center justify-between">
+              Brands
+              {activeBrand !== "all" && (
+                <button
+                  onClick={() => setActiveBrand("all")}
+                  className="text-primary hover:underline lowercase tracking-normal"
+                >
+                  clear
+                </button>
+              )}
+            </h2>
+            <div className="flex flex-col gap-1">
               {["all", ...brands].map(b => (
                 <button
                   key={b}
                   onClick={() => setActiveBrand(b)}
-                  className={`font-mono-tech text-[10px] px-2.5 py-1 uppercase tracking-widest border transition-colors ${
+                  className={`text-left px-4 py-2 font-mono-tech text-[10px] uppercase tracking-widest transition-colors ${
                     activeBrand === b
-                      ? "border-primary text-primary bg-primary/10"
-                      : "border-border-subtle text-muted-foreground hover:border-primary/40"
+                      ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                      : "text-muted-foreground hover:bg-chassis/80 hover:text-foreground border border-transparent"
                   }`}
                 >
-                  {b === "all" ? "All" : b}
-                </button>
-              ))}
-            </div>
-            {/* Sort */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">Sort:</span>
-              {([
-                { value: "default", label: "Default" },
-                { value: "price-asc", label: "Price ↑" },
-                { value: "price-desc", label: "Price ↓" },
-                { value: "name", label: "A→Z" },
-              ] as const).map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSort(opt.value)}
-                  className={`font-mono-tech text-[10px] px-2.5 py-1 uppercase tracking-widest border transition-colors ${
-                    sort === opt.value
-                      ? "border-primary text-primary bg-primary/10"
-                      : "border-border-subtle text-muted-foreground hover:border-primary/40"
-                  }`}
-                >
-                  {opt.label}
+                  {b === "all" ? "All Brands" : b}
                 </button>
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </aside>
 
-      {/* ── Product grid ───────────────────────────────── */}
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-8 py-10 lg:py-16">
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-background aspect-[3/4] animate-pulse bg-grip/40" />
-            ))}
+        {/* ── Main Content (Products Grid) ── */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Top Bar (Results Info & Sorting) */}
+          <div className="bg-chassis/80 backdrop-blur-md border-b border-border-subtle p-4 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-[64px] z-10">
+            <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
+              Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
+              {search && <span> for &quot;<strong className="text-primary">{search}</strong>&quot;</span>}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">Sort:</span>
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value as SortOption)}
+                className="font-mono-tech text-[10px] uppercase tracking-widest bg-background border border-border-subtle text-foreground px-3 py-1.5 focus:outline-none focus:border-primary transition-colors"
+              >
+                <option value="default">Default</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name">Alphabetical (A-Z)</option>
+              </select>
+            </div>
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-24">
-            <Search size={32} className="mx-auto text-muted-foreground mb-4 opacity-40" />
-            <p className="font-mono-tech text-sm text-muted-foreground uppercase tracking-widest">
-              No products found
-            </p>
-            <button
-              onClick={() => { setSearch(""); setActiveCategory("all"); setActiveBrand("all"); }}
-              className="mt-4 font-mono-tech text-[10px] text-primary uppercase tracking-widest hover:underline"
-            >
-              Clear all filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="bg-background">
-                <ShopProductCard product={product} sym={baseCurrency?.symbol || "SSP"} productPath={tp(`/product/${product.slug}`)} />
+
+          {/* Product Grid */}
+          <div className="p-4 lg:p-8 flex-1 bg-background">
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="bg-background aspect-[3/4] animate-pulse bg-grip/40" />
+                ))}
               </div>
-            ))}
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-32 flex flex-col items-center justify-center border border-border-subtle border-dashed bg-chassis/30">
+                <Search size={40} className="text-muted-foreground mb-4 opacity-40" />
+                <p className="font-mono-tech text-sm text-muted-foreground uppercase tracking-widest">
+                  No products found
+                </p>
+                <button
+                  onClick={() => { setSearch(""); setActiveCategory("all"); setActiveBrand("all"); }}
+                  className="mt-6 px-6 py-2 bg-primary text-background font-mono-tech text-[10px] uppercase tracking-widest font-bold hover:bg-primary/90 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-border-subtle border border-border-subtle">
+                {filteredProducts.map(product => (
+                  <div key={product.id} className="bg-background">
+                    <ShopProductCard product={product} sym={baseCurrency?.symbol || "SSP"} productPath={tp(`/product/${product.slug}`)} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

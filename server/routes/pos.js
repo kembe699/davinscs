@@ -348,7 +348,7 @@ router.get("/sales", requireAuth, async (req, res) => {
 
   try {
     let query = `
-      SELECT s.*, c.name as customer_name, u.email as user_email, pt.name as payment_type_name
+      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name, pt.name as payment_type_name
       FROM pos_sales s
       LEFT JOIN customers c ON s.customer_id = c.id
       LEFT JOIN users u ON s.user_id = u.id
@@ -412,8 +412,8 @@ router.get("/sales/:id", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT s.*, 
-              c.name as customer_name, c.email as customer_email, c.phone as customer_phone,
-              u.email as user_email,
+              COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email, c.phone as customer_phone,
+              u.email as user_email, u.name as user_name,
               pt.name as payment_type_name,
               json_agg(json_build_object(
                 'id', si.id,

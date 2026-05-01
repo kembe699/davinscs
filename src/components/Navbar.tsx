@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTenantPath } from "@/contexts/TenantContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const staticLinks = [
   { label: "Support", to: "/support" },
@@ -94,6 +95,8 @@ const Navbar = () => {
   const navigate = useNavigate();
   const tp = useTenantPath();
 
+  const { user } = useAuth();
+
   // Determine active bottom-nav tab (0=Home, 1=Shop, 2=Search, 3=Cart)
   const activeTabIndex = (() => {
     const p = location.pathname;
@@ -107,6 +110,9 @@ const Navbar = () => {
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+    if (user) {
+      localStorage.setItem(`i18nextLng_${user.id}`, lng);
+    }
     setLangOpen(false);
   };
 

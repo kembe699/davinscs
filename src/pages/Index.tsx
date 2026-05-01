@@ -10,8 +10,10 @@ import LayoutBoutique from "@/pages/home/LayoutBoutique";
 import { useLayout } from "@/contexts/LayoutContext";
 import StorefrontShop from "@/components/StorefrontShop";
 
+import { useTheme } from "@/contexts/ThemeContext";
+
 const LayoutTechGrid = () => (
-  <div className="min-h-screen bg-background">
+  <div className="min-h-screen bg-background text-foreground">
     <Navbar />
     <HeroSection />
     <MarqueeBanner />
@@ -23,15 +25,26 @@ const LayoutTechGrid = () => (
 
 const Index = () => {
   const { layout, loading } = useLayout();
+  const { theme } = useTheme();
+
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
-  switch (layout) {
-    case "magazine":   return <LayoutMagazine />;
-    case "minimal":    return <LayoutMinimal />;
-    case "showcase":   return <LayoutShowcase />;
-    case "bold":       return <LayoutBold />;
-    case "boutique":   return <LayoutBoutique />;
-    default:           return <LayoutTechGrid />;
-  }
+  
+  const getLayout = () => {
+    switch (layout) {
+      case "magazine":   return <LayoutMagazine />;
+      case "minimal":    return <LayoutMinimal />;
+      case "showcase":   return <LayoutShowcase />;
+      case "bold":       return <LayoutBold />;
+      case "boutique":   return <LayoutBoutique />;
+      default:           return <LayoutTechGrid />;
+    }
+  };
+
+  return (
+    <div className={theme === "dark" ? "dark bg-background" : "bg-background"}>
+      {getLayout()}
+    </div>
+  );
 };
 
 export default Index;

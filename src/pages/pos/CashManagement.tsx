@@ -100,32 +100,32 @@ export default function CashManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-admin-bg p-6">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-gray-900 p-6">
       <div className="mb-6 flex items-center gap-4">
         <button
           onClick={() => navigate(tp("/pos"))}
-          className="px-4 py-2 bg-admin-surface border border-admin-border text-admin-text hover:bg-admin-bg flex items-center gap-2"
+          className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-[#F8F9FA] dark:bg-gray-900 flex items-center gap-2"
         >
           <ArrowLeft size={16} />
           Back to POS
         </button>
-        <h1 className="text-2xl font-bold text-admin-text">Cash Management</h1>
+        <h1 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">Cash Management</h1>
       </div>
 
       {/* Open Session — shown when no active session */}
       {!currentSession && (
-        <div className="bg-admin-surface border border-admin-border p-6 mb-6">
-          <h2 className="text-lg font-bold text-admin-text mb-1">Open Cash Drawer Session</h2>
-          <p className="text-sm text-admin-text-secondary mb-4">Enter the opening float to start a new session.</p>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h2 className="text-lg font-bold text-[#1A1A2E] dark:text-gray-100 mb-1">Open Cash Drawer Session</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Enter the opening float to start a new session.</p>
           <div className="flex items-end gap-4">
             <div className="flex-1 max-w-xs">
-              <label className="block text-sm text-admin-text-secondary mb-2">Opening Cash Amount</label>
+              <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Opening Cash Amount</label>
               <input
                 type="number"
                 min="0"
                 value={openingCash}
                 onChange={(e) => setOpeningCash(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-lg font-mono focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-lg font-mono focus:outline-none focus:border-primary"
                 placeholder="0"
               />
             </div>
@@ -142,19 +142,19 @@ export default function CashManagement() {
 
       {/* Current Session — shown when active session exists */}
       {currentSession && (
-        <div className="bg-admin-surface border border-admin-border p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-admin-text">Current Session</h2>
+            <h2 className="text-lg font-bold text-[#1A1A2E] dark:text-gray-100">Current Session</h2>
             <span className="px-3 py-1 text-xs font-bold bg-admin-success text-white uppercase tracking-widest">Open</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <p className="text-sm text-admin-text-secondary">Opening Cash</p>
-              <p className="text-xl font-mono text-admin-text">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', false)}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Opening Cash</p>
+              <p className="text-xl font-mono text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', false)}</p>
             </div>
             <div>
-              <p className="text-sm text-admin-text-secondary">Opened At</p>
-              <p className="text-sm text-admin-text">{new Date(currentSession.opened_at).toLocaleString()}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Opened At</p>
+              <p className="text-sm text-[#1A1A2E] dark:text-gray-100">{new Date(currentSession.opened_at).toLocaleString()}</p>
             </div>
           </div>
           <div className="flex gap-3 mb-5">
@@ -172,37 +172,37 @@ export default function CashManagement() {
             </button>
             <button
               onClick={() => { setClosingCash(currentSession.opening_cash); setShowCloseModal(true); }}
-              className="px-4 py-2 bg-admin-surface border border-admin-border text-admin-text hover:bg-admin-bg ml-auto"
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-[#F8F9FA] dark:bg-gray-900 ml-auto"
             >
               Close Session
             </button>
           </div>
 
           {/* Movements log for this session */}
-          <div className="border-t border-admin-border pt-4">
-            <h3 className="text-sm font-semibold text-admin-text mb-3 uppercase tracking-widest">Cash Movements</h3>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-semibold text-[#1A1A2E] dark:text-gray-100 mb-3 uppercase tracking-widest">Cash Movements</h3>
             {movements.length === 0 ? (
-              <p className="text-sm text-admin-text-secondary py-2">No movements recorded yet.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-2">No movements recorded yet.</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-admin-border">
-                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Time</th>
-                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Type</th>
-                    <th className="text-left py-2 pr-4 text-admin-text-secondary font-medium">Reason</th>
-                    <th className="text-right py-2 text-admin-text-secondary font-medium">Amount</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 pr-4 text-gray-500 dark:text-gray-400 font-medium">Time</th>
+                    <th className="text-left py-2 pr-4 text-gray-500 dark:text-gray-400 font-medium">Type</th>
+                    <th className="text-left py-2 pr-4 text-gray-500 dark:text-gray-400 font-medium">Reason</th>
+                    <th className="text-right py-2 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movements.map((m: any) => (
-                    <tr key={m.id} className="border-b border-admin-border last:border-0">
-                      <td className="py-2 pr-4 text-admin-text-secondary">{new Date(m.created_at).toLocaleTimeString()}</td>
+                    <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+                      <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{new Date(m.created_at).toLocaleTimeString()}</td>
                       <td className="py-2 pr-4">
                         <span className={`px-2 py-0.5 text-xs font-bold ${m.type === 'in' ? 'bg-admin-success/20 text-admin-success' : 'bg-admin-danger/20 text-admin-danger'}`}>
                           {m.type === 'in' ? '▲ IN' : '▼ OUT'}
                         </span>
                       </td>
-                      <td className="py-2 pr-4 text-admin-text">{m.reason || '—'}</td>
+                      <td className="py-2 pr-4 text-[#1A1A2E] dark:text-gray-100">{m.reason || '—'}</td>
                       <td className={`py-2 text-right font-mono font-semibold ${m.type === 'in' ? 'text-admin-success' : 'text-admin-danger'}`}>
                         {m.type === 'out' ? '-' : '+'}{formatCurrencySync(m.amount, baseCurrency?.symbol || 'UGX', false)}
                       </td>
@@ -216,34 +216,34 @@ export default function CashManagement() {
       )}
 
       {/* Sessions History */}
-      <div className="bg-admin-surface border border-admin-border">
-        <div className="p-4 border-b border-admin-border">
-          <h2 className="text-lg font-bold text-admin-text">Session History</h2>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-bold text-[#1A1A2E] dark:text-gray-100">Session History</h2>
         </div>
         <table className="w-full">
-          <thead className="bg-admin-bg border-b border-admin-border">
+          <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <tr>
-              <th className="text-left px-4 py-3 text-sm font-medium text-admin-text">Opened</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-admin-text">Closed</th>
-              <th className="text-right px-4 py-3 text-sm font-medium text-admin-text">Opening</th>
-              <th className="text-right px-4 py-3 text-sm font-medium text-admin-text">Closing</th>
-              <th className="text-right px-4 py-3 text-sm font-medium text-admin-text">Difference</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-admin-text">Status</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Opened</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Closed</th>
+              <th className="text-right px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Opening</th>
+              <th className="text-right px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Closing</th>
+              <th className="text-right px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Difference</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Status</th>
             </tr>
           </thead>
           <tbody>
             {sessions.map((session) => (
-              <tr key={session.id} className="border-b border-admin-border hover:bg-admin-bg">
-                <td className="px-4 py-3 text-sm text-admin-text">
+              <tr key={session.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-[#F8F9FA] dark:bg-gray-900">
+                <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100">
                   {new Date(session.opened_at).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-sm text-admin-text">
+                <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100">
                   {session.closed_at ? new Date(session.closed_at).toLocaleString() : '-'}
                 </td>
-                <td className="px-4 py-3 text-sm text-admin-text text-right font-mono">
+                <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
                   {formatCurrencySync(session.opening_cash, baseCurrency?.symbol || 'UGX', false)}
                 </td>
-                <td className="px-4 py-3 text-sm text-admin-text text-right font-mono">
+                <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
                   {session.closing_cash ? formatCurrencySync(session.closing_cash, baseCurrency?.symbol || 'UGX', false) : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-right font-mono">
@@ -257,7 +257,7 @@ export default function CashManagement() {
                   <span className={`px-2 py-1 text-xs ${
                     session.status === 'open' 
                       ? 'bg-admin-success text-white' 
-                      : 'bg-admin-border text-admin-text-secondary'
+                      : 'bg-admin-border text-gray-500 dark:text-gray-400'
                   }`}>
                     {session.status}
                   </span>
@@ -271,24 +271,24 @@ export default function CashManagement() {
       {/* Close Session Modal */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-96">
-            <h2 className="text-xl font-bold text-admin-text mb-4">Close Cash Drawer Session</h2>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 w-96">
+            <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100 mb-4">Close Cash Drawer Session</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Closing Cash Amount</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Closing Cash Amount</label>
                 <input
                   type="number"
                   min="0"
                   value={closingCash}
                   onChange={(e) => setClosingCash(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-lg font-mono focus:outline-none focus:border-primary"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-lg font-mono focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowCloseModal(false)}
-                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+                className="flex-1 px-4 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-white dark:bg-gray-800"
               >
                 Cancel
               </button>
@@ -307,32 +307,32 @@ export default function CashManagement() {
       {/* Cash In Modal */}
       {showCashInModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-96">
-            <h2 className="text-xl font-bold text-admin-text mb-4">Cash In</h2>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 w-96">
+            <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100 mb-4">Cash In</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Amount (in cents)</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Amount (in cents)</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Reason</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Reason</label>
                 <input
                   type="text"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowCashInModal(false)}
-                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+                className="flex-1 px-4 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-white dark:bg-gray-800"
               >
                 Cancel
               </button>
@@ -350,32 +350,32 @@ export default function CashManagement() {
       {/* Cash Out Modal */}
       {showCashOutModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-admin-surface border border-admin-border p-6 w-96">
-            <h2 className="text-xl font-bold text-admin-text mb-4">Cash Out</h2>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 w-96">
+            <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100 mb-4">Cash Out</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Amount (in cents)</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Amount (in cents)</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm text-admin-text-secondary mb-2">Reason</label>
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Reason</label>
                 <input
                   type="text"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowCashOutModal(false)}
-                className="flex-1 px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface"
+                className="flex-1 px-4 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-white dark:bg-gray-800"
               >
                 Cancel
               </button>

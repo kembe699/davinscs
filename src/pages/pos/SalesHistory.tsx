@@ -238,69 +238,69 @@ export default function SalesHistory() {
   });
 
   return (
-    <div className="min-h-screen bg-admin-bg">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-admin-surface border-b border-admin-border p-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(tp("/pos"))}
-              className="px-4 py-2 bg-admin-bg border border-admin-border text-admin-text hover:bg-admin-surface flex items-center gap-2"
+              className="px-4 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 hover:bg-white dark:bg-gray-800 flex items-center gap-2"
             >
               <ArrowLeft size={16} />
               Back to POS
             </button>
-            <h1 className="text-xl font-bold text-admin-text">Sales history</h1>
+            <h1 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100">Sales history</h1>
           </div>
         </div>
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-admin-text-secondary text-sm">From</span>
+          <span className="text-gray-500 dark:text-gray-400 text-sm">From</span>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm"
           />
-          <span className="text-admin-text-secondary text-sm">To</span>
+          <span className="text-gray-500 dark:text-gray-400 text-sm">To</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm"
           />
           <input
             type="text"
             placeholder="Search sale #, customer, cashier…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm w-56 placeholder:text-admin-text-secondary"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm w-56 placeholder:text-gray-500 dark:text-gray-400"
           />
           <button
             onClick={handleRefresh}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2"
           >
             <RefreshCw size={14} /> Refresh
           </button>
           <button
             onClick={handlePrint}
             disabled={!selectedSale}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
           >
             <Printer size={14} /> Print
           </button>
           <button
             onClick={openRefundModal}
             disabled={!selectedSale}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
           >
             <RotateCcw size={14} /> Refund / Return
           </button>
           <button
             onClick={handleDelete}
             disabled={!selectedSale}
-            className="px-3 py-2 bg-admin-bg border border-admin-border text-admin-danger text-sm hover:bg-admin-surface flex items-center gap-2 disabled:opacity-50"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-admin-danger text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
           >
             <Trash2 size={14} /> Delete
           </button>
@@ -309,29 +309,29 @@ export default function SalesHistory() {
 
       {/* Documents Table */}
       <div className="p-4">
-        <div className="bg-admin-surface border border-admin-border mb-4">
-          <div className="bg-admin-bg px-4 py-2 border-b border-admin-border">
-            <h3 className="text-sm font-medium text-admin-text">Documents</h3>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mb-4">
+          <div className="bg-[#F8F9FA] dark:bg-gray-900 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Documents</h3>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-admin-text-secondary">Loading...</div>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
           ) : filteredSales.length === 0 ? (
-            <div className="p-8 text-center text-admin-text-secondary">No sales found</div>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">No sales found</div>
           ) : (
             <div className="overflow-x-auto">
               <div className="max-h-[380px] overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-admin-bg border-b border-admin-border sticky top-0 z-10">
+                <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
                   <tr>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">#</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Type</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Sale #</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Cashier</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Customer</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Date &amp; Time</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Payment</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Discount</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Total</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">#</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Type</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Sale #</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Cashier</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Customer</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Date &amp; Time</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Payment</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Discount</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -339,27 +339,27 @@ export default function SalesHistory() {
                     <tr
                       key={sale.id}
                       onClick={() => loadSaleDetails(sale.id)}
-                      className={`border-b border-admin-border cursor-pointer hover:bg-admin-bg ${
-                        selectedSale?.id === sale.id ? 'bg-admin-bg' : ''
+                      className={`border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-[#F8F9FA] dark:bg-gray-900 ${
+                        selectedSale?.id === sale.id ? 'bg-[#F8F9FA] dark:bg-gray-900' : ''
                       } ${sale.voided ? 'opacity-50 line-through' : ''}`}
                     >
-                      <td className="px-3 py-2 text-xs text-admin-text">{index + 1}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{index + 1}</td>
                       <td className="px-3 py-2 text-xs">
                         <span className={`px-1.5 py-0.5 text-[10px] font-medium ${
                           sale.voided ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
                         }`}>{sale.voided ? 'Refund' : 'Sale'}</span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-admin-text font-mono">{sale.sale_number}</td>
-                      <td className="px-3 py-2 text-xs text-admin-text">{sale.user_email || '—'}</td>
-                      <td className="px-3 py-2 text-xs text-admin-text">{sale.customer_name || 'Walk-in'}</td>
-                      <td className="px-3 py-2 text-xs text-admin-text">{new Date(sale.created_at).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-xs text-admin-text">{getPaymentTypeName(sale.payment_type_id)}</td>
-                      <td className="px-3 py-2 text-xs text-right text-admin-text">
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100 font-mono">{sale.sale_number}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{sale.user_name || sale.user_email || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{sale.customer_name || 'Walk-in'}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{new Date(sale.created_at).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{getPaymentTypeName(sale.payment_type_id)}</td>
+                      <td className="px-3 py-2 text-xs text-right text-[#1A1A2E] dark:text-gray-100">
                         {sale.discount_amount > 0
                           ? formatCurrencySync(sale.discount_amount, baseCurrency?.symbol || 'UGX', false)
                           : '—'}
                       </td>
-                      <td className="px-3 py-2 text-xs text-right font-mono text-admin-text">
+                      <td className="px-3 py-2 text-xs text-right font-mono text-[#1A1A2E] dark:text-gray-100">
                         {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
                       </td>
                     </tr>
@@ -372,31 +372,31 @@ export default function SalesHistory() {
         </div>
 
         {/* Document Items Table */}
-        <div className="bg-admin-surface border border-admin-border">
-          <div className="bg-admin-bg px-4 py-2 border-b border-admin-border">
-            <h3 className="text-sm font-medium text-admin-text">Document items</h3>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="bg-[#F8F9FA] dark:bg-gray-900 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-medium text-[#1A1A2E] dark:text-gray-100">Document items</h3>
           </div>
           {selectedSale ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-admin-bg border-b border-admin-border">
+                <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">ID</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Code</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Name</th>
-                    <th className="text-left px-3 py-2 text-xs font-medium text-admin-text">Unit of measure</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Quantity</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Price before tax</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Tax</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Price</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Total before discount</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Discount</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium text-admin-text">Total</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">ID</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Code</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Name</th>
+                    <th className="text-left px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Unit of measure</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Quantity</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Price before tax</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Tax</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Price</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Total before discount</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Discount</th>
+                    <th className="text-right px-3 py-2 text-xs font-medium text-[#1A1A2E] dark:text-gray-100">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {saleItems.map((item, index) => (
-                    <tr key={item.id} className="border-b border-admin-border text-admin-text">
+                    <tr key={item.id} className="border-b border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100">
                       <td className="px-3 py-2 text-xs">{index + 1}</td>
                       <td className="px-3 py-2 text-xs">{item.product_id}</td>
                       <td className="px-3 py-2 text-xs">{item.product_name}</td>
@@ -414,7 +414,7 @@ export default function SalesHistory() {
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center text-admin-text-secondary text-xs">
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-xs">
               Select a sale to view items
             </div>
           )}
@@ -424,19 +424,19 @@ export default function SalesHistory() {
       {/* Refund / Return Modal */}
       {showRefundModal && selectedSale && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-admin-surface border border-admin-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-admin-border">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h2 className="text-admin-text font-bold text-base flex items-center gap-2">
+                <h2 className="text-[#1A1A2E] dark:text-gray-100 font-bold text-base flex items-center gap-2">
                   <RotateCcw size={16} /> Refund / Return
                 </h2>
-                <p className="text-admin-text-secondary text-xs mt-0.5">
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
                   Original sale: <span className="font-mono">{selectedSale.sale_number}</span>
                   {selectedSale.customer_name && ` · ${selectedSale.customer_name}`}
                 </p>
               </div>
-              <button onClick={() => setShowRefundModal(false)} className="text-admin-text-secondary hover:text-admin-text text-xl leading-none">×</button>
+              <button onClick={() => setShowRefundModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-[#1A1A2E] dark:text-gray-100 text-xl leading-none">×</button>
             </div>
 
             <div className="px-5 py-4 space-y-5">
@@ -454,12 +454,12 @@ export default function SalesHistory() {
 
               {/* Item selection */}
               <div>
-                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Select items to return</p>
-                <div className="border border-admin-border divide-y divide-admin-border">
+                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-gray-100 uppercase tracking-wide mb-2">Select items to return</p>
+                <div className="border border-gray-200 dark:border-gray-700 divide-y divide-admin-border">
                   {saleItems.map(item => {
                     const ri = refundItems[item.product_id] || { checked: false, qty: item.quantity };
                     return (
-                      <div key={item.product_id} className={`flex items-center gap-3 px-3 py-2.5 ${ri.checked ? "bg-admin-bg" : ""}`}>
+                      <div key={item.product_id} className={`flex items-center gap-3 px-3 py-2.5 ${ri.checked ? "bg-[#F8F9FA] dark:bg-gray-900" : ""}`}>
                         <input
                           type="checkbox"
                           checked={ri.checked}
@@ -467,13 +467,13 @@ export default function SalesHistory() {
                           className="w-4 h-4 accent-emerald-500"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-admin-text text-xs font-medium truncate">{item.product_name}</p>
-                          <p className="text-admin-text-secondary text-[10px]">
+                          <p className="text-[#1A1A2E] dark:text-gray-100 text-xs font-medium truncate">{item.product_name}</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-[10px]">
                             Sold qty: {item.quantity} · Unit: {formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-admin-text-secondary text-xs">Qty:</span>
+                          <span className="text-gray-500 dark:text-gray-400 text-xs">Qty:</span>
                           <input
                             type="number"
                             min={1}
@@ -484,10 +484,10 @@ export default function SalesHistory() {
                               const v = Math.min(item.quantity, Math.max(1, Number(e.target.value)));
                               setRefundItems(prev => ({ ...prev, [item.product_id]: { ...ri, qty: v } }));
                             }}
-                            className="w-14 px-2 py-1 bg-admin-bg border border-admin-border text-admin-text text-xs text-center disabled:opacity-40"
+                            className="w-14 px-2 py-1 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-xs text-center disabled:opacity-40"
                           />
                         </div>
-                        <div className="text-xs font-mono text-admin-text w-24 text-right shrink-0">
+                        <div className="text-xs font-mono text-[#1A1A2E] dark:text-gray-100 w-24 text-right shrink-0">
                           {ri.checked
                             ? formatCurrencySync(Math.round(item.subtotal * (ri.qty / item.quantity)), baseCurrency?.symbol || 'UGX', false)
                             : "—"}
@@ -500,7 +500,7 @@ export default function SalesHistory() {
 
               {/* Refund method */}
               <div>
-                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Refund method</p>
+                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-gray-100 uppercase tracking-wide mb-2">Refund method</p>
                 <div className="flex flex-wrap gap-2">
                   {["cash", "original_payment", "store_credit", "bank_transfer"].map(m => (
                     <button
@@ -509,7 +509,7 @@ export default function SalesHistory() {
                       className={`px-3 py-1.5 text-xs border ${
                         refundMethod === m
                           ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-400"
-                          : "bg-admin-bg border-admin-border text-admin-text-secondary hover:text-admin-text"
+                          : "bg-[#F8F9FA] dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-[#1A1A2E] dark:text-gray-100"
                       }`}
                     >
                       {m === "cash" ? "Cash" : m === "original_payment" ? "Original Payment" : m === "store_credit" ? "Store Credit" : "Bank Transfer"}
@@ -520,19 +520,19 @@ export default function SalesHistory() {
 
               {/* Reason */}
               <div>
-                <p className="text-xs font-semibold text-admin-text uppercase tracking-wide mb-2">Reason for return</p>
+                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-gray-100 uppercase tracking-wide mb-2">Reason for return</p>
                 <textarea
                   value={refundReason}
                   onChange={e => setRefundReason(e.target.value)}
                   placeholder="e.g. Defective product, wrong item, customer changed mind…"
                   rows={2}
-                  className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-xs placeholder:text-admin-text-secondary resize-none"
+                  className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-xs placeholder:text-gray-500 dark:text-gray-400 resize-none"
                 />
               </div>
 
               {/* Total */}
-              <div className="flex items-center justify-between border-t border-admin-border pt-4">
-                <span className="text-admin-text text-sm font-semibold">Refund Total</span>
+              <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+                <span className="text-[#1A1A2E] dark:text-gray-100 text-sm font-semibold">Refund Total</span>
                 <span className="text-emerald-400 font-mono font-bold text-lg">
                   {formatCurrencySync(calcRefundTotal(), baseCurrency?.symbol || 'UGX', false)}
                 </span>
@@ -549,7 +549,7 @@ export default function SalesHistory() {
                 </button>
                 <button
                   onClick={() => setShowRefundModal(false)}
-                  className="flex-1 py-2.5 bg-admin-bg border border-admin-border text-admin-text text-sm hover:bg-admin-surface"
+                  className="flex-1 py-2.5 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800"
                 >
                   {refundResult?.ok ? "Close" : "Cancel"}
                 </button>
