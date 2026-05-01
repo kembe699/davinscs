@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Menu, X, ShoppingCart, Search, ChevronDown, Globe, Home, LayoutGrid } from "lucide-react";
+import { Menu, X, ShoppingCart, Search, ChevronDown, Globe, Home, LayoutGrid, Sun, Moon } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiCategory } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const staticLinks = [
-  { label: "Support", to: "/support" },
   { label: "Contact", to: "/contact" },
 ];
 
@@ -79,6 +79,7 @@ const MobileNavTab = ({ icon, label, isActive, onClick, id }: MobileNavTabProps)
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const { logo, companyName } = useLayout();
+  const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
@@ -263,6 +264,16 @@ const Navbar = () => {
           )}
         </div>
 
+        {/* Theme Toggle */}
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="text-muted-foreground hover:text-primary transition-colors p-1"
+        >
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+
         <span className="text-muted-foreground uppercase tracking-tighter hidden md:inline">Status: Open</span>
         <div className="size-2 bg-primary animate-pulse" />
       </div>
@@ -290,6 +301,15 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
+          {/* Theme toggle in mobile menu */}
+          <button
+            type="button"
+            onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setMobileOpen(false); }}
+            className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors text-sm"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
       )}
     </nav>
