@@ -77,9 +77,12 @@ const Footer = () => {
             </ul>
           </div>
           <div>
-            <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Support</h4>
+            <h4 className="font-mono-tech text-[10px] text-primary tracking-widest uppercase mb-4">Info</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to={tp("/contact")} className="hover:text-primary transition-colors">Contact</Link></li>
+              <li><Link to={tp("/shipping")} className="hover:text-primary transition-colors">Shipping</Link></li>
+              <li><Link to={tp("/returns")} className="hover:text-primary transition-colors">Returns</Link></li>
+              <li><Link to={tp("/warranty")} className="hover:text-primary transition-colors">Warranty</Link></li>
             </ul>
           </div>
           <div>

@@ -17,7 +17,6 @@ import LightingPage from "./pages/categories/Lighting.tsx";
 import ProductDetail from "./pages/ProductDetail.tsx";
 import DynamicCategoryPage from "./pages/categories/DynamicCategoryPage.tsx";
 import Contact from "./pages/Contact.tsx";
-import Support from "./pages/Support.tsx";
 import Shipping from "./pages/Shipping.tsx";
 import Returns from "./pages/Returns.tsx";
 import Warranty from "./pages/Warranty.tsx";
@@ -96,7 +95,10 @@ import { Outlet } from "react-router-dom";
 function ThemeWrapper() {
   const { theme } = useTheme();
   return (
-    <div className={theme === "dark" ? "dark bg-background text-foreground min-h-screen" : "bg-background text-foreground min-h-screen"}>
+    <div
+      className={theme === "dark" ? "dark bg-background text-foreground min-h-screen" : "bg-background text-foreground min-h-screen"}
+      data-theme={theme}
+    >
       <Outlet />
     </div>
   );
@@ -136,7 +138,6 @@ const App = () => (
                 <Route path="teleprompters/:id" element={<ProductDetail />} />
                 <Route path="lighting/:id" element={<ProductDetail />} />
                 <Route path="contact" element={<Contact />} />
-                <Route path="support" element={<Support />} />
                 <Route path="shipping" element={<Shipping />} />
                 <Route path="returns" element={<Returns />} />
                 <Route path="warranty" element={<Warranty />} />

@@ -688,7 +688,7 @@ export default function POSMain() {
           >
             <ShoppingCart size={18} className="md:w-5 md:h-5" />
             {cart.length > 0 && (
-              <span className="absolute top-0 right-0 min-w-[14px] md:min-w-[16px] h-3.5 md:h-4 bg-[#10B981] text-white text-[8px] md:text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
+              <span className="pos-badge-gradient absolute top-0 right-0 min-w-[14px] md:min-w-[16px] h-3.5 md:h-4 text-[8px] md:text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
                 {cart.length}
               </span>
             )}
@@ -720,10 +720,11 @@ export default function POSMain() {
           <div className="flex-1 overflow-y-auto py-2">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`w-full px-1.5 md:px-4 py-2 md:py-4 text-center md:text-left font-medium text-[10px] md:text-base border-l-2 md:border-l-4 transition-colors flex flex-col md:flex-row items-center md:items-start ${!selectedCategory || selectedCategory === 'all'
-                  ? 'border-[#10B981] bg-[#10B981]/10 dark:bg-[#10B981]/20 text-[#10B981]'
-                  : 'border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 hover:text-gray-900'
-                }`}
+              className={`w-full px-1.5 md:px-4 py-2 md:py-4 text-center md:text-left font-medium text-[10px] md:text-base transition-colors flex flex-col md:flex-row items-center md:items-start ${
+                !selectedCategory || selectedCategory === 'all'
+                  ? 'pos-accent-border-l pos-accent-tint pos-accent-text'
+                  : 'border-l-2 md:border-l-4 border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 hover:text-gray-900'
+              }`}
               style={{ minHeight: '48px' }}
             >
               <span className="w-full truncate md:whitespace-nowrap break-words whitespace-normal leading-tight">All Products</span>
@@ -732,10 +733,11 @@ export default function POSMain() {
               <button
                 key={cat.slug}
                 onClick={() => setSelectedCategory(cat.slug)}
-                className={`w-full px-1.5 md:px-4 py-2 md:py-4 text-center md:text-left font-medium text-[10px] md:text-base border-l-2 md:border-l-4 transition-colors flex flex-col md:flex-row items-center md:items-start ${selectedCategory === cat.slug
-                    ? 'border-[#10B981] bg-[#10B981]/10 dark:bg-[#10B981]/20 text-[#10B981]'
-                    : 'border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 hover:text-gray-900'
-                  }`}
+                className={`w-full px-1.5 md:px-4 py-2 md:py-4 text-center md:text-left font-medium text-[10px] md:text-base transition-colors flex flex-col md:flex-row items-center md:items-start ${
+                  selectedCategory === cat.slug
+                    ? 'pos-accent-border-l pos-accent-tint pos-accent-text'
+                    : 'border-l-2 md:border-l-4 border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 hover:text-gray-900'
+                }`}
                 style={{ minHeight: '48px' }}
               >
                 <span className="w-full truncate md:whitespace-nowrap break-words whitespace-normal leading-tight">{cat.name}</span>
@@ -808,7 +810,7 @@ export default function POSMain() {
                       )}
 
                       {qtyInCart > 0 && (
-                        <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-[#10B981] text-white text-[9px] md:text-xs font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded shadow-sm">
+                        <div className="pos-badge-gradient absolute top-1 right-1 md:top-2 md:right-2 text-[9px] md:text-xs font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded shadow-sm">
                           {qtyInCart} in cart
                         </div>
                       )}
@@ -820,7 +822,7 @@ export default function POSMain() {
                       </div>
 
                       <div className="mt-auto flex justify-between items-end pt-1 md:pt-0">
-                        <div className="text-[#10B981] font-bold text-xs md:text-base truncate mr-1">
+                        <div className="pos-price-gradient text-xs md:text-base truncate mr-1">
                           {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
                         </div>
                         {outOfStock ? (
@@ -941,10 +943,11 @@ export default function POSMain() {
                 </button>
                 <button
                   onClick={() => setShowPromoModal(true)}
-                  className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition-colors border ${appliedPromotion
-                      ? 'bg-[#10B981]/10 dark:bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
+                  className={`px-2 md:px-3 py-1.5 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium transition-colors border ${
+                    appliedPromotion
+                      ? 'pos-accent-tint border-[#00A896] pos-accent-text'
                       : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'
-                    }`}
+                  }`}
                 >
                   {appliedPromotion ? `Promo: ${appliedPromotion.name}` : 'Apply Promo'}
                 </button>
@@ -957,9 +960,9 @@ export default function POSMain() {
                   <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(subtotal, schemeCurrencySymbol(), false)}</span>
                 </div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-xs md:text-sm text-[#10B981]">
-                    <span>{appliedPromotion ? `Promo: ${appliedPromotion.name}` : 'Discount'}</span>
-                    <span className="font-medium">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
+                  <div className="flex justify-between text-xs md:text-sm">
+                    <span className="pos-price-gradient">{appliedPromotion ? `Promo: ${appliedPromotion.name}` : 'Discount'}</span>
+                    <span className="pos-price-gradient">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs md:text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
@@ -971,7 +974,7 @@ export default function POSMain() {
               <div className="flex justify-between items-center pt-2 md:pt-3 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-base md:text-xl font-bold text-[#1A1A2E] dark:text-gray-100">Total</span>
                 <div className="text-right">
-                  <span className="text-lg md:text-2xl font-bold text-[#10B981]">
+                  <span className="pos-price-gradient text-lg md:text-2xl">
                     {formatCurrencySync(total, schemeCurrencySymbol(), false)}
                   </span>
                   {secondaryCurrency && exchangeRate && (
@@ -986,7 +989,7 @@ export default function POSMain() {
             <button
               onClick={() => setShowPaymentModal(true)}
               disabled={cart.length === 0}
-              className="w-full py-3 md:py-4 bg-[#10B981] hover:bg-[#059669] disabled:opacity-50 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold rounded-lg md:rounded-xl text-sm md:text-lg transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
+              className="pos-accent-bg w-full py-3 md:py-4 disabled:opacity-50 disabled:cursor-not-allowed font-bold rounded-lg md:rounded-xl text-sm md:text-lg transition-all shadow-lg flex items-center justify-center gap-2"
             >
               Checkout
             </button>

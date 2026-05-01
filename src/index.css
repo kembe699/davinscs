@@ -84,10 +84,10 @@
     --grip: 0 0% 18%;
     --metal: 0 0% 90%;
     --border-subtle: 0 0% 24%;
-    --brand-gradient: linear-gradient(90deg, #064E3B 0%, #059669 50%, #10B981 100%);
-    --brand-start: #064E3B;
-    --brand-mid: #059669;
-    --brand-end: #10B981;
+    --brand-gradient: linear-gradient(135deg, #1565C0 0%, #00A896 55%, #56C02B 100%);
+    --brand-start: #1565C0;
+    --brand-mid: #00A896;
+    --brand-end: #56C02B;
   }
 
   [data-theme="light"] {
@@ -213,7 +213,70 @@ a.hover\:bg-primary:hover {
 
 /* Gradient background utility for explicit use */
 .bg-brand-gradient {
-  background: linear-gradient(90deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%);
+  background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%);
+}
+.bg-brand-gradient:hover {
+  background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-mid) 50%, var(--brand-end) 100%);
+  filter: brightness(1.1);
+}
+
+/* POS gradient accent — used in POSMain for buttons, badges, active states */
+/* Logo gradient: #1565C0 (blue) → #00A896 (teal) → #56C02B (green) */
+.pos-accent-bg {
+  background: linear-gradient(135deg, #1565C0 0%, #00A896 55%, #56C02B 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.pos-accent-bg:hover {
+  filter: brightness(1.1);
+}
+.pos-accent-bg:disabled {
+  background: #d1d5db !important;
+  filter: none;
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* Active text for POS sidebar — solid teal (readable, matches logo mid-tone) */
+/* NOTE: Do NOT use background-clip/text-fill-color here — it causes invisible text */
+.pos-accent-text {
+  color: #00A896 !important;
+  -webkit-text-fill-color: #00A896 !important;
+  font-weight: 700;
+}
+
+/* Subtle gradient tint background for active states */
+.pos-accent-tint {
+  background: linear-gradient(135deg, rgba(21,101,192,0.1) 0%, rgba(0,168,150,0.12) 55%, rgba(86,192,43,0.08) 100%) !important;
+}
+
+/* Gradient left border for active category */
+.pos-accent-border-l {
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, #1565C0 0%, #00A896 55%, #56C02B 100%) 1;
+}
+
+/* Badge gradient — blue to green like the logo */
+.pos-badge-gradient {
+  background: linear-gradient(135deg, #00A896 0%, #56C02B 100%);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+/* Gradient text for prices — teal-to-green visible gradient */
+.pos-price-gradient {
+  background: linear-gradient(90deg, #00A896 0%, #56C02B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* Ring gradient outline */
+.pos-accent-ring {
+  outline: 2px solid #00A896;
+  outline-offset: 2px;
 }
 
 @layer utilities {
