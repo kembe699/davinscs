@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -437,6 +437,36 @@ export default function POSMain() {
       secondaryCurrency: secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
       exchangeRate,
     });
+  };
+
+  const handlePrintReceipt = (sale: any) => {
+    const html = buildReceiptBody(sale);
+    // Use hidden iframe to bypass popup blockers and go straight to print dialogue
+    const frameId = 'pos-receipt-print-frame';
+    let frame = document.getElementById(frameId) as HTMLIFrameElement | null;
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.id = frameId;
+      frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:80mm;height:1px;border:none;visibility:hidden;';
+      document.body.appendChild(frame);
+    }
+    const doc = frame.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head>
+      <title>Receipt - ${sale.sale_number}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; width: 80mm; }
+        pre { white-space: pre-wrap; word-break: break-word; }
+        table { width: 100%; border-collapse: collapse; }
+        @page { size: 80mm auto; margin: 4mm 2mm; }
+        @media print { html, body { width: 80mm; } }
+      </style>
+    </head><body>${html}</body></html>`);
+    doc.close();
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
   };
 
 
@@ -998,7 +1028,8 @@ export default function POSMain() {
               <button
                 onClick={handleHoldSale}
                 disabled={cart.length === 0}
-                className="flex-1 py-2 md:py-3 bg-white dark:bg-gray-800 border-2 border-amber-500 text-amber-600 font-semibold rounded-lg md:rounded-xl text-[11px] md:text-sm hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:border-gray-200 dark:border-gray-700 disabled:text-gray-400 dark:text-gray-500"
+                className="flex-1 py-2 md:py-3 bg-white dark:bg-gray-800 border-2 text-[#00A896] font-semibold rounded-lg md:rounded-xl text-[11px] md:text-sm hover:bg-[#00A896]/5 transition-colors disabled:opacity-50 disabled:text-gray-400"
+                style={{ borderColor: '#00A896' }}
               >
                 Hold
               </button>
@@ -1225,36 +1256,57 @@ export default function POSMain() {
 
       {/* Receipt Modal */}
       {showReceipt && completedSale && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full flex items-center justify-center mb-6">
-              <ShoppingCart size={32} className="text-[#10B981]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100 mb-2">Payment Successful!</h2>
-            <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-8">Sale #{completedSale.sale_number}</p>
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '92vh' }}>
 
-            <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl w-full flex justify-center mb-8 border border-gray-100 dark:border-gray-700/50 shadow-inner" style={{ minHeight: '100mm' }}>
-              <div
-                style={{ width: '80mm', backgroundColor: 'white', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-                dangerouslySetInnerHTML={{ __html: buildReceiptBody(completedSale) }}
-              />
+            {/* Fixed Header */}
+            <div className="flex flex-col items-center pt-6 px-6 pb-4 shrink-0">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: 'linear-gradient(135deg,#1565C0,#00A896,#56C02B)' }}>
+                <ShoppingCart size={28} className="text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100">Payment Successful!</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Sale #{completedSale.sale_number}</p>
             </div>
 
-            <button
-              onClick={() => {
-                setShowReceipt(false);
-                setCart([]);
-                setCartDiscount(0);
-                setCustomerName('');
-                setAppliedPromotion(null);
-              }}
-              className="w-full py-4 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-lg shadow-[#10B981]/20 text-lg"
-            >
-              Start New Sale
-            </button>
+            {/* Scrollable Receipt Body */}
+            <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl w-full flex justify-center border border-gray-100 dark:border-gray-700/50 shadow-inner">
+                <div
+                  style={{ width: '100%', maxWidth: '80mm', backgroundColor: 'white', padding: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', fontSize: '12px' }}
+                  dangerouslySetInnerHTML={{ __html: buildReceiptBody(completedSale) }}
+                />
+              </div>
+            </div>
+
+            {/* Fixed Footer — always visible */}
+            <div className="shrink-0 p-4 pt-3 border-t border-gray-100 dark:border-gray-700/50 bg-white dark:bg-gray-800 rounded-b-2xl flex gap-3">
+              {/* Print button */}
+              <button
+                onClick={() => handlePrintReceipt(completedSale)}
+                title="Print Receipt"
+                className="shrink-0 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-[#00A896] hover:text-[#00A896] text-gray-500 dark:text-gray-300 transition-all shadow-sm"
+              >
+                <Printer size={20} />
+              </button>
+              {/* New Sale button */}
+              <button
+                onClick={() => {
+                  setShowReceipt(false);
+                  setCart([]);
+                  setCartDiscount(0);
+                  setCustomerName('');
+                  setAppliedPromotion(null);
+                }}
+                className="pos-accent-bg flex-1 py-3 md:py-4 font-bold rounded-xl text-base md:text-lg transition-all shadow-lg"
+              >
+                Start New Sale
+              </button>
+            </div>
+
           </div>
         </div>
       )}
+
 
       {/* Customer Modal */}
       {showCustomerModal && (
