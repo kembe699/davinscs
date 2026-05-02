@@ -128,11 +128,12 @@ export default function ProductForm() {
     setError("");
     setLoading(true);
     try {
+      const payload = { ...form, description: form.description?.trim() || "" };
       if (isEdit) {
-        await api.products.update(Number(id), form as Partial<ApiProduct>);
+        await api.products.update(Number(id), payload as Partial<ApiProduct>);
         toast("Product updated successfully!", "success", "Saved");
       } else {
-        await api.products.create(form as Partial<ApiProduct>);
+        await api.products.create(payload as Partial<ApiProduct>);
         toast("Product created successfully!", "success", "Saved");
       }
       navigate(tp("/admin/products"));
@@ -179,47 +180,14 @@ export default function ProductForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Info and Specifications in Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column: Basic Info Cards */}
-            <div className="lg:col-span-6 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+          <div className="space-y-6">
               {/* Basic Info Card */}
               <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Basic Info</h2>
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Product</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="field-label">Product Name *</label>
-                    <input
-                      required type="text" value={form.name}
-                      onChange={(e) => {
-                        set("name", e.target.value);
-                        if (!isEdit) set("slug", autoSlug(e.target.value));
-                      }}
-                      placeholder="e.g. Paracetamol 500mg"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Slug *</label>
-                    <input
-                      required type="text" value={form.slug}
-                      onChange={(e) => set("slug", e.target.value)}
-                      placeholder="e.g. paracetamol-500mg"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Brand</label>
-                    <input
-                      type="text" value={form.brand}
-                      onChange={(e) => set("brand", e.target.value)}
-                      placeholder="e.g. Pfizer / Generic"
-                      className="field-input"
-                    />
-                  </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="field-label">Category *</label>
                     <select
                       required value={form.category}
@@ -236,16 +204,36 @@ export default function ProductForm() {
                       )}
                     </select>
                   </div>
-                </div>
-
-                <div>
-                  <label className="field-label">Description</label>
-                  <textarea
-                    rows={3} value={form.description}
-                    onChange={(e) => set("description", e.target.value)}
-                    placeholder="Brief product description…"
-                    className="field-input resize-none"
-                  />
+                  <div className="sm:col-span-2">
+                    <label className="field-label">Product Name *</label>
+                    <input
+                      required type="text" value={form.name}
+                      onChange={(e) => {
+                        set("name", e.target.value);
+                        if (!isEdit) set("slug", autoSlug(e.target.value));
+                      }}
+                      placeholder="e.g. iPhone 17 Pro Max"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Slug *</label>
+                    <input
+                      required type="text" value={form.slug}
+                      onChange={(e) => set("slug", e.target.value)}
+                      placeholder="e.g. iphone-17-pro-max"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Brand</label>
+                    <input
+                      type="text" value={form.brand}
+                      onChange={(e) => set("brand", e.target.value)}
+                      placeholder="Brand (optional)"
+                      className="field-input"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -276,11 +264,26 @@ export default function ProductForm() {
 
               {/* Pricing & Type Card */}
               <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Pricing & Type</h2>
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Price & type</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="sm:col-span-2">
+                    <label className="field-label">Selling Price ({baseCurrency?.code || 'UGX'}) *</label>
+                    <input
+                      required type="number" min={0} value={form.price === 0 ? "" : form.price}
+                      onChange={(e) => {
+                        const sp = e.target.value === "" ? "" : Number(e.target.value);
+                        set("price", sp);
+                        if (form.cost_price && Number(form.cost_price) > 0 && sp !== "" && Number(sp) > 0) {
+                          setMargin(Math.round((sp - form.cost_price) / form.cost_price * 100));
+                        }
+                      }}
+                      placeholder="e.g. 1500000"
+                      className="field-input"
+                    />
+                  </div>
                   <div>
-                    <label className="field-label">Unit Cost ({baseCurrency?.code || 'UGX'})</label>
+                    <label className="field-label">Unit cost ({baseCurrency?.code || 'UGX'})</label>
                     <input
                       type="number" min={0} value={form.cost_price === 0 ? "" : form.cost_price}
                       onChange={(e) => {
@@ -290,10 +293,9 @@ export default function ProductForm() {
                           set("price", Math.round(Number(cp) * (1 + Number(margin) / 100)));
                         }
                       }}
-                      placeholder="e.g. 500000"
+                      placeholder="Cost (optional)"
                       className="field-input"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Purchase / landed cost</p>
                   </div>
                   <div>
                     <label className="field-label">Margin (%)</label>
@@ -309,26 +311,9 @@ export default function ProductForm() {
                       placeholder="e.g. 30  →  30% markup"
                       className="field-input"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Auto-calculates selling price</p>
                   </div>
                   <div>
-                    <label className="field-label">Selling Price ({baseCurrency?.code || 'UGX'}) *</label>
-                    <input
-                      required type="number" min={0} value={form.price === 0 ? "" : form.price}
-                      onChange={(e) => {
-                        const sp = e.target.value === "" ? "" : Number(e.target.value);
-                        set("price", sp);
-                        if (form.cost_price && Number(form.cost_price) > 0 && sp !== "" && Number(sp) > 0) {
-                          setMargin(Math.round((sp - form.cost_price) / form.cost_price * 100));
-                        }
-                      }}
-                      placeholder="auto-filled from cost + margin"
-                      className="field-input"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Final price charged to customer</p>
-                  </div>
-                  <div>
-                    <label className="field-label">Product Type *</label>
+                    <label className="field-label">Product type *</label>
                     <select
                       required value={(form as any).product_type}
                       onChange={(e) => set("product_type", e.target.value)}
@@ -339,12 +324,12 @@ export default function ProductForm() {
                     </select>
                   </div>
                   <div>
-                    <label className="field-label">Barcode/SKU</label>
+                    <label className="field-label">Barcode / SKU</label>
                     <div className="flex gap-2">
                       <input
                         type="text" value={(form as any).barcode}
                         onChange={(e) => set("barcode", e.target.value)}
-                        placeholder="SKU-ABC123"
+                        placeholder="Optional"
                         className="field-input flex-1"
                       />
                       <button
@@ -358,7 +343,7 @@ export default function ProductForm() {
                     </div>
                   </div>
                   <div>
-                    <label className="field-label">Expiry Date</label>
+                    <label className="field-label">Expiry date</label>
                     <input
                       type="date" value={(form as any).expiry_date}
                       onChange={(e) => set("expiry_date", e.target.value)}
@@ -367,7 +352,7 @@ export default function ProductForm() {
                   </div>
                   {accounts.length > 0 && (
                     <div className="sm:col-span-2">
-                      <label className="field-label">Expense Account (COGS)</label>
+                      <label className="field-label">Expense account (COGS)</label>
                       <select
                         value={(form as any).expense_account_id || ""}
                         onChange={(e) => set("expense_account_id", Number(e.target.value) || 0)}
@@ -378,15 +363,11 @@ export default function ProductForm() {
                           <option key={a.id} value={a.id}>{a.name}</option>
                         ))}
                       </select>
-                      <p className="text-xs text-muted-foreground mt-1">Expense account debited when this product is sold</p>
                     </div>
                   )}
                 </div>
               </section>
-            </div>
 
-            {/* Right Column: Specs and Stock Control */}
-            <div className="lg:col-span-6 space-y-6">
               {/* Specs */}
               <section className="border border-border-subtle p-6 bg-chassis space-y-4">
                 <div className="flex items-center justify-between">
@@ -396,7 +377,7 @@ export default function ProductForm() {
                   </button>
                 </div>
                 {form.specs.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No specs added yet.</p>
+                  <p className="text-xs text-muted-foreground">Optional — skip if not needed.</p>
                 )}
                 {form.specs.map((spec, i) => (
                   <div key={i} className="flex gap-3 items-center">
@@ -422,11 +403,11 @@ export default function ProductForm() {
               {/* Stock Control — only for physical products, not services */}
               {(form as any).product_type !== 'service' && (
                 <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock Control</h2>
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Stock</h2>
                   
-                  <div className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                      <label className="field-label">Unit of Measure (UOM)</label>
+                      <label className="field-label">Unit of measure</label>
                       <select
                         value={(form as any).uom}
                         onChange={(e) => set("uom", e.target.value)}
@@ -436,29 +417,26 @@ export default function ProductForm() {
                           <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
                       </select>
-                      <p className="text-xs text-muted-foreground mt-1">How this product is sold / counted</p>
                     </div>
                     <div>
-                      <label className="field-label">Current Stock</label>
-                      <input
-                        type="number" min={0}
-                        value={(form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
-                        onChange={(e) => set("quantity_on_hand", e.target.value === "" ? "" : Number(e.target.value))}
-                        placeholder="e.g. 100"
-                        className="field-input"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Available quantity in stock</p>
-                    </div>
-                    <div>
-                      <label className="field-label">Reorder Level</label>
+                      <label className="field-label">Reorder level</label>
                       <input
                         type="number" min={0}
                         value={(form as any).reorder_level === 0 ? "" : (form as any).reorder_level}
                         onChange={(e) => set("reorder_level", e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="Optional"
+                        className="field-input"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="field-label">Quantity in stock</label>
+                      <input
+                        type="number" min={0}
+                        value={(form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
+                        onChange={(e) => set("quantity_on_hand", e.target.value === "" ? "" : Number(e.target.value))}
                         placeholder="e.g. 10"
                         className="field-input"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Minimum stock before reorder alert</p>
                     </div>
                   </div>
                 </section>
@@ -466,14 +444,14 @@ export default function ProductForm() {
 
               {/* Image URL Card */}
               <section className="border border-border-subtle p-6 bg-chassis space-y-5">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Product Image</h2>
+                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Image</h2>
                 
                 <div>
                   <label className="field-label">Image URL</label>
                   <input
                     type="text" value={form.image_url}
                     onChange={(e) => set("image_url", e.target.value)}
-                    placeholder="https://example.com/image.jpg"
+                    placeholder="https://… (optional)"
                     className="field-input"
                   />
                   {form.image_url && (
@@ -483,7 +461,6 @@ export default function ProductForm() {
                   )}
                 </div>
               </section>
-            </div>
           </div>
 
           <div className="flex gap-3">

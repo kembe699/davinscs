@@ -111,7 +111,7 @@ export default function Onboarding() {
     company_name: "",
     address: "",
     city: "",
-    country: "South Sudan",
+    country: "",
     phone: "",
     email: "",
     tax_id: "",
@@ -304,13 +304,13 @@ export default function Onboarding() {
                     onChange={(e) => set("company_name", e.target.value)}
                   />
                 </div>
-                <Field icon={Phone} label="Phone" placeholder="+211 92 000 0000" value={form.phone} onChange={(v) => set("phone", v)} />
+                <Field icon={Phone} label="Phone" placeholder="Enter phone number" value={form.phone} onChange={(v) => set("phone", v)} />
                 <Field icon={Mail} label="Email" placeholder="info@yourbusiness.com" value={form.email} onChange={(v) => set("email", v)} />
                 <Field icon={MapPin} label="Address" placeholder="Street address" value={form.address} onChange={(v) => set("address", v)} />
-                <Field icon={MapPin} label="City" placeholder="Juba" value={form.city} onChange={(v) => set("city", v)} />
-                <Field icon={Globe} label="Country" placeholder="South Sudan" value={form.country} onChange={(v) => set("country", v)} />
+                <Field icon={MapPin} label="City" placeholder="Enter city" value={form.city} onChange={(v) => set("city", v)} />
+                <Field icon={Globe} label="Country" placeholder="Enter country" value={form.country} onChange={(v) => set("country", v)} />
                 <Field icon={Hash} label="Tax / TIN Number" placeholder="Optional" value={form.tax_id} onChange={(v) => set("tax_id", v)} />
-                <Field icon={Phone} label="WhatsApp" placeholder="+211 92 000 0000" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
+                <Field icon={Phone} label="WhatsApp" placeholder="Enter WhatsApp number" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
               </div>
 
               {/* Currency */}

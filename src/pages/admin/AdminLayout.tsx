@@ -35,8 +35,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Inventory",
     icon: Package,
     items: [
-      { label: "Products",    path: "/admin/products",    icon: Package,      permission: "products.view" },
       { label: "Categories",  path: "/admin/categories",  icon: Layers,       permission: "categories.view" },
+      { label: "Products",    path: "/admin/products",    icon: Package,      permission: "products.view" },
       { label: "Stock",       path: "/admin/inventory",   icon: PackageCheck, permission: "inventory.view" },
       { label: "Procurement", path: "/admin/procurement", icon: ShoppingCart, permission: "procurement.view" },
     ],

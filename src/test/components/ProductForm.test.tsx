@@ -23,6 +23,14 @@ vi.mock("@/contexts/CurrencyContext", () => ({
   }),
 }));
 
+vi.mock("@/contexts/ToastContext", () => ({
+  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
+}));
+
+vi.mock("@/contexts/TenantContext", () => ({
+  useTenantPath: () => (path: string) => path,
+}));
+
 vi.mock("@/lib/api", () => ({
   api: {
     products: {
@@ -63,21 +71,21 @@ describe("ProductForm — render", () => {
   it("renders the product name field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Sony FX3 Full-Frame Cinema Camera")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("e.g. iPhone 17 Pro Max")).toBeInTheDocument();
     });
   });
 
   it("renders the selling price field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("auto-filled from cost + margin")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("e.g. 1500000")).toBeInTheDocument();
     });
   });
 
   it("renders the cost price field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("e.g. 500000")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Cost (optional)")).toBeInTheDocument();
     });
   });
 
@@ -91,7 +99,7 @@ describe("ProductForm — render", () => {
   it("renders the brand field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Sony")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Brand (optional)")).toBeInTheDocument();
     });
   });
 
@@ -120,12 +128,12 @@ describe("ProductForm — margin auto-calculation", () => {
     renderProductForm();
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("e.g. 500000")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Cost (optional)")).toBeInTheDocument();
     });
 
-    const costInput = screen.getByPlaceholderText("e.g. 500000") as HTMLInputElement;
+    const costInput = screen.getByPlaceholderText("Cost (optional)") as HTMLInputElement;
     const marginInput = screen.getByPlaceholderText(/30.*markup/) as HTMLInputElement;
-    const priceInput = screen.getByPlaceholderText("auto-filled from cost + margin") as HTMLInputElement;
+    const priceInput = screen.getByPlaceholderText("e.g. 1500000") as HTMLInputElement;
 
     fireEvent.change(costInput, { target: { value: "100000" } });
     fireEvent.change(marginInput, { target: { value: "20" } });
@@ -143,18 +151,18 @@ describe("ProductForm — margin auto-calculation", () => {
 describe("ProductForm — field updates", () => {
   it("accepts text input in the name field", async () => {
     renderProductForm();
-    await waitFor(() => screen.getByPlaceholderText("Sony FX3 Full-Frame Cinema Camera"));
+    await waitFor(() => screen.getByPlaceholderText("e.g. iPhone 17 Pro Max"));
 
-    const nameInput = screen.getByPlaceholderText("Sony FX3 Full-Frame Cinema Camera") as HTMLInputElement;
+    const nameInput = screen.getByPlaceholderText("e.g. iPhone 17 Pro Max") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "Test Camera" } });
     expect(nameInput.value).toBe("Test Camera");
   });
 
   it("accepts numeric input in the cost price field", async () => {
     renderProductForm();
-    await waitFor(() => screen.getByPlaceholderText("e.g. 500000"));
+    await waitFor(() => screen.getByPlaceholderText("Cost (optional)"));
 
-    const costInput = screen.getByPlaceholderText("e.g. 500000") as HTMLInputElement;
+    const costInput = screen.getByPlaceholderText("Cost (optional)") as HTMLInputElement;
     fireEvent.change(costInput, { target: { value: "50000" } });
     expect(costInput.value).toBe("50000");
   });
