@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -11,6 +11,8 @@ import {
   ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import IdleWarningModal from "@/components/IdleWarningModal";
 
 type NavItem = { label: string; path: string; icon: any; permission: string };
 type NavGroup = { label: string; icon: any; items: NavItem[] };
@@ -94,6 +96,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const tp = (path: string) => `/${tenantSlug}${path}`;
 
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate(tp("/admin/login"), { replace: true });
+  }, [logout, navigate, tenantSlug]);
+
+  const { showWarning, secondsLeft, resetTimer } = useIdleTimeout({
+    timeoutMs: 5 * 60 * 1000,
+    warningMs: 60 * 1000,
+    onTimeout: handleLogout,
+  });
+
   const isActive = (path: string) =>
     path === "/admin"
       ? location.pathname === tp("/admin")
@@ -111,7 +124,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const toggleGroup = (label: string) =>
     setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
 
-  const handleLogout = () => { logout(); navigate(tp("/admin/login")); };
+  const handleLogoutBtn = () => { logout(); navigate(tp("/admin/login")); };
   const closeSidebar = () => setSidebarOpen(false);
 
   function ThemeToggle() {
@@ -262,7 +275,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {user?.email}
         </p>
         <div className="flex items-center justify-between mt-2">
-          <button onClick={handleLogout}
+          <button onClick={handleLogoutBtn}
             className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"
           >
             <LogOut size={14} />
@@ -279,6 +292,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-[100dvh] bg-admin-bg flex flex-col">
+      {showWarning && (
+        <IdleWarningModal
+          secondsLeft={secondsLeft}
+          onStay={resetTimer}
+          onLogout={handleLogout}
+        />
+      )}
       {/* Mobile top bar */}
       <header className="lg:hidden sticky top-0 z-30 bg-admin-bg border-b border-admin-border px-4 py-3 flex items-center gap-3">
         <button

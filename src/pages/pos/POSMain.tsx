@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
@@ -10,6 +10,8 @@ import { formatCurrencySync } from "@/utils/currency";
 import { openPrintWindow, printDocument, printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import IdleWarningModal from "@/components/IdleWarningModal";
 
 export default function POSMain() {
   const navigate = useNavigate();
@@ -59,6 +61,17 @@ export default function POSMain() {
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [showMobileCart, setShowMobileCart] = useState(false);
   const { toast } = useToast();
+
+  const posLogout = useCallback(() => {
+    logout();
+    navigate(tp("/admin/login"), { replace: true });
+  }, [logout, navigate]);
+
+  const { showWarning: showIdleWarning, secondsLeft, resetTimer } = useIdleTimeout({
+    timeoutMs: 5 * 60 * 1000,
+    warningMs: 60 * 1000,
+    onTimeout: posLogout,
+  });
 
   type StockAlert = { product: ApiProduct; kind: "expired" | "out_of_stock" | "low_stock" };
   const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
@@ -661,6 +674,13 @@ export default function POSMain() {
 
   return (
     <div className="h-screen bg-[#F8F9FA] dark:bg-gray-900 flex flex-col font-sans text-[#1A1A2E] dark:text-gray-100">
+      {showIdleWarning && (
+        <IdleWarningModal
+          secondsLeft={secondsLeft}
+          onStay={resetTimer}
+          onLogout={posLogout}
+        />
+      )}
       {/* Top Navigation Bar */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-14 md:h-16 flex items-center justify-between px-2 md:px-4 sm:px-6 shrink-0 z-10">
         <div className="flex items-center gap-2 md:gap-4">
