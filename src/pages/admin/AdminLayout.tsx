@@ -8,7 +8,8 @@ import {
   LayoutDashboard, Package, Layers, Users, LogOut, PackageCheck, ShoppingCart,
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
   ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
-  ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X,
+  ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X, ExternalLink,
+  CalendarClock, AlertTriangle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
@@ -79,7 +80,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { logo, companyName } = useLayout();
   const location = useLocation();
   const navigate = useNavigate();
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, status: tenantStatus, trialEndsAt, subscriptionEnd } = useTenant();
+
+  function getExpiryInfo() {
+    let expiryDate: Date | null = null;
+    let label = "";
+    if (tenantStatus === "trial" && trialEndsAt) {
+      expiryDate = new Date(trialEndsAt);
+      label = "Trial";
+    } else if (tenantStatus === "active" && subscriptionEnd) {
+      expiryDate = new Date(subscriptionEnd);
+      label = "Subscription";
+    }
+    if (!expiryDate) return null;
+    const msLeft = expiryDate.getTime() - Date.now();
+    const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+    return { label, daysLeft, expiryDate };
+  }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { t, i18n } = useTranslation();
 
@@ -271,9 +288,48 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Footer */}
       <div className="p-4 border-t border-admin-border">
-        <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-3">
+        <p className="font-mono text-[9px] text-admin-text-secondary uppercase tracking-widest truncate mb-1">
           {user?.email}
         </p>
+        {(() => {
+          const info = getExpiryInfo();
+          if (!info) return null;
+          const { label, daysLeft, expiryDate } = info;
+          const urgent = daysLeft <= 3;
+          const warning = daysLeft > 3 && daysLeft <= 7;
+          const colorClass = urgent
+            ? "border-red-500/40 bg-red-500/10 text-red-400"
+            : warning
+            ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+            : "border-green-500/40 bg-green-500/10 text-green-400";
+          const display = daysLeft <= 0
+            ? "Expires today"
+            : daysLeft === 1
+            ? "1 day left"
+            : `${daysLeft} days left`;
+          return (
+            <a
+              href="https://flippedpos.com/account"
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`${label} expires ${expiryDate.toLocaleDateString()}`}
+              className={`flex items-center gap-1.5 text-[10px] font-mono border px-2 py-1 mb-2 transition-opacity hover:opacity-80 ${colorClass}`}
+            >
+              {urgent || warning ? <AlertTriangle size={9} /> : <CalendarClock size={9} />}
+              <span className="font-semibold uppercase tracking-wider">{label}</span>
+              <span className="opacity-80">— {display}</span>
+            </a>
+          );
+        })()}
+        <a
+          href="https://flippedpos.com/account"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 transition-colors mb-3"
+        >
+          <ExternalLink size={10} />
+          My Account
+        </a>
         <div className="flex items-center justify-between mt-2">
           <button onClick={handleLogoutBtn}
             className="flex items-center gap-2 text-sm text-admin-text-secondary hover:text-admin-danger transition-colors"

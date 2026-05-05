@@ -8,6 +8,8 @@ interface TenantInfo {
   businessName: string;
   needsSetup: boolean;
   status: string;
+  trialEndsAt: string | null;
+  subscriptionEnd: string | null;
 }
 
 const TenantContext = createContext<TenantInfo | null>(null);
@@ -80,6 +82,8 @@ export function TenantRoot() {
           businessName: d.businessName,
           needsSetup: d.needsSetup,
           status: d.status,
+          trialEndsAt: d.trialEndsAt || null,
+          subscriptionEnd: d.subscriptionEnd || null,
         });
       })
       .catch(() => setError("Failed to load instance"))

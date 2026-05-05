@@ -277,7 +277,7 @@ router.get('/tenant/:slug', async (req, res) => {
   const { slug } = req.params;
   try {
     const result = await pool.query(
-      'SELECT business_name, schema_name, tenant_slug, status, trial_ends_at FROM public.tenants WHERE tenant_slug = $1',
+      'SELECT business_name, schema_name, tenant_slug, status, trial_ends_at, subscription_end FROM public.tenants WHERE tenant_slug = $1',
       [slug.toLowerCase()]
     );
     const tenant = result.rows[0];
@@ -298,6 +298,8 @@ router.get('/tenant/:slug', async (req, res) => {
       tenantSlug: tenant.tenant_slug,
       needsSetup,
       status: effectiveStatus,
+      trialEndsAt: tenant.trial_ends_at || null,
+      subscriptionEnd: tenant.subscription_end || null,
     });
   } catch (err) {
     console.error('Tenant slug lookup error:', err);
