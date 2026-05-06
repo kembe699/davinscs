@@ -694,8 +694,9 @@ export default function POSMain() {
         />
       )}
       {/* Top Navigation Bar */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-14 md:h-16 flex items-center justify-between px-2 md:px-4 sm:px-6 shrink-0 z-10">
-        <div className="flex items-center gap-2 md:gap-4">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-14 md:h-16 flex items-center justify-between px-2 md:px-4 sm:px-6 shrink-0 z-10 relative">
+        {/* Left Side */}
+        <div className="flex items-center gap-2 md:gap-4 shrink-0 lg:w-[280px]">
           <div className="font-bold text-base md:text-xl tracking-tight text-[#1A1A2E] dark:text-gray-100 truncate max-w-[120px] md:max-w-none">
             {companyData?.name || "FlippedPOS"}
           </div>
@@ -703,7 +704,7 @@ export default function POSMain() {
           <select
             value={selectedSchemeId ?? ""}
             onChange={e => setSelectedSchemeId(e.target.value === "" ? null : Number(e.target.value))}
-            className="hidden md:block ml-4 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-[#10B981]"
+            className="hidden lg:block ml-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-[#10B981] w-[140px]"
           >
             <option value="">Standard Pricing</option>
             {schemes.map(s => (
@@ -712,9 +713,9 @@ export default function POSMain() {
           </select>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search (Desktop) */}
-          <div className="relative hidden md:block w-64">
+        {/* Center: Search (Desktop) */}
+        <div className="hidden md:flex flex-1 justify-center px-4 max-w-2xl">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
             <input
               type="text"
@@ -730,7 +731,10 @@ export default function POSMain() {
               </button>
             )}
           </div>
+        </div>
 
+        {/* Right Side */}
+        <div className="flex items-center justify-end gap-1 md:gap-3 shrink-0 lg:w-[280px]">
           {/* Stock Alerts */}
           {stockAlerts.length > 0 && (
             <button
@@ -758,6 +762,14 @@ export default function POSMain() {
             className="hidden md:block p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
           >
             {viewMode === 'grid' ? <List size={18} className="md:w-5 md:h-5" /> : <LayoutGrid size={18} className="md:w-5 md:h-5" />}
+          </button>
+
+          {/* Menu */}
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="hidden md:block p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
+          >
+            <Menu size={18} className="md:w-5 md:h-5" />
           </button>
         </div>
       </header>
@@ -844,7 +856,7 @@ export default function POSMain() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder="Search or scan barcode..."
-              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[11px] md:text-sm text-[#1A1A2E] dark:text-gray-100 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-[11px] md:text-sm text-[#1A1A2E] dark:text-gray-100 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent"
             />
           </div>
 
