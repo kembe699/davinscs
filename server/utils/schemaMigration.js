@@ -73,7 +73,14 @@ export async function migrateTenant(schemaName = "public") {
     );
     ALTER TABLE public.pricing_plans ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
     ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
+    ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS pesapal_tracking_id TEXT;
+    ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS pesapal_merchant_ref TEXT;
     ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+
+    CREATE TABLE IF NOT EXISTS public.saas_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT
+    );
 
     -- POS INSTANCE TABLES
     CREATE TABLE IF NOT EXISTS users (

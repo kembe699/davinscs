@@ -7,6 +7,7 @@ import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache } from '../middleware/auth.js';
 import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail } from '../utils/email.js';
+import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
 function generateCustomerCode() {
@@ -583,26 +584,28 @@ router.post('/billing', requireSaasAdmin, async (req, res) => {
   }
 });
 
-// Mark invoice as paid → activate subscription window
-router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
+// Helper to activate subscription
+async function activateSubscription(invoiceId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
+    
     // 1. Mark invoice paid
     const invRes = await client.query(
-      `UPDATE public.saas_billing SET status='paid', paid_at=NOW() WHERE id=$1 RETURNING *`,
-      [req.params.id]
+      `UPDATE public.saas_billing SET status='paid', paid_at=NOW() WHERE id=$1 AND status='pending' RETURNING *`,
+      [invoiceId]
     );
-    if (!invRes.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Invoice not found' }); }
+    if (!invRes.rows[0]) {
+      await client.query('ROLLBACK');
+      return null; // Already paid or not found
+    }
     const inv = invRes.rows[0];
 
     // 2. Calculate new subscription window
     const days = periodDays(inv.billing_period || 'monthly');
 
-    // If tenant is already active with a future subscription_end, extend from that date
     const tenantRes = await client.query(
-      `SELECT status, subscription_end FROM public.tenants WHERE id = $1`, [inv.tenant_id]
+      `SELECT status, subscription_end, schema_name FROM public.tenants WHERE id = $1`, [inv.tenant_id]
     );
     const tenant = tenantRes.rows[0];
     const baseDate = (tenant?.status === 'active' && tenant?.subscription_end && new Date(tenant.subscription_end) > new Date())
@@ -629,17 +632,25 @@ router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
       sendInvoicePaidEmail(customerEmail, inv.invoice_number, inv.amount, newEnd).catch(console.error);
     }
 
-    // 4. Invalidate tenant status cache
-    const tenantFull = (await pool.query('SELECT schema_name FROM public.tenants WHERE id=$1', [inv.tenant_id])).rows[0];
-    clearTenantCache(tenantFull?.schema_name);
-
-    res.json({ ...inv, status: 'paid', paid_at: new Date().toISOString() });
+    clearTenantCache(tenant?.schema_name);
+    return { ...inv, status: 'paid', paid_at: new Date().toISOString() };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Pay invoice error:', err);
-    res.status(500).json({ error: 'Server error' });
+    throw err;
   } finally {
     client.release();
+  }
+}
+
+// Mark invoice as paid → activate subscription window
+router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
+  try {
+    const inv = await activateSubscription(req.params.id);
+    if (!inv) return res.status(404).json({ error: 'Invoice not found or already paid' });
+    res.json(inv);
+  } catch (err) {
+    console.error('Pay invoice error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -856,8 +867,53 @@ router.get('/customer/me', requireCustomer, async (req, res) => {
   }
 });
 
-// Customer — self-subscribe (creates unpaid invoice for admin to mark paid)
-router.post('/customer/subscribe', requireCustomer, async (req, res) => {
+// Customer — pay existing invoice
+router.post('/customer/pay-invoice', requireCustomer, async (req, res) => {
+  const { invoice_id } = req.body;
+  if (!invoice_id) return res.status(400).json({ error: 'invoice_id is required' });
+
+  try {
+    const tenantId = req.customer.tenant_id;
+    const invRes = await pool.query(`SELECT * FROM public.saas_billing WHERE id=$1 AND tenant_id=$2`, [invoice_id, tenantId]);
+    if (!invRes.rows.length) return res.status(404).json({ error: 'Invoice not found' });
+    
+    const inv = invRes.rows[0];
+    if (inv.status === 'paid') return res.status(400).json({ error: 'Invoice is already paid' });
+
+    const ugxRate = parseFloat(process.env.UGX_RATE || '3700');
+    const amountUgx = inv.amount * ugxRate;
+
+    const tenantRes = await pool.query(`SELECT business_name FROM public.tenants WHERE id=$1`, [tenantId]);
+    const businessName = tenantRes.rows[0]?.business_name || 'Customer';
+
+    const orderData = await submitOrder({
+      id: inv.invoice_number,
+      amount: amountUgx,
+      currency: 'UGX',
+      description: `Payment for FlippedPOS Invoice ${inv.invoice_number}`,
+      callback_url: `${process.env.FRONTEND_URL}/account/payment-result`,
+      billing_address: {
+        email_address: req.customer.email,
+        phone_number: '',
+        first_name: businessName,
+        last_name: ''
+      }
+    });
+
+    await pool.query(
+      `UPDATE public.saas_billing SET pesapal_tracking_id=$1, pesapal_merchant_ref=$2 WHERE id=$3`,
+      [orderData.order_tracking_id, orderData.merchant_reference || inv.invoice_number, inv.id]
+    );
+
+    res.json({ redirect_url: orderData.redirect_url });
+  } catch (err) {
+    console.error('Pay invoice error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+// Customer — subscribe and pay immediately
+router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
   const { plan_id, billing_period } = req.body;
   if (!plan_id) return res.status(400).json({ error: 'plan_id is required' });
 
@@ -871,16 +927,6 @@ router.post('/customer/subscribe', requireCustomer, async (req, res) => {
     if (!planRes.rows.length) return res.status(404).json({ error: 'Plan not found' });
     const plan = planRes.rows[0];
 
-    // Prevent duplicate pending invoices for the same plan
-    const dupCheck = await pool.query(
-      `SELECT id FROM public.saas_billing
-       WHERE tenant_id=$1 AND plan_name=$2 AND status='pending'`,
-      [tenantId, plan.name]
-    );
-    if (dupCheck.rows.length) {
-      return res.status(409).json({ error: 'You already have a pending invoice for this plan. Please wait for the admin to process it.' });
-    }
-
     // Generate unique invoice number
     let invoiceNumber;
     for (let attempt = 0; attempt < 10; attempt++) {
@@ -893,7 +939,6 @@ router.post('/customer/subscribe', requireCustomer, async (req, res) => {
     if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
 
     const period = billing_period || plan.billing_period || 'monthly';
-    // Parse price: strip non-numeric chars except decimal
     const priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
 
     const inv = await pool.query(
@@ -902,14 +947,102 @@ router.post('/customer/subscribe', requireCustomer, async (req, res) => {
       [invoiceNumber, tenantId, plan.name, priceNum, 'USD', `Subscription request via portal`, period]
     );
 
+    const ugxRate = parseFloat(process.env.UGX_RATE || '3700');
+    const amountUgx = priceNum * ugxRate;
+
+    const tenantRes = await pool.query(`SELECT business_name FROM public.tenants WHERE id=$1`, [tenantId]);
+    const businessName = tenantRes.rows[0]?.business_name || 'Customer';
+
+    const orderData = await submitOrder({
+      id: invoiceNumber,
+      amount: amountUgx,
+      currency: 'UGX',
+      description: `Subscription for ${plan.name} (${period})`,
+      callback_url: `${process.env.FRONTEND_URL}/account/payment-result`,
+      billing_address: {
+        email_address: req.customer.email,
+        phone_number: '',
+        first_name: businessName,
+        last_name: ''
+      }
+    });
+
+    await pool.query(
+      `UPDATE public.saas_billing SET pesapal_tracking_id=$1, pesapal_merchant_ref=$2 WHERE id=$3`,
+      [orderData.order_tracking_id, orderData.merchant_reference || invoiceNumber, inv.rows[0].id]
+    );
+
     sendInvoiceCreatedEmail(req.customer.email, invoiceNumber, plan.name, priceNum).catch(console.error);
 
-    res.json({ invoice: inv.rows[0], message: 'Subscription request submitted. Your account will be activated once payment is confirmed.' });
+    res.json({ redirect_url: orderData.redirect_url });
   } catch (err) {
-    console.error('Customer subscribe error:', err);
+    console.error('Pay subscribe error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+// PesaPal Callback Route
+router.get('/pesapal/callback', async (req, res) => {
+  // Can be called by frontend directly or by PesaPal
+  const { OrderTrackingId } = req.query;
+  if (!OrderTrackingId) return res.status(400).json({ error: 'Missing OrderTrackingId' });
+
+  try {
+    const statusData = await getTransactionStatus(OrderTrackingId);
+    
+    // Find invoice
+    const invRes = await pool.query(`SELECT id, status FROM public.saas_billing WHERE pesapal_tracking_id=$1`, [OrderTrackingId]);
+    if (!invRes.rows.length) return res.status(404).json({ error: 'Invoice not found' });
+    
+    const invoice = invRes.rows[0];
+    
+    if (statusData.status_code === 1 && invoice.status === 'pending') {
+      // Completed
+      await activateSubscription(invoice.id);
+      return res.json({ status: 'completed' });
+    } else if (statusData.status_code === 2 || statusData.status_code === 3) {
+      // Failed or Cancelled
+      return res.json({ status: 'failed' });
+    }
+    
+    return res.json({ status: 'pending' });
+  } catch (err) {
+    console.error('PesaPal callback error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// PesaPal IPN Endpoint
+const handleIpn = async (req, res) => {
+  const OrderTrackingId = req.query.OrderTrackingId || req.body.OrderTrackingId;
+  const OrderNotificationType = req.query.OrderNotificationType || req.body.OrderNotificationType;
+  const OrderMerchantReference = req.query.OrderMerchantReference || req.body.OrderMerchantReference;
+  
+  if (!OrderTrackingId) {
+    return res.status(400).json({ error: 'Missing OrderTrackingId' });
+  }
+
+  try {
+    const statusData = await getTransactionStatus(OrderTrackingId);
+    
+    const invRes = await pool.query(`SELECT id, status FROM public.saas_billing WHERE pesapal_tracking_id=$1`, [OrderTrackingId]);
+    if (!invRes.rows.length) return res.status(200).json({ status: 200, message: 'Processed but no matching invoice' });
+
+    const invoice = invRes.rows[0];
+    
+    if (statusData.status_code === 1 && invoice.status === 'pending') {
+      await activateSubscription(invoice.id);
+    }
+    
+    res.status(200).json({ status: 200, message: 'IPN processed successfully' });
+  } catch (err) {
+    console.error('IPN processing error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+router.get('/pesapal/ipn', handleIpn);
+router.post('/pesapal/ipn', handleIpn);
 
 // ── Website Contact Form ─────────────────────────────────────────────────────
 router.post('/contact', async (req, res) => {
@@ -1041,10 +1174,93 @@ async function recordDbSnapshots() {
   }
 }
 
+// ── Offline Subscription Sync ─────────────────────────────────────────────────
+// Runs only when OFFLINE_MODE=true. Calls the master FlippedPOS API every 6 h
+// to pull the latest subscription status, trial_ends_at and subscription_end
+// for every local tenant. Suspensions and expiries on the master are mirrored
+// to the local Docker DB so the Admin sidebar timer and suspension screen stay
+// accurate even when running completely offline (after the sync window).
+async function runOfflineSubscriptionSync() {
+  if (process.env.OFFLINE_MODE !== 'true' || !process.env.MASTER_API_URL) return;
+
+  try {
+    const { rows: tenants } = await pool.query(
+      `SELECT id, schema_name, customer_code, status, trial_ends_at, subscription_end
+       FROM public.tenants
+       WHERE customer_code IS NOT NULL`
+    );
+
+    if (tenants.length === 0) return;
+
+    console.log(`[Offline Sync] Checking subscription status for ${tenants.length} tenant(s)…`);
+
+    for (const local of tenants) {
+      try {
+        const resp = await fetch(
+          `${process.env.MASTER_API_URL}/api/saas/offline/sync-tenant`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerCode: local.customer_code }),
+            signal: AbortSignal.timeout(10000),
+          }
+        );
+
+        if (!resp.ok) {
+          console.warn(`[Offline Sync] Master returned ${resp.status} for ${local.customer_code}`);
+          continue;
+        }
+
+        const { tenant: remote } = await resp.json();
+        if (!remote) continue;
+
+        const changed =
+          remote.status !== local.status ||
+          remote.trial_ends_at !== (local.trial_ends_at ? new Date(local.trial_ends_at).toISOString() : null) ||
+          remote.subscription_end !== (local.subscription_end ? new Date(local.subscription_end).toISOString() : null);
+
+        if (changed) {
+          await pool.query(
+            `UPDATE public.tenants
+             SET status = $1, trial_ends_at = $2, subscription_end = $3
+             WHERE id = $4`,
+            [remote.status, remote.trial_ends_at || null, remote.subscription_end || null, local.id]
+          );
+          clearTenantCache(local.schema_name);
+          console.log(
+            `[Offline Sync] Updated ${local.schema_name}: status=${remote.status}, ` +
+            `sub_end=${remote.subscription_end || 'none'}`
+          );
+        }
+      } catch (tenantErr) {
+        console.warn(`[Offline Sync] Could not sync ${local.customer_code}:`, tenantErr.message);
+      }
+    }
+
+    console.log('[Offline Sync] Done.');
+  } catch (err) {
+    console.error('[Offline Sync] Error:', err.message);
+  }
+}
+
 // Called from server/index.js AFTER migrations complete so the tables exist
 export function initSaasSchedulers() {
   runSubscriptionSweep();
   recordDbSnapshots();
   setInterval(runSubscriptionSweep, 15 * 60 * 1000);
   setInterval(recordDbSnapshots, 6 * 60 * 60 * 1000);
+
+  // Offline mode: sync subscription status from master on boot + every 6 h
+  if (process.env.OFFLINE_MODE === 'true' && process.env.MASTER_API_URL) {
+    runOfflineSubscriptionSync();
+    setInterval(runOfflineSubscriptionSync, 6 * 60 * 60 * 1000);
+  }
+
+  // Register PesaPal IPN
+  if (process.env.PESAPAL_CONSUMER_KEY) {
+    const ipnUrl = `${process.env.APP_BASE_URL || 'https://app.flippedpos.com'}/api/saas/pesapal/ipn`;
+    registerIPN(ipnUrl)
+      .then(ipnId => console.log(`[PesaPal] IPN Registered successfully. ID: ${ipnId}`))
+      .catch(err => console.error(`[PesaPal] Failed to register IPN: ${err.message}`));
+  }
 }
