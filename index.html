@@ -36,6 +36,25 @@
 </head>
 
   <body>
+    <div id="custom-splash" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; z-index: 999999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out;">
+      <img src="/splash.png" style="width: 100%; height: 100%; object-fit: cover;" alt="Splash Screen" />
+    </div>
+    
+    <script>
+      // Lock scrolling while splash screen is visible
+      document.body.style.overflow = 'hidden';
+      
+      // Ensure it stays for exactly 3 seconds
+      setTimeout(() => {
+        const splash = document.getElementById('custom-splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          document.body.style.overflow = ''; // Restore scrolling
+          setTimeout(() => splash.remove(), 500); // Remove from DOM after fade out
+        }
+      }, 3000);
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

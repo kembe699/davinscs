@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer, Home } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -731,33 +731,12 @@ export default function POSMain() {
             </button>
           )}
 
-          {/* Mobile Cart Toggle */}
-          <button 
-            onClick={() => setShowMobileCart(true)}
-            className="lg:hidden p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors relative"
-          >
-            <ShoppingCart size={18} className="md:w-5 md:h-5" />
-            {cart.length > 0 && (
-              <span className="pos-badge-gradient absolute top-0 right-0 min-w-[14px] md:min-w-[16px] h-3.5 md:h-4 text-[8px] md:text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
-                {cart.length}
-              </span>
-            )}
-          </button>
-
-          {/* Theme Toggle */}
+          {/* Theme Toggle (Desktop Only) */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
+            className="hidden md:block p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
           >
             {theme === 'dark' ? <Sun size={18} className="md:w-5 md:h-5" /> : <Moon size={18} className="md:w-5 md:h-5" />}
-          </button>
-
-          {/* Menu */}
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
-          >
-            <Menu size={18} className="md:w-5 md:h-5" />
           </button>
         </div>
       </header>
@@ -766,7 +745,7 @@ export default function POSMain() {
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* LEFT: Categories Sidebar */}
-        <div className="w-[72px] md:w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shrink-0 overflow-hidden">
+        <div className="hidden md:flex w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col shrink-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto py-2">
             <button
               onClick={() => setSelectedCategory('all')}
@@ -805,11 +784,31 @@ export default function POSMain() {
         </div>
 
         {/* CENTER: Product Grid */}
-        <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 overflow-y-auto">
+        <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
+          {/* Mobile Category Chips */}
+          <div className="md:hidden flex overflow-x-auto gap-2 pb-3 mb-2 -mx-2 px-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${!selectedCategory || selectedCategory === 'all' ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
+            >
+              All
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.slug}
+                onClick={() => setSelectedCategory(cat.slug)}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${selectedCategory === cat.slug ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
           {/* Mobile Search */}
           <div className="mb-4 relative md:hidden">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
             <input
+              id="mobile-search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1602,6 +1601,33 @@ export default function POSMain() {
           </div>
         </div>
       )}
+    {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <button className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors">
+          <Home size={20} />
+          <span className="text-[10px] mt-1 font-medium">Home</span>
+        </button>
+        <button onClick={() => { document.getElementById('mobile-search')?.focus(); }} className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors">
+          <Search size={20} />
+          <span className="text-[10px] mt-1 font-medium">Search</span>
+        </button>
+        <button onClick={() => setShowMobileCart(true)} className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors relative">
+          <div className="relative">
+            <ShoppingCart size={20} />
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 border-2 border-white">
+                {cart.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-1 font-medium">Cart</span>
+        </button>
+        <button onClick={() => setShowMenu(true)} className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors">
+          <Menu size={20} />
+          <span className="text-[10px] mt-1 font-medium">Menu</span>
+        </button>
+      </div>
+
     </div>
   );
 }
