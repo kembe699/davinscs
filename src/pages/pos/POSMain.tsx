@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer, Home } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer, Home, LayoutGrid, List } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -60,7 +60,19 @@ export default function POSMain() {
   const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const exactMatch = products.find(p => p.barcode?.toLowerCase() === q || p.sku?.toLowerCase() === q);
+      if (exactMatch) {
+        addToCart(exactMatch);
+        setSearchQuery("");
+      }
+    }
+  };
 
   const posLogout = useCallback(() => {
     logout();
@@ -708,7 +720,8 @@ export default function POSMain() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or scan barcode..."
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-none rounded-full text-sm text-[#1A1A2E] dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#10B981]"
             />
             {searchQuery && (
@@ -731,12 +744,20 @@ export default function POSMain() {
             </button>
           )}
 
-          {/* Theme Toggle (Desktop Only) */}
+          {/* Theme Toggle */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="hidden md:block p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
+            className="p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
           >
             {theme === 'dark' ? <Sun size={18} className="md:w-5 md:h-5" /> : <Moon size={18} className="md:w-5 md:h-5" />}
+          </button>
+
+          {/* View Toggle */}
+          <button
+            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            className="hidden md:block p-1.5 md:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10B981] hover:bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full transition-colors"
+          >
+            {viewMode === 'grid' ? <List size={18} className="md:w-5 md:h-5" /> : <LayoutGrid size={18} className="md:w-5 md:h-5" />}
           </button>
         </div>
       </header>
@@ -785,23 +806,32 @@ export default function POSMain() {
 
         {/* CENTER: Product Grid */}
         <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
-          {/* Mobile Category Chips */}
-          <div className="md:hidden flex overflow-x-auto gap-2 pb-3 mb-2 -mx-2 px-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${!selectedCategory || selectedCategory === 'all' ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
-            >
-              All
-            </button>
-            {categories.map(cat => (
+          {/* Mobile Category Chips & View Toggle */}
+          <div className="md:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
+            <div className="flex-1 flex overflow-x-auto gap-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
-                key={cat.slug}
-                onClick={() => setSelectedCategory(cat.slug)}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${selectedCategory === cat.slug ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
+                onClick={() => setSelectedCategory('all')}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${!selectedCategory || selectedCategory === 'all' ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
               >
-                {cat.name}
+                All
               </button>
-            ))}
+              {categories.map(cat => (
+                <button
+                  key={cat.slug}
+                  onClick={() => setSelectedCategory(cat.slug)}
+                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors border shadow-sm ${selectedCategory === cat.slug ? 'bg-[#10B981] text-white border-[#10B981]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700'}`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+              className="p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 shadow-sm shrink-0"
+            >
+              {viewMode === 'grid' ? <List size={18} /> : <LayoutGrid size={18} />}
+            </button>
           </div>
 
           {/* Mobile Search */}
@@ -812,7 +842,8 @@ export default function POSMain() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search or scan barcode..."
               className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[11px] md:text-sm text-[#1A1A2E] dark:text-gray-100 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent"
             />
           </div>
@@ -831,21 +862,58 @@ export default function POSMain() {
             }
 
             return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6 pb-24 lg:pb-0">
+              <div className={viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6 pb-24 lg:pb-0" : "flex flex-col gap-2 md:gap-3 pb-24 lg:pb-0"}>
                 {visibleProducts.map(product => {
                   const availableStock = product.quantity_on_hand - (product.quantity_reserved ?? 0);
-                const qtyInCart = cart.find(item => item.product.id === product.id)?.quantity || 0;
-                const remainingStock = availableStock - qtyInCart;
-                const outOfStock = !product.in_stock || availableStock <= 0;
+                  const qtyInCart = cart.find(item => item.product.id === product.id)?.quantity || 0;
+                  const remainingStock = availableStock - qtyInCart;
+                  const outOfStock = !product.in_stock || availableStock <= 0;
 
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    disabled={outOfStock}
-                    className={`bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col text-left relative group ${outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'}`}
-                  >
-                    <div className="w-full aspect-square bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center relative overflow-hidden border-b border-gray-50">
+                  if (viewMode === 'list') {
+                    return (
+                      <div key={product.id} className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700/50 p-2 md:p-3 flex items-center gap-3 md:gap-4 transition-all duration-200 ${outOfStock ? 'opacity-50' : 'hover:shadow-md'}`}>
+                        <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-700">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <PackageX className="w-8 h-8 text-gray-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-[#1A1A2E] dark:text-gray-100 font-medium text-xs md:text-sm truncate">{product.name}</h3>
+                          <div className="text-[10px] md:text-xs text-gray-500 mt-0.5">{product.category}</div>
+                          <div className="pos-price-gradient text-sm md:text-base font-bold mt-1">
+                            {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {outOfStock ? (
+                            <span className="text-[10px] md:text-xs font-bold text-red-500">Out</span>
+                          ) : (
+                            <span className={`text-[10px] md:text-xs font-medium ${remainingStock <= 5 ? 'text-amber-500' : 'text-gray-400'}`}>
+                              {remainingStock} left
+                            </span>
+                          )}
+                          <button
+                            onClick={() => addToCart(product)}
+                            disabled={outOfStock}
+                            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${outOfStock ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-[#10B981]/10 text-[#10B981] hover:bg-[#10B981] hover:text-white'}`}
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      disabled={outOfStock}
+                      className={`bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col text-left relative group ${outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'}`}
+                    >
+                      <div className="w-full h-24 md:h-32 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center relative overflow-hidden border-b border-gray-50">
                       {product.image_url ? (
                         <img
                           src={product.image_url}
@@ -1120,25 +1188,6 @@ export default function POSMain() {
           </div>
         )}
       </div>
-
-      {/* Mobile floating cart CTA */}
-      {cart.length > 0 && (
-        <div className="lg:hidden fixed bottom-4 inset-x-4 z-30">
-          <button
-            onClick={() => setShowMobileCart(true)}
-            className="w-full flex items-center justify-between px-6 py-4 bg-[#10B981] text-white shadow-[0_10px_25px_-5px_rgba(0,168,150,0.5)] rounded-2xl font-bold text-lg"
-          >
-            <div className="flex items-center gap-3">
-              <ShoppingCart size={24} />
-              <div className="flex flex-col items-start">
-                <span>Checkout</span>
-                <span className="text-xs font-normal opacity-90">{cart.length} items</span>
-              </div>
-            </div>
-            <span>{formatCurrencySync(total, schemeCurrencySymbol(), false)}</span>
-          </button>
-        </div>
-      )}
 
       {/* Payment Modal */}
       {showPaymentModal && (
