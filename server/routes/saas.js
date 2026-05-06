@@ -926,6 +926,17 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
     );
     if (!planRes.rows.length) return res.status(404).json({ error: 'Plan not found' });
     const plan = planRes.rows[0];
+    const period = billing_period || plan.billing_period || 'monthly';
+
+    // Prevent duplicate pending invoices for the same plan and period
+    const dupCheck = await pool.query(
+      `SELECT id FROM public.saas_billing
+       WHERE tenant_id=$1 AND plan_name=$2 AND billing_period=$3 AND status='pending'`,
+      [tenantId, plan.name, period]
+    );
+    if (dupCheck.rows.length) {
+      return res.status(409).json({ error: 'You already have a pending invoice for this subscription. Please go to your Billing page to pay it.' });
+    }
 
     // Generate unique invoice number
     let invoiceNumber;
@@ -938,8 +949,12 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
     }
     if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
 
-    const period = billing_period || plan.billing_period || 'monthly';
-    const priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
+    let priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
+    if (period === 'quarterly') {
+      priceNum = priceNum * 3;
+    } else if (period === 'annual') {
+      priceNum = priceNum * 12 * 0.95;
+    }
 
     const inv = await pool.query(
       `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
