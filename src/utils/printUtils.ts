@@ -190,10 +190,47 @@ export function downloadDocument(filename: string, bodyHTML: string): void {
   else setTimeout(doPrint, 1500);
 }
 
-/** Print a thermal (80mm) receipt — uses NO shared A4 CSS so the caller's
- *  @page { size: 80mm auto } rule is the only one in the document. */
 export function printThermal(title: string, bodyHTML: string): void {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHTML}</body></html>`;
+  
+  // Mobile browsers (especially Safari/Chrome on iOS/Android) struggle with printing hidden iframes.
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      
+      const images = Array.from(win.document.images);
+      if (images.length === 0) {
+        setTimeout(() => { win.print(); }, 500);
+        return;
+      }
+      
+      let loadedCount = 0;
+      let hasPrinted = false;
+      const doPrint = () => {
+        if (hasPrinted) return;
+        hasPrinted = true;
+        win.print();
+      };
+      
+      images.forEach(img => {
+        if (img.complete) loadedCount++;
+        else {
+          img.onload = () => { loadedCount++; if (loadedCount === images.length) doPrint(); };
+          img.onerror = () => { loadedCount++; if (loadedCount === images.length) doPrint(); };
+        }
+      });
+      
+      if (loadedCount === images.length) doPrint();
+      else setTimeout(doPrint, 1500);
+      return;
+    }
+    // Fallback to iframe if popup is blocked
+  }
+
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;left:0;top:0;';
   document.body.appendChild(iframe);

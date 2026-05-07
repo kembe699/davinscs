@@ -886,7 +886,7 @@ export default function POSMain() {
                       <div key={product.id} className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700/50 p-2 md:p-3 flex items-center gap-3 md:gap-4 transition-all duration-200 ${outOfStock ? 'opacity-50' : 'hover:shadow-md'}`}>
                         <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-700">
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-1" />
                           ) : (
                             <PackageX className="w-8 h-8 text-gray-300" />
                           )}
@@ -930,7 +930,7 @@ export default function POSMain() {
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                           referrerPolicy="no-referrer"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
