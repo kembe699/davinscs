@@ -27,6 +27,10 @@ export default function CashManagement() {
 
   useEffect(() => {
     loadData();
+    const intervalId = setInterval(() => {
+      loadData();
+    }, 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const loadData = async () => {
@@ -184,6 +188,7 @@ export default function CashManagement() {
             {movements.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400 py-2">No movements recorded yet.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -210,6 +215,7 @@ export default function CashManagement() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -220,6 +226,7 @@ export default function CashManagement() {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-[#1A1A2E] dark:text-gray-100">Session History</h2>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <tr>
@@ -266,6 +273,7 @@ export default function CashManagement() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Close Session Modal */}

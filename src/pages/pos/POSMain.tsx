@@ -96,6 +96,15 @@ export default function POSMain() {
     loadSecondaryCurrency();
     loadSchemes();
     loadPromotions();
+
+    const intervalId = setInterval(() => {
+      loadData();
+      checkCashDrawer();
+      loadSchemes();
+      loadPromotions();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {

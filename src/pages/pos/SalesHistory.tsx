@@ -41,6 +41,12 @@ export default function SalesHistory() {
     loadData();
     loadCompanyData();
     loadSecondaryCurrency();
+
+    const intervalId = setInterval(() => {
+      loadData();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   // Re-sync refund item state whenever saleItems reloads (e.g. after a refund)
@@ -275,7 +281,7 @@ export default function SalesHistory() {
             placeholder="Search sale #, customer, cashier…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm w-56 placeholder:text-gray-500 dark:text-gray-400"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm w-full md:w-56 placeholder:text-gray-500 dark:text-gray-400"
           />
           <button
             onClick={handleRefresh}

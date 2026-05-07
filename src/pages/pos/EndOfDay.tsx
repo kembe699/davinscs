@@ -34,7 +34,13 @@ export default function EndOfDay() {
   const [closing, setClosing]               = useState(false);
   const [closeResult, setCloseResult]       = useState<any>(null);
 
-  useEffect(() => { loadAll(); }, [selectedDate]);
+  useEffect(() => {
+    loadAll();
+    const intervalId = setInterval(() => {
+      loadAll();
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [selectedDate]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -195,7 +201,7 @@ export default function EndOfDay() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-gray-900">
       {/* Top bar */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center gap-3 print:hidden">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 flex flex-wrap items-center gap-3 print:hidden">
         <button
           onClick={() => navigate(tp("/pos"))}
           className="flex items-center gap-2 px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm hover:bg-white dark:bg-gray-800"
