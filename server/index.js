@@ -178,6 +178,6 @@ migrateTenant("public")
     });
   })
   .catch((err) => {
-    console.error("\u274c Startup failed:", err.message);
+    console.error("\u274c Startup failed:", err);
     process.exit(1);
   });

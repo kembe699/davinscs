@@ -152,6 +152,12 @@ export async function autoSeed() {
         features: JSON.stringify(['Everything in Professional','Multiple branches','Custom integrations','Dedicated server','On-site training','SLA guarantee','White-label option']),
         cta_label: 'Contact Sales', cta_href: '#contact',
       },
+      {
+        name: 'Mobile plan', price: '$15', sub_label: 'per month', highlight: true, sort_order: 3,
+        description: 'Designed exclusively for small business owners on the go using smartphones.',
+        features: JSON.stringify(['Mobile App Access','Basic POS Terminal','Simplified Inventory','Add Products easily','Track Sales & History','Unlimited cashiers']),
+        cta_label: 'Get Mobile', cta_href: '/register?plan=mobile',
+      },
     ];
 
     const { rows: existingPlans } = await pool.query('SELECT COUNT(*) FROM public.pricing_plans');
