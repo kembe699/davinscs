@@ -36,6 +36,7 @@ export default function Company() {
     website: "",
     site_layout: "tech_grid",
     description: "",
+    currency: "UGX",
     brand_color_start: "#004A99",
     brand_color_mid: "#008B8B",
     brand_color_end: "#32CD32",
@@ -103,6 +104,7 @@ export default function Company() {
           tax_id: data.tax_id || "",
           website: data.website || "",
           description: data.description || "",
+          currency: data.currency || "UGX",
           brand_color_start: data.brand_color_start || "#004A99",
           brand_color_mid: data.brand_color_mid || "#008B8B",
           brand_color_end: data.brand_color_end || "#32CD32",
@@ -150,6 +152,7 @@ export default function Company() {
         tax_id: savedData.tax_id || "",
         website: savedData.website || "",
         description: savedData.description || "",
+        currency: savedData.currency || "UGX",
         brand_color_start: start,
         brand_color_mid: mid,
         brand_color_end: end,
@@ -505,6 +508,18 @@ export default function Company() {
                   <div>
                     <label className="block text-sm text-foreground mb-2">Country</label>
                     <input type="text" value={companyData.country} onChange={(e) => setCompanyData({ ...companyData, country: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-foreground mb-2">Currency</label>
+                    <select value={companyData.currency} onChange={(e) => setCompanyData({ ...companyData, currency: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary">
+                      <option value="UGX">UGX - Ugandan Shilling</option>
+                      <option value="USD">USD - US Dollar</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - British Pound</option>
+                      <option value="KES">KES - Kenyan Shilling</option>
+                      <option value="TZS">TZS - Tanzanian Shilling</option>
+                      <option value="RWF">RWF - Rwandan Franc</option>
+                    </select>
                   </div>
                 </div>
               </div>

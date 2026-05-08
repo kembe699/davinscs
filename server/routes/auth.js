@@ -8,7 +8,7 @@ import { logAudit } from "../utils/audit.js";
 
 
 import { tenantStorage } from "../tenantStorage.js";
-
+import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
 router.post("/login", async (req, res) => {
@@ -98,14 +98,14 @@ router.post("/login", async (req, res) => {
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, role_id: user.role_id, permissions, schema_name: schemaName },
+        { id: user.id, name: user.name, email: user.email, role: user.role, role_id: user.role_id, permissions, schema_name: schemaName },
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
       await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN', entityType: 'user', entityId: user.id, details: { role: roleName }, ip: req.ip });
       res.json({
         token,
-        user: { id: user.id, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name: schemaName }
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, role_id: user.role_id, role_name: roleName, permissions, schema_name: schemaName }
       });
     });
   } catch (err) {
@@ -246,6 +246,38 @@ router.post("/reset-password", async (req, res) => {
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const schemaName = req.user.schema_name || 'public';
+    let tenantInfo = null;
+    
+    if (schemaName !== 'public') {
+      const { rows } = await pool.query(
+        "SELECT status, trial_ends_at, subscription_end FROM public.tenants WHERE schema_name = $1",
+        [schemaName]
+      );
+      tenantInfo = rows[0] || null;
+    }
+    
+    let dbUser = req.user;
+    try {
+      await tenantStorage.run(schemaName, async () => {
+        const { rows } = await pool.query("SELECT id, name, email, role, role_id FROM users WHERE id = $1", [req.user.id]);
+        if (rows[0]) {
+          dbUser = { ...req.user, ...rows[0] };
+        }
+      });
+    } catch(e) {
+      console.error("Error fetching user details", e);
+    }
+    
+    res.json({ user: dbUser, tenant: tenantInfo });
+  } catch (err) {
+    console.error("[GET /auth/me] Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

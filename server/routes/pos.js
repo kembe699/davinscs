@@ -93,12 +93,15 @@ router.post("/sales", requireAuth, async (req, res) => {
       [user_id]
     );
     
-    const session_id = sessionResult.rows[0]?.id || null;
-
-    // Require an open cash session to sell
+    let session_id = sessionResult.rows[0]?.id || null;
+    
+    // Auto-open cash drawer session if none exists
     if (!session_id) {
-      client.release();
-      return res.status(403).json({ error: "No open cash drawer session. Please open your session in Cash Management before making a sale." });
+      const openSessionResult = await client.query(
+        "INSERT INTO cash_drawer_sessions (user_id, status, opened_at) VALUES ($1, 'open', NOW()) RETURNING id",
+        [user_id]
+      );
+      session_id = openSessionResult.rows[0].id;
     }
 
     // Calculate totals
@@ -334,7 +337,7 @@ router.post("/sales", requireAuth, async (req, res) => {
     res.json(completeSale.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
+    console.error("SALE_ERROR_DUMP:", err.stack || err);
     res.status(500).json({ error: err.message || "Server error" });
   } finally {
     client.release();
@@ -647,10 +650,11 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
       refund_amount: refund_total,
       refund_number,
     });
-  } catch (err) {
+  } catch (error) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    require('fs').appendFileSync('/tmp/pos_error.log', new Date().toISOString() + ' ERROR: ' + (error.stack || error) + '\n');
+    console.error("Sale error:", error);
+    res.status(500).json({ error: "Failed to process sale" });
   } finally {
     client.release();
   }
