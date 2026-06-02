@@ -158,57 +158,26 @@ if (process.env.NODE_ENV === "production") {
 
 
 
-// ─── Startup ─────────────────────────────────────────────────────────────────
-// We bind the port FIRST so Render can detect it immediately,
-// then run migrations + seeding in the background with retries.
-
-const MAX_RETRY_DELAY = 30_000; // 30 s
-
-async function waitForDb(retries = 10, delayMs = 3000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await pool.query('SELECT 1');
-      console.log('✅ Database connection established.');
-      return;
-    } catch (err) {
-      console.error(`⚠️  DB not ready (attempt ${attempt}/${retries}): ${err.message}`);
-      if (attempt === retries) throw err;
-      await new Promise(r => setTimeout(r, Math.min(delayMs * attempt, MAX_RETRY_DELAY)));
-    }
-  }
-}
-
-async function runMigrationsAndSeed() {
-  try {
-    await waitForDb();
-
-    // Migrate public schema
-    await migrateTenant('public');
-    console.log('Migrated public schema.');
-
-    // Migrate all tenant schemas (failures are non-fatal)
-    const { rows } = await pool.query('SELECT schema_name FROM public.tenants');
+migrateTenant("public")
+  .then(async () => {
+    const { rows } = await pool.query("SELECT schema_name FROM public.tenants");
     for (const tenant of rows) {
       try {
         await migrateTenant(tenant.schema_name);
         console.log(`Migrated tenant schema: ${tenant.schema_name}`);
       } catch (err) {
-        console.error(`Failed to migrate tenant schema: ${tenant.schema_name}`, err.message);
+        console.error(`Failed to migrate tenant schema: ${tenant.schema_name}`, err);
       }
     }
-
-    await autoSeed();
+  })
+  .then(() => autoSeed())
+  .then(() => {
     initSaasSchedulers();
-    console.log('✅ Migrations, seeding and schedulers complete.');
-  } catch (err) {
-    // Log but do NOT exit — the server is already listening.
-    // Migrations will be retried on next deploy or can be triggered manually.
-    console.error('❌ Background startup task failed:', err.message);
-  }
-}
-
-// Bind port immediately so Render detects it, then run migrations in background
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  runMigrationsAndSeed();
-});
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("\u274c Startup failed:", err);
+    process.exit(1);
+  });
