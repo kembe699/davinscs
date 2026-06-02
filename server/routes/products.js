@@ -51,24 +51,37 @@ router.post("/", requireAuth, async (req, res) => {
   if (!slug || !name || !brand || !price || !category) {
     return res.status(400).json({ error: "slug, name, brand, price and category are required" });
   }
+  const priceInt = parseInt(price, 10);
+  const costPriceInt = parseInt(cost_price, 10) || 0;
+  const qtyInt = parseInt(quantity_on_hand, 10) || 0;
+  const reorderInt = parseInt(reorder_level, 10) || 0;
+  const expenseId = parseInt(expense_account_id, 10) || null;
+  if (isNaN(priceInt)) {
+    return res.status(400).json({ error: "price must be a valid integer" });
+  }
   try {
     const { rows } = await pool.query(
       `INSERT INTO products (slug, name, brand, price, cost_price, tag, description, specs, image_url, in_stock, is_featured, category, barcode, expiry_date, product_type, quantity_on_hand, reorder_level, expense_account_id, uom)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
-      [slug, name, brand, price, cost_price || 0, tag || "", description || "", JSON.stringify(specs || []), image_url || "", in_stock ?? true, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", quantity_on_hand || 0, reorder_level || 0, expense_account_id || null, uom || "pcs"]
+      [slug, name, brand, priceInt, costPriceInt, tag || "", description || "", JSON.stringify(specs || []), image_url || "", in_stock ?? true, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", qtyInt, reorderInt, expenseId, uom || "pcs"]
     );
-    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'PRODUCT_CREATED', entityType: 'product', entityId: rows[0].id, details: { name, sku: slug, price, category }, ip: req.ip });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'PRODUCT_CREATED', entityType: 'product', entityId: rows[0].id, details: { name, sku: slug, price: priceInt, category }, ip: req.ip });
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("[products POST]", err.code, err.message, err.detail);
+    res.status(500).json({ error: "Server error", detail: err.message });
   }
 });
 
 // PUT update product (admin)
 router.put("/:id", requireAuth, async (req, res) => {
   const { name, brand, price, cost_price, tag, description, specs, image_url, in_stock, is_featured, category, slug, barcode, expiry_date, product_type, quantity_on_hand, reorder_level, expense_account_id, uom } = req.body;
+  const priceInt = parseInt(price, 10);
+  const costPriceInt = parseInt(cost_price, 10) || 0;
+  const qtyInt = parseInt(quantity_on_hand, 10) || 0;
+  const reorderInt = parseInt(reorder_level, 10) || 0;
+  const expenseId = parseInt(expense_account_id, 10) || null;
   try {
     const { rows } = await pool.query(
       `UPDATE products SET
@@ -77,15 +90,15 @@ router.put("/:id", requireAuth, async (req, res) => {
         expiry_date=$14, product_type=$15, quantity_on_hand=$16, reorder_level=$17,
         expense_account_id=$18, uom=$19, updated_at=NOW()
        WHERE id=$20 RETURNING *`,
-      [slug, name, brand, price, cost_price || 0, tag, description, JSON.stringify(specs || []), image_url, in_stock, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", quantity_on_hand || 0, reorder_level || 0, expense_account_id || null, uom || "pcs", req.params.id]
+      [slug, name, brand, priceInt, costPriceInt, tag, description, JSON.stringify(specs || []), image_url, in_stock, is_featured ?? false, category, barcode || "", expiry_date || null, product_type || "product", qtyInt, reorderInt, expenseId, uom || "pcs", req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: "Product not found" });
-    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'PRODUCT_UPDATED', entityType: 'product', entityId: rows[0].id, details: { name, price, category }, ip: req.ip });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'PRODUCT_UPDATED', entityType: 'product', entityId: rows[0].id, details: { name, price: priceInt, category }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("[products PUT]", err.code, err.message, err.detail);
+    res.status(500).json({ error: "Server error", detail: err.message });
   }
 });
 

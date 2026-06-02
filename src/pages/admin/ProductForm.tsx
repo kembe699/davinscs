@@ -226,11 +226,11 @@ export default function ProductForm() {
                     />
                   </div>
                   <div>
-                    <label className="field-label">Brand</label>
+                    <label className="field-label">Brand *</label>
                     <input
-                      type="text" value={form.brand}
+                      required type="text" value={form.brand}
                       onChange={(e) => set("brand", e.target.value)}
-                      placeholder="Brand (optional)"
+                      placeholder="e.g. Samsung"
                       className="field-input"
                     />
                   </div>
