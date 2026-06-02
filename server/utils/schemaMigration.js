@@ -821,6 +821,20 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_id INTEGER REFERENCES currencies(id);
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_code VARCHAR(10) DEFAULT 'UGX';
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT 'UGX';
+
+    DO $$
+    DECLARE col_type TEXT;
+    BEGIN
+      SELECT data_type INTO col_type
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name   = 'products'
+          AND column_name  = 'cost_price';
+      IF col_type = 'integer' THEN
+        ALTER TABLE products ALTER COLUMN cost_price TYPE NUMERIC(15,2) USING cost_price::numeric(15,2);
+        ALTER TABLE products ALTER COLUMN cost_price SET DEFAULT 0;
+      END IF;
+    END $$;
   `);
   console.log("\u2705 Migrations applied");
 }
