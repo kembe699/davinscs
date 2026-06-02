@@ -270,12 +270,15 @@ export default function ProductForm() {
                   <div className="sm:col-span-2">
                     <label className="field-label">Selling Price ({baseCurrency?.code || 'UGX'}) *</label>
                     <input
-                      required type="number" min={0} value={form.price === 0 ? "" : form.price}
+                      required type="number" min={0} step="any" value={form.price === 0 ? "" : form.price}
                       onChange={(e) => {
-                        const sp = e.target.value === "" ? "" : Number(e.target.value);
-                        set("price", sp);
-                        if (form.cost_price && Number(form.cost_price) > 0 && sp !== "" && Number(sp) > 0) {
-                          setMargin(Math.round((sp - form.cost_price) / form.cost_price * 100));
+                        const raw = e.target.value;
+                        const sp = raw === "" ? "" : raw;
+                        set("price", sp as number | "");
+                        const spNum = parseFloat(raw);
+                        const cpNum = parseFloat(String(form.cost_price));
+                        if (!isNaN(spNum) && !isNaN(cpNum) && cpNum > 0) {
+                          setMargin(Math.round((spNum - cpNum) / cpNum * 100));
                         }
                       }}
                       placeholder="e.g. 1500000"
@@ -285,12 +288,13 @@ export default function ProductForm() {
                   <div>
                     <label className="field-label">Unit cost ({baseCurrency?.code || 'UGX'})</label>
                     <input
-                      type="number" min={0} value={form.cost_price === 0 ? "" : form.cost_price}
+                      type="number" min={0} step="any" value={form.cost_price === 0 ? "" : form.cost_price}
                       onChange={(e) => {
-                        const cp = e.target.value === "" ? "" : Number(e.target.value);
-                        set("cost_price", cp);
-                        if (cp !== "" && cp > 0 && margin !== "") {
-                          set("price", Math.round(Number(cp) * (1 + Number(margin) / 100)));
+                        const raw = e.target.value;
+                        set("cost_price", raw as unknown as number | "");
+                        const cpNum = parseFloat(raw);
+                        if (!isNaN(cpNum) && cpNum > 0 && margin !== "") {
+                          set("price", Math.round(cpNum * (1 + Number(margin) / 100)));
                         }
                       }}
                       placeholder="Cost (optional)"
@@ -300,12 +304,15 @@ export default function ProductForm() {
                   <div>
                     <label className="field-label">Margin (%)</label>
                     <input
-                      type="number" min={0} value={margin}
+                      type="number" min={0} step="any" value={margin}
                       onChange={(e) => {
-                        const m = e.target.value === "" ? "" : Number(e.target.value);
+                        const raw = e.target.value;
+                        const m = raw === "" ? "" : (raw as unknown as number);
                         setMargin(m);
-                        if (m !== "" && form.cost_price > 0) {
-                          set("price", Math.round(form.cost_price * (1 + Number(m) / 100)));
+                        const mNum = parseFloat(raw);
+                        const cpNum = parseFloat(String(form.cost_price));
+                        if (!isNaN(mNum) && !isNaN(cpNum) && cpNum > 0) {
+                          set("price", Math.round(cpNum * (1 + mNum / 100)));
                         }
                       }}
                       placeholder="e.g. 30  →  30% markup"
