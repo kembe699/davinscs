@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { SHARED_PRINT_CSS } from './printUtils';
+import { SHARED_PRINT_CSS, brandAccentStyleTag } from './printUtils';
 import { showGlobalToast } from './toastBridge';
 
 export interface CompanyInfo {
@@ -10,6 +10,7 @@ export interface CompanyInfo {
   website?: string;
   tax_id?: string;
   logo?: string;
+  brand_color_start?: string;
 }
 
 export interface ReportExportOptions {
@@ -145,6 +146,7 @@ export const exportToPDF = (options: ReportExportOptions) => {
   <meta charset="utf-8"><title>${reportTitle}</title>
   <style>${SHARED_PRINT_CSS}</style>
 </head><body>
+  ${brandAccentStyleTag(companyInfo)}
   <div class="header">
     <div class="header-left">
       ${companyInfo.logo
@@ -194,6 +196,7 @@ export const printReport = (options: ReportExportOptions) => {
       <title>${reportTitle}</title>
       <style>${SHARED_PRINT_CSS}</style>
     </head><body>
+      ${brandAccentStyleTag(companyInfo)}
       <div class="header">
         <div class="header-left">
           ${companyInfo.logo

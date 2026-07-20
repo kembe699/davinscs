@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download, ChevronDown, ChevronUp, ShoppingCart, Truck, Wallet } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { companyHeaderHTML, downloadDocument, printDocument } from "@/utils/printUtils";
 
@@ -27,6 +27,7 @@ export default function ProcurementEnhanced() {
   const [addingSupplier, setAddingSupplier] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
   const [supplierForm, setSupplierForm] = useState({ name: "", contact_person: "", email: "", phone: "", address: "" });
+  const [expandedSupplierId, setExpandedSupplierId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   
   // PO form
@@ -134,6 +135,32 @@ export default function ProcurementEnhanced() {
     };
     load();
   }, []);
+
+  // Everything needed is already loaded (pos/grns/bills/payments) — no extra fetch required.
+  const getSupplierOverview = (supplierId: number) => {
+    const supplierPOs = pos.filter(p => p.supplier_id === supplierId);
+    const supplierGRNs = grns.filter(g => g.supplier_id === supplierId);
+    const supplierBills = bills.filter(b => b.supplier_id === supplierId);
+    const supplierPayments = payments
+      .filter(p => p.supplier_id === supplierId)
+      .sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime());
+
+    const totalOrdered = supplierPOs.reduce((sum, p) => sum + Number(p.total_amount || 0), 0);
+    const totalBilled = supplierBills.reduce((sum, b) => sum + Number(b.total_amount || 0), 0);
+    const totalPaid = supplierBills.reduce((sum, b) => sum + Number(b.paid_amount || 0), 0);
+    const balance = totalBilled - totalPaid;
+
+    return {
+      poCount: supplierPOs.length,
+      grnCount: supplierGRNs.length,
+      billCount: supplierBills.length,
+      totalOrdered,
+      totalBilled,
+      totalPaid,
+      balance,
+      payments: supplierPayments,
+    };
+  };
 
   const handleSaveSupplier = async () => {
     if (!supplierForm.name) return;
@@ -700,6 +727,7 @@ export default function ProcurementEnhanced() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle bg-chassis">
+                    <th className="w-8"></th>
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Name</th>
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Contact</th>
                     <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Email</th>
@@ -708,13 +736,23 @@ export default function ProcurementEnhanced() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
-                  {suppliers.map((supplier) => (
-                    <tr key={supplier.id} className="hover:bg-chassis/50 transition-colors">
+                  {suppliers.map((supplier) => {
+                    const isExpanded = expandedSupplierId === supplier.id;
+                    const sym = currencies.find(c => c.is_base)?.symbol ?? 'UGX';
+                    return (
+                    <Fragment key={supplier.id}>
+                    <tr
+                      onClick={() => setExpandedSupplierId(isExpanded ? null : supplier.id)}
+                      className={`cursor-pointer hover:bg-chassis/50 transition-colors ${isExpanded ? 'bg-chassis/40' : ''}`}
+                    >
+                      <td className="px-2 py-3 text-muted-foreground">
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </td>
                       <td className="px-4 py-3 font-medium text-foreground">{supplier.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{supplier.contact_person || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{supplier.email || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{supplier.phone || "—"}</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => {
                             setEditingSupplierId(supplier.id);
@@ -739,7 +777,72 @@ export default function ProcurementEnhanced() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    {isExpanded && (() => {
+                      const ov = getSupplierOverview(supplier.id);
+                      return (
+                        <tr className="bg-background/30">
+                          <td colSpan={6} className="p-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                              <div className="border border-border-subtle bg-chassis p-3">
+                                <div className="flex items-center gap-2 mb-1 text-muted-foreground"><ShoppingCart size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Orders</span></div>
+                                <p className="text-lg font-bold text-foreground">{ov.poCount}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono-tech">{sym}{ov.totalOrdered.toLocaleString()}</p>
+                              </div>
+                              <div className="border border-border-subtle bg-chassis p-3">
+                                <div className="flex items-center gap-2 mb-1 text-muted-foreground"><Truck size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Received (GRN)</span></div>
+                                <p className="text-lg font-bold text-foreground">{ov.grnCount}</p>
+                              </div>
+                              <div className="border border-border-subtle bg-chassis p-3">
+                                <div className="flex items-center gap-2 mb-1 text-muted-foreground"><FileText size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Bills</span></div>
+                                <p className="text-lg font-bold text-foreground">{ov.billCount}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono-tech">{sym}{ov.totalBilled.toLocaleString()}</p>
+                              </div>
+                              <div className="border border-border-subtle bg-chassis p-3">
+                                <div className="flex items-center gap-2 mb-1 text-muted-foreground"><DollarSign size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Total Paid</span></div>
+                                <p className="text-lg font-bold text-green-500">{sym}{ov.totalPaid.toLocaleString()}</p>
+                              </div>
+                              <div className="border border-border-subtle bg-chassis p-3">
+                                <div className="flex items-center gap-2 mb-1 text-muted-foreground"><Wallet size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Balance Owed</span></div>
+                                <p className={`text-lg font-bold ${ov.balance > 0 ? 'text-red-500' : 'text-foreground'}`}>{sym}{ov.balance.toLocaleString()}</p>
+                              </div>
+                            </div>
+
+                            <h4 className="text-xs font-bold text-foreground mb-2">Payment History</h4>
+                            {ov.payments.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">No payments recorded for this supplier yet.</p>
+                            ) : (
+                              <div className="border border-border-subtle overflow-hidden">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="bg-chassis border-b border-border-subtle">
+                                      <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Date</th>
+                                      <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">For</th>
+                                      <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Method</th>
+                                      <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Amount</th>
+                                      <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Notes</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-border-subtle">
+                                    {ov.payments.map(p => (
+                                      <tr key={p.id}>
+                                        <td className="px-3 py-2 text-muted-foreground">{new Date(p.payment_date).toLocaleDateString()}</td>
+                                        <td className="px-3 py-2 text-foreground">{p.bill_number || "—"}</td>
+                                        <td className="px-3 py-2 text-muted-foreground capitalize">{p.payment_method?.replace('_', ' ')}</td>
+                                        <td className="px-3 py-2 text-right font-mono-tech text-foreground">{sym}{Number(p.amount).toLocaleString()}</td>
+                                        <td className="px-3 py-2 text-muted-foreground">{p.notes || "—"}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

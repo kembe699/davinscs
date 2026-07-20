@@ -522,7 +522,7 @@ export default function ReportsNew() {
 
   return (
     <AdminLayout>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden" style={{ ['--report-accent' as any]: companyInfo.brand_color_start || '#1f2937' }}>
         {/* Left Sidebar - Report Selection */}
         <div className="w-80 bg-admin-surface border-r border-admin-border overflow-y-auto">
           <div className="p-4 border-b border-admin-border">
@@ -1147,9 +1147,9 @@ export default function ReportsNew() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#2980b9', color: 'white' }}>
+                        <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid var(--report-accent, #1f2937)' }}>
                           {['Scheme', 'Currency', 'Sales Count', 'Revenue', 'Tax', 'Discounts', 'Avg Sale'].map((h, i) => (
-                            <th key={i} className={`px-4 py-3 font-bold border border-gray-400 ${i >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>
+                            <th key={i} className={`px-4 py-3 font-bold text-[11px] uppercase tracking-wide text-gray-700 border-x border-gray-200 ${i >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1157,14 +1157,14 @@ export default function ReportsNew() {
                         {reportData.map((row: any, i: number) => {
                           const sym = row.currency_symbol || baseCurrency?.symbol || 'UGX';
                           return (
-                            <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f5f5f5' }}>
-                              <td className="px-4 py-3 border border-gray-300 text-gray-900">{row.scheme_name}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-gray-900">{row.currency_code || baseCurrency?.code || 'UGX'}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-right font-mono text-gray-900">{row.total_sales}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_revenue), sym, false)}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_tax), sym, false)}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_discounts), sym, false)}</td>
-                              <td className="px-4 py-3 border border-gray-300 text-right font-mono text-gray-900">{formatCurrencySync(Math.round(parseFloat(row.average_sale)), sym, false)}</td>
+                            <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                              <td className="px-4 py-3 border-b border-gray-100 text-gray-900">{row.scheme_name}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-gray-900">{row.currency_code || baseCurrency?.code || 'UGX'}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{row.total_sales}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_revenue), sym, false)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_tax), sym, false)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_discounts), sym, false)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(Math.round(parseFloat(row.average_sale)), sym, false)}</td>
                             </tr>
                           );
                         })}

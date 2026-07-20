@@ -1,62 +1,76 @@
 import { showGlobalToast } from './toastBridge';
 
-/** Shared print template — matches the invoice PDF style exactly */
+/** Shared print template — professional letterhead style used by every
+ *  printed/exported document (invoices, POs, GRNs, bills, quotations, reports).
+ *  Accent color comes from the tenant's own Brand Color (Company Settings),
+ *  injected per-document via brandAccentStyleTag() — falls back to a neutral
+ *  charcoal if a tenant hasn't set one. */
 
 export const SHARED_PRINT_CSS = `
-  @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
+  @page { size: A4 portrait; margin: 1.3cm 1.6cm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; background: #fff; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2980b9; padding-bottom: 14px; margin-bottom: 14px; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #1f2937; background: #fff; -webkit-font-smoothing: antialiased; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--accent, #1f2937); padding-bottom: 16px; margin-bottom: 18px; }
   .header-left { display: flex; align-items: flex-start; gap: 14px; }
-  .logo { width: 150px; height: 110px; object-fit: contain; }
-  .logo-placeholder { width: 110px; height: 110px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 9px; text-align: center; }
-  .company-name { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 4px; }
-  .company-detail { font-size: 10px; color: #666; line-height: 1.7; }
+  .logo { width: 130px; height: 100px; object-fit: contain; }
+  .logo-placeholder { width: 100px; height: 100px; border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 9px; text-align: center; }
+  .company-name { font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 4px; letter-spacing: 0.2px; }
+  .company-detail { font-size: 9.5px; color: #6b7280; line-height: 1.7; }
   .doc-meta { text-align: right; flex-shrink: 0; }
-  .doc-title { font-size: 22px; font-weight: bold; color: #2980b9; letter-spacing: 2px; }
-  .doc-number { font-size: 13px; color: #2c3e50; font-weight: bold; margin-top: 4px; }
-  .doc-date { font-size: 10px; color: #666; margin-top: 2px; }
-  .info-box { background: #f7f9fb; border: 1px solid #dce3ea; padding: 10px 14px; margin: 14px 0; }
-  .info-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-  .info-name { font-size: 13px; font-weight: bold; color: #2c3e50; }
-  .info-detail { font-size: 10px; color: #666; margin-top: 2px; }
-  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: bold; margin-top: 6px; }
+  .doc-title { font-size: 19px; font-weight: 700; color: #111827; letter-spacing: 3px; text-transform: uppercase; }
+  .doc-number { font-size: 12px; color: var(--accent, #1f2937); font-weight: 700; margin-top: 5px; font-family: 'Courier New', monospace; }
+  .doc-date { font-size: 9.5px; color: #6b7280; margin-top: 3px; }
+  .info-box { background: #f9fafb; border: 1px solid #e5e7eb; border-left: 3px solid var(--accent, #1f2937); padding: 10px 14px; margin: 16px 0; }
+  .info-label { font-size: 8.5px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 4px; font-weight: 600; }
+  .info-name { font-size: 13px; font-weight: 700; color: #111827; }
+  .info-detail { font-size: 9.5px; color: #6b7280; margin-top: 2px; }
+  .status-badge { display: inline-block; padding: 2px 9px; border-radius: 3px; font-size: 9.5px; font-weight: 700; margin-top: 6px; letter-spacing: 0.3px; }
   .status-draft     { background: #f3f4f6; color: #6b7280; }
-  .status-sent      { background: #dbeafe; color: #1d4ed8; }
-  .status-accepted  { background: #d1fae5; color: #059669; }
-  .status-rejected  { background: #fee2e2; color: #dc2626; }
-  .status-converted { background: #ede9fe; color: #7c3aed; }
-  .status-unpaid    { background: #fee2e2; color: #dc2626; }
-  .status-partial   { background: #fef3c7; color: #d97706; }
-  .status-paid      { background: #d1fae5; color: #059669; }
+  .status-sent      { background: #f0fdfa; color: #0f766e; }
+  .status-accepted  { background: #ecfdf5; color: #047857; }
+  .status-rejected  { background: #fef2f2; color: #b91c1c; }
+  .status-converted { background: #f5f3ff; color: #6d28d9; }
+  .status-unpaid    { background: #fef2f2; color: #b91c1c; }
+  .status-partial   { background: #fffbeb; color: #b45309; }
+  .status-paid      { background: #ecfdf5; color: #047857; }
   .status-voided    { background: #f3f4f6; color: #6b7280; }
-  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-  th { background: #2980b9; color: #fff; padding: 7px 6px; font-size: 10px; font-weight: bold; text-align: left; border: 1px solid #2471a3; }
-  td { padding: 6px; font-size: 10px; color: #222; border: 1px solid #ddd; }
-  tr:nth-child(even) td { background: #f7f9fb; }
-  tfoot td { background: #e8edf1; font-weight: bold; border-top: 2px solid #999; }
-  .num { text-align: right; font-family: monospace; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th { background: #f9fafb; color: #374151; padding: 8px 7px; font-size: 9px; font-weight: 700; text-align: left; border-bottom: 2px solid var(--accent, #1f2937); text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px; font-size: 10px; color: #1f2937; border-bottom: 1px solid #eef0f2; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  tfoot td { background: #f9fafb; font-weight: 700; border-top: 2px solid #111827; border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; }
   .right { text-align: right; }
   .center { text-align: center; }
-  .section-title { font-size: 11px; font-weight: bold; color: #2c3e50; margin: 16px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-  .summary { display: flex; justify-content: flex-end; margin: 10px 0; }
-  .summary-table { width: 260px; }
-  .summary-table td { border: none; padding: 3px 6px; font-size: 11px; }
-  .summary-table .total-row td { font-size: 13px; font-weight: bold; border-top: 2px solid #999; padding-top: 6px; }
-  .summary-table .paid-row td { color: #059669; }
-  .summary-table .balance-row td { color: #dc2626; font-weight: bold; }
-  .notes-box { margin-top: 14px; font-size: 10px; color: #555; border: 1px solid #ddd; padding: 8px; }
-  .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 9px; color: #888; text-align: center; }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
-  .summary-card { border: 1px solid #dce3ea; padding: 8px 10px; background: #f7f9fb; }
-  .summary-card .s-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 3px; }
-  .summary-card .s-value { font-size: 15px; font-weight: bold; color: #2c3e50; }
+  .section-title { font-size: 10px; font-weight: 700; color: #111827; margin: 18px 0 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; text-transform: uppercase; letter-spacing: 1.5px; }
+  .summary { display: flex; justify-content: flex-end; margin: 12px 0; }
+  .summary-table { width: 270px; }
+  .summary-table td { border: none; padding: 4px 6px; font-size: 11px; }
+  .summary-table .total-row td { font-size: 13px; font-weight: 700; border-top: 2px solid #111827; padding-top: 7px; }
+  .summary-table .paid-row td { color: #047857; }
+  .summary-table .balance-row td { color: #b91c1c; font-weight: 700; }
+  .notes-box { margin-top: 16px; font-size: 9.5px; color: #4b5563; border: 1px solid #e5e7eb; border-left: 3px solid var(--accent, #1f2937); padding: 9px 12px; background: #fafbfc; }
+  .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 8.5px; color: #9ca3af; text-align: center; letter-spacing: 0.2px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .summary-card { border: 1px solid #e5e7eb; border-top: 2px solid var(--accent, #1f2937); padding: 9px 11px; background: #fafbfc; }
+  .summary-card .s-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.8px; color: #9ca3af; margin-bottom: 4px; font-weight: 600; }
+  .summary-card .s-value { font-size: 15px; font-weight: 700; color: #111827; }
+  .no-data { padding: 40px; text-align: center; color: #9ca3af; font-size: 11px; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;
 
+/** Sets the --accent CSS variable for this document from the tenant's own
+ *  Brand Color (Company Settings), falling back to a neutral charcoal.
+ *  Prepend this to any body HTML that isn't already covered by companyHeaderHTML(). */
+export function brandAccentStyleTag(co: any): string {
+  const accent = co?.brand_color_start || '#1f2937';
+  return `<style>:root{--accent:${accent};}</style>`;
+}
+
 export function companyHeaderHTML(co: any, docTitle: string, docNumber: string, extraMeta = ""): string {
   return `
+  ${brandAccentStyleTag(co)}
   <div class="header">
     <div class="header-left">
       ${co?.logo

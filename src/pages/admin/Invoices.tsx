@@ -5,7 +5,7 @@ import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { printDocument, downloadDocument } from "@/utils/printUtils";
+import { printDocument, downloadDocument, brandAccentStyleTag } from "@/utils/printUtils";
 import CreateInvoiceModal from "./CreateInvoiceModal";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -168,6 +168,7 @@ export default function Invoices() {
       </tr>`).join('');
 
     return `
+  ${brandAccentStyleTag(co)}
   <div class="header">
     <div class="header-left">
       ${co.logo ? `<img class="logo" src="${co.logo}" alt="${co.name || ''}">` : `<div class="logo-placeholder">No<br>Logo</div>`}

@@ -17,32 +17,32 @@ interface ReportTableProps {
 export default function ReportTable({ columns, data, showTotals = true, totalsExclude = [] }: ReportTableProps) {
   const calculateTotal = (accessor: string) => {
     if (totalsExclude.includes(accessor)) return '';
-    
+
     // Check if any row has a numeric value for this accessor
     const hasNumericValues = data.some(row => {
       const val = row[accessor];
       return val !== null && val !== undefined && val !== '' && !isNaN(parseFloat(val));
     });
-    
+
     if (!hasNumericValues) return '';
-    
+
     const sum = data.reduce((acc, row) => {
       const val = parseFloat(row[accessor]) || 0;
       return acc + val;
     }, 0);
-    
+
     return sum;
   };
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse" style={{ borderCollapse: 'collapse' }}>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ backgroundColor: '#2980b9', color: 'white' }}>
+          <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid var(--report-accent, #1f2937)' }}>
             {columns.map((col, idx) => (
-              <th 
+              <th
                 key={idx}
-                className={`px-4 py-3 font-bold border border-gray-400 ${
+                className={`px-4 py-3 font-bold text-[11px] uppercase tracking-wide text-gray-700 border-x border-gray-200 ${
                   col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                 }`}
               >
@@ -53,11 +53,11 @@ export default function ReportTable({ columns, data, showTotals = true, totalsEx
         </thead>
         <tbody>
           {data.map((row, rowIdx) => (
-            <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? 'white' : '#f5f5f5' }}>
+            <tr key={rowIdx} style={{ backgroundColor: rowIdx % 2 === 0 ? 'white' : '#fafbfc' }}>
               {columns.map((col, colIdx) => (
-                <td 
+                <td
                   key={colIdx}
-                  className={`px-4 py-3 text-gray-900 border border-gray-300 ${
+                  className={`px-4 py-3 text-gray-900 border-b border-gray-100 ${
                     col.align === 'right' ? 'text-right font-mono' : col.align === 'center' ? 'text-center' : ''
                   }`}
                 >
@@ -69,21 +69,21 @@ export default function ReportTable({ columns, data, showTotals = true, totalsEx
         </tbody>
         {showTotals && data.length > 0 && (
           <tfoot>
-            <tr style={{ backgroundColor: '#dcdcdc', fontWeight: 'bold', borderTop: '2px solid #333' }}>
+            <tr style={{ backgroundColor: '#f9fafb', fontWeight: 'bold', borderTop: '2px solid #111827' }}>
               {columns.map((col, idx) => {
                 if (idx === 0) {
                   return (
-                    <td key={idx} className="px-4 py-3 text-gray-900 border border-gray-400">
+                    <td key={idx} className="px-4 py-3 text-gray-900 border-x border-gray-200">
                       TOTAL
                     </td>
                   );
                 }
-                
+
                 const total = calculateTotal(col.accessor);
                 return (
-                  <td 
+                  <td
                     key={idx}
-                    className={`px-4 py-3 text-gray-900 border border-gray-400 ${
+                    className={`px-4 py-3 text-gray-900 border-x border-gray-200 ${
                       col.align === 'right' ? 'text-right font-mono' : ''
                     }`}
                   >
