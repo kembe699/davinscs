@@ -524,6 +524,36 @@ router.put('/tenants/:id/status', requireSaasAdmin, async (req, res) => {
   }
 });
 
+// Permanently delete a tenant — drops their entire schema (all POS data) and
+// removes their row from public.tenants. Cascades to tenant_users,
+// tenant_db_snapshots, and saas_billing via existing ON DELETE CASCADE FKs.
+// Irreversible — the frontend requires typing the customer code to confirm.
+router.delete('/tenants/:id', requireSaasAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query(
+      'SELECT schema_name, customer_code, business_name FROM public.tenants WHERE id = $1',
+      [req.params.id]
+    );
+    const tenant = rows[0];
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+    await client.query('BEGIN');
+    await client.query(`DROP SCHEMA IF EXISTS "${tenant.schema_name}" CASCADE`);
+    await client.query('DELETE FROM public.tenants WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
+
+    clearTenantCache(tenant.schema_name);
+    res.json({ ok: true, business_name: tenant.business_name, customer_code: tenant.customer_code });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Delete tenant error:', err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
 // ── Billing / Invoices ────────────────────────────────────────────────────────
 
 function generateInvoiceNumber() {

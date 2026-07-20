@@ -7,6 +7,15 @@ import { formatCurrencySync } from "@/utils/currency";
 import { printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt } from "@/utils/receiptUtils";
 
+// Local calendar date (YYYY-MM-DD) — NOT toISOString(), which converts to UTC
+// and rolls back a day whenever local time is ahead of UTC.
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function Receipts() {
   const { baseCurrency } = useCurrency();
   const sym = baseCurrency?.symbol || "UGX";
@@ -19,7 +28,7 @@ export default function Receipts() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalDateStr(new Date());
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
 
@@ -132,7 +141,7 @@ export default function Receipts() {
   };
 
   const filtered = sales.filter(sale => {
-    const saleDate = new Date(sale.created_at).toISOString().slice(0, 10);
+    const saleDate = toLocalDateStr(new Date(sale.created_at));
     if (startDate && saleDate < startDate) return false;
     if (endDate && saleDate > endDate) return false;
     if (search) {
