@@ -7,19 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.tsx";
 import { LayoutProvider } from "./contexts/LayoutContext.tsx";
 import { TenantRoot } from "./contexts/TenantContext.tsx";
-import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import CamerasPage from "./pages/categories/Cameras.tsx";
-import LensesPage from "./pages/categories/Lenses.tsx";
-import MicrophonesPage from "./pages/categories/Microphones.tsx";
-import TelepromptersPage from "./pages/categories/Teleprompters.tsx";
-import LightingPage from "./pages/categories/Lighting.tsx";
-import ProductDetail from "./pages/ProductDetail.tsx";
-import DynamicCategoryPage from "./pages/categories/DynamicCategoryPage.tsx";
-import Contact from "./pages/Contact.tsx";
-import Shipping from "./pages/Shipping.tsx";
-import Returns from "./pages/Returns.tsx";
-import Warranty from "./pages/Warranty.tsx";
 import AdminLogin from "./pages/admin/Login.tsx";
 import Dashboard from "./pages/admin/Dashboard.tsx";
 import AdminProducts from "./pages/admin/Products.tsx";
@@ -28,14 +16,10 @@ import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
 import ResetPassword from "./pages/admin/ResetPassword.tsx";
 import Inventory from "./pages/admin/Inventory.tsx";
-import Orders from "./pages/admin/Orders.tsx";
 import Procurement from "./pages/admin/Procurement.tsx";
 import Accounting from "./pages/admin/Accounting.tsx";
 import ReportsNew from "./pages/admin/ReportsNew.tsx";
 import Company from "./pages/admin/Company.tsx";
-import Cart from "./pages/Cart.tsx";
-import Checkout from "./pages/Checkout.tsx";
-import OrderConfirmation from "./pages/OrderConfirmation.tsx";
 import POSMain from "./pages/pos/POSMain.tsx";
 import SalesHistory from "./pages/pos/SalesHistory.tsx";
 import CashManagement from "./pages/pos/CashManagement.tsx";
@@ -122,39 +106,17 @@ const App = () => (
 
             {/* All tenant routes live under /:tenantSlug */}
             <Route path="/:tenantSlug" element={<TenantRoot />}>
-              
+
               <Route element={<ThemeWrapper />}>
-                {/* Storefront */}
-                <Route index element={<Index />} />
+                <Route index element={<Navigate to="admin" replace />} />
                 <Route path="setup" element={<Onboarding />} />
-                <Route path="cameras" element={<CamerasPage />} />
-                <Route path="lenses" element={<LensesPage />} />
-                <Route path="microphones" element={<MicrophonesPage />} />
-                <Route path="teleprompters" element={<TelepromptersPage />} />
-                <Route path="lighting" element={<LightingPage />} />
-                <Route path="cameras/:id" element={<ProductDetail />} />
-                <Route path="lenses/:id" element={<ProductDetail />} />
-                <Route path="microphones/:id" element={<ProductDetail />} />
-                <Route path="teleprompters/:id" element={<ProductDetail />} />
-                <Route path="lighting/:id" element={<ProductDetail />} />
-                <Route path="contact" element={<Contact />} />
-                <Route path="shipping" element={<Shipping />} />
-                <Route path="returns" element={<Returns />} />
-                <Route path="warranty" element={<Warranty />} />
-                <Route path="cart" element={<Cart />} />
-                <Route path="checkout" element={<Checkout />} />
-                <Route path="order-confirmation/:id" element={<OrderConfirmation />} />
-                <Route path="product/:slug" element={<ProductDetail />} />
-                
+
                 {/* POS */}
                 <Route path="pos" element={<ProtectedRoute><POSMain /></ProtectedRoute>} />
                 <Route path="pos/sales-history" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
                 <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
                 <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
                 <Route path="verify/:saleNumber" element={<ReceiptVerify />} />
-                
-                {/* Dynamic category catch-all — must be last inside wrapper */}
-                <Route path=":categorySlug" element={<DynamicCategoryPage />} />
               </Route>
 
               {/* Admin CMS (Not wrapped in ThemeWrapper so it doesn't get .dark) */}
@@ -166,7 +128,6 @@ const App = () => (
               <Route path="admin/products/:id/edit" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
               <Route path="admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
               <Route path="admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-              <Route path="admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
               <Route path="admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
               <Route path="admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
               <Route path="admin/reports" element={<ProtectedRoute><ReportsNew /></ProtectedRoute>} />

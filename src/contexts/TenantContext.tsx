@@ -182,7 +182,7 @@ export function TenantRoot() {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Subscription Expired</h2>
           <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-            Your instance has been suspended due to an expired subscription. Please renew your subscription to restore access to your administration panel and POS. Your public storefront remains active.
+            Your instance has been suspended due to an expired subscription. Please renew your subscription to restore access to your administration panel and POS.
           </p>
           <div className="flex flex-col gap-3">
             <a 

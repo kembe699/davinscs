@@ -9,11 +9,11 @@ import ReportTable from "@/components/ReportTable";
 import { useToast } from "@/contexts/ToastContext";
 
 type ReportCategory = "sales" | "expenses" | "inventory" | "analytics" | "invoices";
-type ReportType = 
-  | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-comparison" | "sales-by-scheme"
+type ReportType =
+  | "daily-sales" | "sales-by-user" | "sales-by-customer" | "sales-by-product" | "sales-by-scheme"
   | "income-statement" | "expenses-summary" | "expenses-by-category" | "cash-drawer-expenses"
   | "stock-movement" | "expiring-products" | "expired-products" | "low-stock" | "out-of-stock"
-  | "trending-products" | "pos-vs-web"
+  | "trending-products"
   | "invoices-overview" | "invoices-all" | "invoices-overdue" | "invoices-partial" | "invoices-collections";
 
 type DatePreset = "today" | "yesterday" | "this-week" | "last-week" | "this-month" | "last-month" | "this-year" | "custom";
@@ -149,9 +149,6 @@ export default function ReportsNew() {
         case "sales-by-product":
           data = await api.reports.sales.byProduct(startDate, endDate);
           break;
-        case "sales-comparison":
-          data = await api.reports.sales.comparison(startDate, endDate);
-          break;
         case "sales-by-scheme":
           data = await api.reports.sales.byScheme(startDate, endDate, filterSchemeId);
           break;
@@ -190,9 +187,6 @@ export default function ReportsNew() {
         // Analytics Reports
         case "trending-products":
           data = await api.reports.trending.products(startDate, endDate, 20);
-          break;
-        case "pos-vs-web":
-          data = await api.reports.trending.posVsWeb(startDate, endDate);
           break;
 
         // Invoice Reports
@@ -252,12 +246,6 @@ export default function ReportsNew() {
         { header: "Times Sold", dataKey: "times_sold" },
         { header: "Avg Price", dataKey: "average_price" }
       ],
-      "sales-comparison": [
-        { header: "Channel", dataKey: "channel" },
-        { header: "Orders", dataKey: "orders" },
-        { header: "Revenue", dataKey: "revenue" },
-        { header: "Avg Order", dataKey: "avg_order" }
-      ],
       "income-statement": [
         { header: "Line Item", dataKey: "label" },
         { header: "Amount", dataKey: "amount" }
@@ -315,18 +303,7 @@ export default function ReportsNew() {
       "trending-products": [
         { header: "Product", dataKey: "product_name" },
         { header: "Total Qty", dataKey: "total_quantity" },
-        { header: "Total Revenue", dataKey: "total_revenue" },
-        { header: "POS Qty", dataKey: "pos_quantity" },
-        { header: "POS Revenue", dataKey: "pos_revenue" },
-        { header: "Web Qty", dataKey: "web_quantity" },
-        { header: "Web Revenue", dataKey: "web_revenue" }
-      ],
-      "pos-vs-web": [
-        { header: "Date", dataKey: "date" },
-        { header: "POS Orders", dataKey: "pos_orders" },
-        { header: "POS Revenue", dataKey: "pos_revenue" },
-        { header: "Web Orders", dataKey: "web_orders" },
-        { header: "Web Revenue", dataKey: "web_revenue" }
+        { header: "Total Revenue", dataKey: "total_revenue" }
       ],
       "sales-by-scheme": [
         { header: "Scheme", dataKey: "scheme_name" },
@@ -390,15 +367,6 @@ export default function ReportsNew() {
   const prepareExportData = () => {
     if (!reportData) return [];
     
-    // Handle special case for sales comparison
-    if (selectedReport === "sales-comparison" && !Array.isArray(reportData)) {
-      return [
-        { channel: "POS", orders: reportData.pos.total_orders, revenue: reportData.pos.total_revenue, avg_order: reportData.pos.average_order_value },
-        { channel: "Website", orders: reportData.website.total_orders, revenue: reportData.website.total_revenue, avg_order: reportData.website.average_order_value },
-        { channel: "Total", orders: reportData.total_orders, revenue: reportData.total_revenue, avg_order: Math.round(reportData.total_revenue / reportData.total_orders) }
-      ];
-    }
-
     // Handle income statement
     if (selectedReport === "income-statement" && reportData && !Array.isArray(reportData)) {
       const rows: any[] = [];
@@ -500,7 +468,6 @@ export default function ReportsNew() {
         { id: "sales-by-user", name: "Sales by users" },
         { id: "sales-by-customer", name: "Sales by customers" },
         { id: "sales-by-product", name: "Sales by products" },
-        { id: "sales-comparison", name: "POS vs Website" },
         { id: "sales-by-scheme", name: "Sales by scheme" },
       ]
     },
@@ -530,7 +497,6 @@ export default function ReportsNew() {
       name: "Analytics",
       reports: [
         { id: "trending-products", name: "Trending products" },
-        { id: "pos-vs-web", name: "POS vs Website comparison" },
       ]
     },
     {
@@ -843,71 +809,6 @@ export default function ReportsNew() {
                   />
                 )}
 
-                {/* Sales Comparison Report */}
-                {selectedReport === "sales-comparison" && reportData && !Array.isArray(reportData) && (
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="border border-admin-border p-4">
-                      <h3 className="text-lg font-bold text-admin-text mb-4">POS Sales</h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Orders:</span>
-                          <span className="font-bold text-admin-text">{reportData.pos.total_orders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Revenue:</span>
-                          <span className="font-mono font-bold text-admin-text">
-                            {formatCurrencySync(parseInt(reportData.pos.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Avg Order Value:</span>
-                          <span className="font-mono text-admin-text">
-                            {formatCurrencySync(parseInt(reportData.pos.average_order_value), baseCurrency?.symbol || 'UGX', false)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border border-admin-border p-4">
-                      <h3 className="text-lg font-bold text-admin-text mb-4">Website Orders</h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Orders:</span>
-                          <span className="font-bold text-admin-text">{reportData.website.total_orders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Revenue:</span>
-                          <span className="font-mono font-bold text-admin-text">
-                            {formatCurrencySync(parseInt(reportData.website.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Avg Order Value:</span>
-                          <span className="font-mono text-admin-text">
-                            {formatCurrencySync(parseInt(reportData.website.average_order_value), baseCurrency?.symbol || 'UGX', false)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-span-2 border border-admin-text bg-admin-text/5 p-4">
-                      <h3 className="text-lg font-bold text-admin-text mb-4">Combined Totals</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Orders:</span>
-                          <span className="font-bold text-admin-text">{reportData.total_orders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-admin-text-secondary">Total Revenue:</span>
-                          <span className="font-mono font-bold text-admin-text">
-                            {formatCurrencySync(parseInt(reportData.total_revenue), baseCurrency?.symbol || 'UGX', false)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Income Statement (P&L) */}
                 {selectedReport === "income-statement" && reportData && !Array.isArray(reportData) && (
                   <div className="max-w-2xl mx-auto">
@@ -1111,30 +1012,10 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'Product', accessor: 'product_name' },
                       { header: 'Total Qty', accessor: 'total_quantity', align: 'right' },
-                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'POS Qty', accessor: 'pos_quantity', align: 'right' },
-                      { header: 'POS Revenue', accessor: 'pos_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Web Qty', accessor: 'web_quantity', align: 'right' },
-                      { header: 'Web Revenue', accessor: 'web_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
                     ]}
                     data={reportData}
                     totalsExclude={['product_name']}
-                  />
-                )}
-
-                {/* POS vs Web Comparison */}
-                {selectedReport === "pos-vs-web" && Array.isArray(reportData) && (
-                  <ReportTable
-                    columns={[
-                      { header: 'Date', accessor: 'date', format: (val) => new Date(val).toLocaleDateString() },
-                      { header: 'POS Orders', accessor: 'pos_orders', align: 'right' },
-                      { header: 'POS Revenue', accessor: 'pos_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Web Orders', accessor: 'web_orders', align: 'right' },
-                      { header: 'Web Revenue', accessor: 'web_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
-                    ]}
-                    data={reportData.map((row: any) => ({ ...row, total_revenue: parseInt(row.pos_revenue) + parseInt(row.web_revenue) }))}
-                    totalsExclude={['date']}
                   />
                 )}
 

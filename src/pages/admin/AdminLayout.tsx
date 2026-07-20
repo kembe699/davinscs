@@ -31,7 +31,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Customers",   path: "/admin/customers",   icon: UserCheck,    permission: "orders.view" },
       { label: "Quotations",  path: "/admin/quotations",  icon: ClipboardList,permission: "invoices.view" },
       { label: "Invoices",    path: "/admin/invoices",    icon: Receipt,      permission: "invoices.view" },
-      { label: "Orders",      path: "/admin/orders",      icon: ShoppingCart, permission: "orders.view" },
     ],
   },
   {

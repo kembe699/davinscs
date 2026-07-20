@@ -138,13 +138,6 @@ export async function migrateTenant(schemaName = "public") {
       expires_at TIMESTAMPTZ NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS orders (
-      id SERIAL PRIMARY KEY,
-      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
-      product_name VARCHAR(255) DEFAULT '',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    
     -- Inventory Module
     CREATE TABLE IF NOT EXISTS stock_movements (
       id SERIAL PRIMARY KEY,
@@ -281,7 +274,7 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     
-    -- E-Commerce Module
+    -- Customers (used by POS customer assignment, credit sales, invoices)
     CREATE TABLE IF NOT EXISTS customers (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -292,49 +285,6 @@ export async function migrateTenant(schemaName = "public") {
       postal_code VARCHAR(20),
       country VARCHAR(100),
       created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    
-    CREATE TABLE IF NOT EXISTS customer_orders (
-      id SERIAL PRIMARY KEY,
-      order_number VARCHAR(50) UNIQUE NOT NULL,
-      customer_id INTEGER REFERENCES customers(id),
-      customer_name VARCHAR(255) NOT NULL,
-      customer_email VARCHAR(255),
-      customer_phone VARCHAR(50),
-      shipping_address TEXT,
-      shipping_city VARCHAR(100),
-      shipping_postal_code VARCHAR(20),
-      shipping_country VARCHAR(100),
-      subtotal INTEGER NOT NULL,
-      shipping_cost INTEGER DEFAULT 0,
-      total INTEGER NOT NULL,
-      status VARCHAR(50) DEFAULT 'pending',
-      tracking_number VARCHAR(100),
-      notes TEXT,
-      cancelled_at TIMESTAMPTZ,
-      cancelled_by INTEGER REFERENCES users(id),
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    
-    CREATE TABLE IF NOT EXISTS order_items (
-      id SERIAL PRIMARY KEY,
-      order_id INTEGER REFERENCES customer_orders(id) ON DELETE CASCADE,
-      product_id INTEGER REFERENCES products(id),
-      product_name VARCHAR(255) NOT NULL,
-      product_price INTEGER NOT NULL,
-      quantity INTEGER NOT NULL,
-      subtotal INTEGER NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    
-    CREATE TABLE IF NOT EXISTS cart_items (
-      id SERIAL PRIMARY KEY,
-      session_id VARCHAR(255) NOT NULL,
-      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
-      quantity INTEGER NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS quotations (
@@ -500,13 +450,6 @@ export async function migrateTenant(schemaName = "public") {
         WHEN duplicate_column THEN NULL;
       END;
 
-      -- Add site_layout column if it doesn't exist
-      BEGIN
-        ALTER TABLE company_settings ADD COLUMN site_layout VARCHAR(50) DEFAULT 'tech_grid';
-      EXCEPTION
-        WHEN duplicate_column THEN NULL;
-      END;
-
       -- Add brand color columns if they don't exist
       BEGIN
         ALTER TABLE company_settings ADD COLUMN brand_color_start VARCHAR(20) DEFAULT '#004A99';
@@ -520,11 +463,6 @@ export async function migrateTenant(schemaName = "public") {
       END;
       BEGIN
         ALTER TABLE company_settings ADD COLUMN brand_color_end VARCHAR(20) DEFAULT '#32CD32';
-      EXCEPTION
-        WHEN duplicate_column THEN NULL;
-      END;
-      BEGIN
-        ALTER TABLE company_settings ADD COLUMN storefront_settings JSONB DEFAULT '{}';
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;
@@ -741,6 +679,21 @@ export async function migrateTenant(schemaName = "public") {
       IF NOT EXISTS (SELECT 1 FROM _migrations WHERE name = 'price_list_items_multiply_100') THEN
         UPDATE price_list_items SET price = price * 100;
         INSERT INTO _migrations (name) VALUES ('price_list_items_multiply_100');
+      END IF;
+    END $$;
+
+    -- One-time fix: drop the e-commerce/storefront module (orders, cart, and the
+    -- storefront layout/content settings) — this instance is POS-only now.
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM _migrations WHERE name = 'drop_ecommerce_module') THEN
+        DROP TABLE IF EXISTS order_items;
+        DROP TABLE IF EXISTS customer_orders;
+        DROP TABLE IF EXISTS cart_items;
+        DROP TABLE IF EXISTS orders;
+        ALTER TABLE company_settings DROP COLUMN IF EXISTS site_layout;
+        ALTER TABLE company_settings DROP COLUMN IF EXISTS storefront_settings;
+        INSERT INTO _migrations (name) VALUES ('drop_ecommerce_module');
       END IF;
     END $$;
 

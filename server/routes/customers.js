@@ -16,9 +16,9 @@ router.get("/", requireAuth, async (req, res) => {
     }
     const { rows } = await pool.query(
       `SELECT c.*,
-        (SELECT COUNT(*) FROM customer_orders co WHERE co.customer_id = c.id) as order_count,
+        (SELECT COUNT(*) FROM pos_sales s WHERE s.customer_id = c.id AND s.voided = false) as order_count,
         (SELECT COUNT(*) FROM invoices i WHERE i.customer_id = c.id OR LOWER(i.customer_email) = LOWER(c.email)) as invoice_count,
-        (SELECT COALESCE(SUM(co.total),0) FROM customer_orders co WHERE co.customer_id = c.id) as total_spent
+        (SELECT COALESCE(SUM(s.total_amount),0) FROM pos_sales s WHERE s.customer_id = c.id AND s.voided = false) as total_spent
        FROM customers c
        WHERE ${where}
        ORDER BY c.name ASC`,
@@ -31,18 +31,13 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-// Get single customer with orders + invoices
+// Get single customer with POS sales + invoices
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { rows: cRows } = await pool.query("SELECT * FROM customers WHERE id = $1", [id]);
     if (!cRows[0]) return res.status(404).json({ error: "Customer not found" });
 
-    const { rows: orders } = await pool.query(
-      `SELECT id, order_number, status, total as total_amount, created_at, customer_name
-       FROM customer_orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 50`,
-      [id]
-    );
     const { rows: posOrders } = await pool.query(
       `SELECT s.id, s.sale_number as order_number, s.total_amount, s.created_at,
               pt.name as payment_type_name, s.sale_type
@@ -58,7 +53,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       [id]
     );
 
-    res.json({ customer: cRows[0], orders, posOrders, invoices });
+    res.json({ customer: cRows[0], posOrders, invoices });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

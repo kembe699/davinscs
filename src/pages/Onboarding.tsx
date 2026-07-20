@@ -30,7 +30,6 @@ interface FormData {
   brand_color_start: string;
   brand_color_mid: string;
   brand_color_end: string;
-  site_layout: string;
   // Step 4 – Admin user
   admin_name: string;
   admin_email: string;
@@ -75,15 +74,6 @@ const BUSINESS_TYPES = [
   { id: "other", label: "Other", icon: MoreHorizontal },
 ];
 
-const LAYOUTS = [
-  { id: "tech_grid", label: "Tech Grid", desc: "Bold grid, great for electronics" },
-  { id: "boutique", label: "Boutique", desc: "Elegant, fashion-forward" },
-  { id: "minimal", label: "Minimal", desc: "Clean and uncluttered" },
-  { id: "magazine", label: "Magazine", desc: "Content-rich editorial" },
-  { id: "showcase", label: "Showcase", desc: "Hero-focused, visual" },
-  { id: "bold", label: "Bold", desc: "High contrast, impactful" },
-];
-
 const STEPS = [
   { id: 1, label: "Business Type", icon: Building2 },
   { id: 2, label: "Business Info", icon: Store },
@@ -122,7 +112,6 @@ export default function Onboarding() {
     brand_color_start: "#004A99",
     brand_color_mid: "#008B8B",
     brand_color_end: "#32CD32",
-    site_layout: "tech_grid",
     admin_name: "",
     admin_email: "",
     admin_password: "",
@@ -188,7 +177,6 @@ export default function Onboarding() {
           brand_color_start: form.brand_color_start,
           brand_color_mid: form.brand_color_mid,
           brand_color_end: form.brand_color_end,
-          site_layout: form.site_layout,
           primary_currency: form.primary_currency,
           secondary_currency: form.secondary_currency || null,
         }),
@@ -357,7 +345,7 @@ export default function Onboarding() {
           <div className="p-8">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-foreground mb-1">Brand & Appearance</h2>
-              <p className="text-muted-foreground text-sm">Upload your logo and choose your brand colors and storefront style.</p>
+              <p className="text-muted-foreground text-sm">Upload your logo and choose the brand colors used across your admin panel and POS.</p>
             </div>
             <div className="space-y-6">
               {/* Logo */}
@@ -426,28 +414,6 @@ export default function Onboarding() {
                   className="mt-3 h-3 rounded-full"
                   style={{ background: `linear-gradient(90deg, ${form.brand_color_start}, ${form.brand_color_mid}, ${form.brand_color_end})` }}
                 />
-              </div>
-
-              {/* Site Layout */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Storefront Style</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {LAYOUTS.map(({ id, label, desc }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => set("site_layout", id)}
-                      className={`p-3 rounded-none border-2 text-left transition-all duration-200
-                        ${form.site_layout === id
-                          ? "border-primary bg-primary/10"
-                          : "border-border-subtle bg-background/50 hover:border-primary/50"
-                        }`}
-                    >
-                      <div className={`text-sm font-semibold mb-0.5 ${form.site_layout === id ? "text-primary" : "text-slate-200"}`}>{label}</div>
-                      <div className="text-xs text-muted-foreground/70 leading-snug">{desc}</div>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

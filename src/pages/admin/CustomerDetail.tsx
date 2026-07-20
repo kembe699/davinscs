@@ -27,7 +27,7 @@ const STATUS_STYLE: Record<string, string> = {
   credit:     "bg-orange-500/10 text-orange-400 border border-orange-500/30",
 };
 
-type Tab = "orders" | "pos" | "invoices";
+type Tab = "pos" | "invoices";
 
 export default function CustomerDetail() {
   const { toast } = useToast();
@@ -40,7 +40,7 @@ export default function CustomerDetail() {
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("orders");
+  const [activeTab, setActiveTab] = useState<Tab>("pos");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
@@ -128,13 +128,12 @@ export default function CustomerDetail() {
     </AdminLayout>
   );
 
-  const { customer, orders, posOrders, invoices } = data;
+  const { customer, posOrders, invoices } = data;
 
-  const totalOrders = (orders?.length || 0) + (posOrders?.length || 0);
-  const totalSpent = [
-    ...( orders || []).map((o: any) => Number(o.total_amount || 0)),
-    ...(posOrders || []).map((o: any) => Number(o.total_amount || 0)),
-  ].reduce((a, b) => a + b, 0);
+  const totalOrders = posOrders?.length || 0;
+  const totalSpent = (posOrders || [])
+    .map((o: any) => Number(o.total_amount || 0))
+    .reduce((a, b) => a + b, 0);
   const totalInvoiced = (invoices || []).reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const totalBalance = (invoices || []).reduce((s: number, i: any) => s + Number(i.balance || 0), 0);
 
@@ -234,7 +233,6 @@ export default function CustomerDetail() {
         <div className="border border-border-subtle">
           <div className="flex border-b border-border-subtle">
             {([
-              { id: "orders" as Tab, label: "Web Orders", count: orders?.length || 0, icon: ShoppingBag },
               { id: "pos" as Tab, label: "POS Sales", count: posOrders?.length || 0, icon: ShoppingBag },
               { id: "invoices" as Tab, label: "Invoices", count: invoices?.length || 0, icon: Receipt },
             ] as const).map(tab => (
@@ -252,33 +250,6 @@ export default function CustomerDetail() {
               </button>
             ))}
           </div>
-
-          {/* Web Orders */}
-          {activeTab === "orders" && (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-subtle bg-chassis">
-                  {["Order #", "Status", "Amount", "Date"].map(h => (
-                    <th key={h} className={`px-6 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest ${h === "Amount" || h === "Date" ? "text-right" : "text-left"}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-subtle">
-                {(!orders || orders.length === 0) ? (
-                  <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground text-sm">No web orders found</td></tr>
-                ) : orders.map((o: any) => (
-                  <tr key={o.id} className="hover:bg-chassis/50 transition-colors">
-                    <td className="px-6 py-4 font-mono-tech text-xs text-primary">{o.order_number}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 text-[10px] rounded font-mono-tech ${STATUS_STYLE[o.status] || ""}`}>{o.status}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-xs">{formatCurrencySync(o.total_amount, sym, false)}</td>
-                    <td className="px-6 py-4 text-right text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
 
           {/* POS Sales */}
           {activeTab === "pos" && (

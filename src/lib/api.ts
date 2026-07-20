@@ -118,12 +118,6 @@ export type ApiUser = {
   created_at: string;
 };
 
-export type ApiOrderStats = {
-  total: number;
-  by_product: { name: string; category: string; order_count: number }[];
-  recent: { id: number; product_name: string; created_at: string; category: string }[];
-};
-
 export type ApiInventoryItem = {
   id: number;
   name: string;
@@ -288,55 +282,6 @@ export type ApiTransactionLine = {
   credit: number;
 };
 
-export type ApiCartItem = {
-  id: number;
-  product_id: number;
-  name: string;
-  slug: string;
-  price: number;
-  image_url: string;
-  quantity: number;
-  quantity_on_hand: number;
-  quantity_reserved: number;
-  available: number;
-  created_at: string;
-};
-
-export type ApiCustomerOrder = {
-  id: number;
-  order_number: string;
-  customer_id?: number;
-  customer_name: string;
-  customer_email?: string;
-  customer_phone?: string;
-  shipping_address?: string;
-  shipping_city?: string;
-  shipping_postal_code?: string;
-  shipping_country?: string;
-  subtotal: number;
-  shipping_cost: number;
-  total: number;
-  status: string;
-  tracking_number?: string;
-  notes?: string;
-  item_count?: number;
-  cancelled_at?: string;
-  cancelled_by?: number;
-  created_at: string;
-  updated_at: string;
-  items?: ApiOrderItem[];
-};
-
-export type ApiOrderItem = {
-  id: number;
-  order_id: number;
-  product_id: number;
-  product_name: string;
-  product_price: number;
-  quantity: number;
-  subtotal: number;
-};
-
 export type PaymentType = {
   id: number;
   name: string;
@@ -473,21 +418,6 @@ export type SalesByProductReport = {
   average_price: number;
 };
 
-export type SalesComparisonReport = {
-  pos: {
-    total_orders: number;
-    total_revenue: number;
-    average_order_value: number;
-  };
-  website: {
-    total_orders: number;
-    total_revenue: number;
-    average_order_value: number;
-  };
-  total_revenue: number;
-  total_orders: number;
-};
-
 export type ExpensesSummaryReport = {
   accounting_expenses: number;
   cash_drawer_expenses: number;
@@ -575,18 +505,6 @@ export type TrendingProductReport = {
   product_name: string;
   total_quantity: number;
   total_revenue: number;
-  pos_quantity: number;
-  pos_revenue: number;
-  web_quantity: number;
-  web_revenue: number;
-};
-
-export type POSvsWebReport = {
-  date: string;
-  pos_orders: number;
-  pos_revenue: number;
-  web_orders: number;
-  web_revenue: number;
 };
 
 export type Promotion = {
@@ -609,36 +527,6 @@ export type Country = {
   created_at: string;
 };
 
-export type StorefrontSettings = {
-  hero_image?: string;
-  about_image?: string;
-  hero_tagline?: string;
-  hero_heading_1?: string;
-  hero_heading_2?: string;
-  hero_subtext?: string;
-  hero_brands_count?: string;
-  hero_products_count?: string;
-  hero_badge_1?: string;
-  hero_badge_2?: string;
-  hero_badge_3?: string;
-  about_tagline?: string;
-  about_heading?: string;
-  about_body?: string;
-  about_stat_1_value?: string;
-  about_stat_1_label?: string;
-  about_stat_2_value?: string;
-  about_stat_2_label?: string;
-  about_stat_3_value?: string;
-  about_stat_3_label?: string;
-  ticker_items?: string[];
-  ticker_bg?: string;
-  ticker_text_color?: string;
-  instagram_url?: string;
-  youtube_url?: string;
-  twitter_url?: string;
-  newsletter_url?: string;
-};
-
 export type CompanySettings = {
   name: string;
   logo: string;
@@ -651,12 +539,11 @@ export type CompanySettings = {
   tax_id: string;
   website: string;
   whatsapp: string;
-  site_layout: string;
   description: string;
+  currency: string;
   brand_color_start: string;
   brand_color_mid: string;
   brand_color_end: string;
-  storefront_settings: StorefrontSettings;
 };
 
 export type POSSale = {
@@ -735,11 +622,6 @@ export const api = {
       request<ApiProduct>(`/api/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/products/${id}`, { method: "DELETE" }),
-  },
-  orders: {
-    track: (product_id: number, product_name: string) =>
-      request("/api/orders", { method: "POST", body: JSON.stringify({ product_id, product_name }) }),
-    stats: () => request<ApiOrderStats>("/api/orders/stats"),
   },
   categories: {
     list: () => request<ApiCategory[]>("/api/categories"),
@@ -890,49 +772,6 @@ export const api = {
         request<{ assets: any[]; liabilities: any[]; equity: any[]; total_assets: number; total_liabilities: number; total_equity: number }>(`/api/accounting/balance-sheet?as_of_date=${as_of_date}`),
     },
   },
-  cart: {
-    get: () => request<ApiCartItem[]>("/api/cart", { credentials: "include" }),
-    add: (product_id: number, quantity: number) =>
-      request<ApiCartItem>("/api/cart/add", {
-        method: "POST",
-        body: JSON.stringify({ product_id, quantity }),
-        credentials: "include",
-      }),
-    update: (id: number, quantity: number) =>
-      request<ApiCartItem>(`/api/cart/update/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({ quantity }),
-        credentials: "include",
-      }),
-    remove: (id: number) =>
-      request<{ success: boolean }>(`/api/cart/remove/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      }),
-    clear: () =>
-      request<{ success: boolean }>("/api/cart/clear", {
-        method: "DELETE",
-        credentials: "include",
-      }),
-  },
-  checkout: {
-    submit: (data: {
-      customer_name: string;
-      customer_email: string;
-      customer_phone?: string;
-      shipping_address: string;
-      shipping_city: string;
-      shipping_postal_code: string;
-      shipping_country: string;
-      notes?: string;
-    }) =>
-      request<ApiCustomerOrder>("/api/checkout", {
-        method: "POST",
-        body: JSON.stringify(data),
-        credentials: "include",
-      }),
-    getOrder: (id: number) => request<ApiCustomerOrder>(`/api/checkout/orders/${id}`),
-  },
   paymentTypes: {
     list: () => request<PaymentType[]>("/api/payment-types"),
     active: () => request<PaymentType[]>("/api/payment-types/active"),
@@ -997,19 +836,6 @@ export const api = {
     get: () => request<CompanySettings>("/api/company"),
     save: (data: Partial<CompanySettings>) =>
       request<CompanySettings>("/api/company", { method: "POST", body: JSON.stringify(data) }),
-  },
-  customerOrders: {
-    list: (params?: { status?: string; search?: string; limit?: number; offset?: number }) => {
-      const qs = new URLSearchParams(params as any).toString();
-      return request<{ orders: ApiCustomerOrder[]; total: number; limit: number; offset: number }>(`/api/customer-orders${qs ? `?${qs}` : ""}`);
-    },
-    get: (id: number) => request<ApiCustomerOrder>(`/api/customer-orders/${id}`),
-    updateStatus: (id: number, status: string) =>
-      request<ApiCustomerOrder>(`/api/customer-orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
-    update: (id: number, data: Partial<ApiCustomerOrder>) =>
-      request<ApiCustomerOrder>(`/api/customer-orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-    cancel: (id: number) =>
-      request<ApiCustomerOrder>(`/api/customer-orders/${id}/cancel`, { method: "POST" }),
   },
   pos: {
     createSale: (data: {
@@ -1189,12 +1015,6 @@ export const api = {
         if (endDate) params.append('end_date', endDate);
         return request<SalesByProductReport[]>(`/api/reports/sales/by-product?${params}`);
       },
-      comparison: (startDate?: string, endDate?: string) => {
-        const params = new URLSearchParams();
-        if (startDate) params.append('start_date', startDate);
-        if (endDate) params.append('end_date', endDate);
-        return request<SalesComparisonReport>(`/api/reports/sales/comparison?${params}`);
-      },
       byScheme: (startDate?: string, endDate?: string, schemeId?: number | null) => {
         const params = new URLSearchParams();
         if (startDate) params.append('start_date', startDate);
@@ -1245,12 +1065,6 @@ export const api = {
         if (endDate) params.append('end_date', endDate);
         if (limit) params.append('limit', limit.toString());
         return request<TrendingProductReport[]>(`/api/reports/trending/products?${params}`);
-      },
-      posVsWeb: (startDate?: string, endDate?: string) => {
-        const params = new URLSearchParams();
-        if (startDate) params.append('start_date', startDate);
-        if (endDate) params.append('end_date', endDate);
-        return request<POSvsWebReport[]>(`/api/reports/trending/pos-vs-web?${params}`);
       },
     },
     invoiceReports: {

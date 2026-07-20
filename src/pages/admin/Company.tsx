@@ -2,26 +2,15 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun } from "lucide-react";
-import { Upload, Save, Plus, Trash2 } from "lucide-react";
+import { Upload, Save } from "lucide-react";
 import AdminLayout from "./AdminLayout";
-import { api, StorefrontSettings } from "@/lib/api";
-import LayoutPicker from "@/components/admin/LayoutPicker";
+import { api } from "@/lib/api";
 import { useLayout } from "@/contexts/LayoutContext";
-
-const DEFAULT_STOREFRONT: StorefrontSettings = {
-  ticker_bg: "#ffffff",
-  ticker_text_color: "#000000",
-  instagram_url: "",
-  youtube_url: "",
-  twitter_url: "",
-  newsletter_url: "",
-};
 
 export default function Company() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const { refreshLayout } = useLayout();
-  const [activeTab, setActiveTab] = useState<"general" | "storefront">("general");
   const [companyData, setCompanyData] = useState({
     name: "",
     logo: "",
@@ -34,19 +23,14 @@ export default function Company() {
     postal_code: "",
     tax_id: "",
     website: "",
-    site_layout: "tech_grid",
     description: "",
     currency: "UGX",
     brand_color_start: "#004A99",
     brand_color_mid: "#008B8B",
     brand_color_end: "#32CD32",
-    storefront_settings: { ...DEFAULT_STOREFRONT } as StorefrontSettings,
   });
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string>("");
-
-  const setSF = (patch: Partial<StorefrontSettings>) =>
-    setCompanyData(prev => ({ ...prev, storefront_settings: { ...prev.storefront_settings, ...patch } }));
 
   const compressImage = (file: File, maxPx = 400, quality = 0.85): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -70,18 +54,6 @@ export default function Company() {
       reader.readAsDataURL(file);
     });
 
-  const setTickerItem = (i: number, val: string) => {
-    const items = [...(companyData.storefront_settings.ticker_items || [])];
-    items[i] = val;
-    setSF({ ticker_items: items });
-  };
-  const addTickerItem = () => setSF({ ticker_items: [...(companyData.storefront_settings.ticker_items || []), ""] });
-  const removeTickerItem = (i: number) => {
-    const items = [...(companyData.storefront_settings.ticker_items || [])];
-    items.splice(i, 1);
-    setSF({ ticker_items: items });
-  };
-
   useEffect(() => {
     loadCompanyData();
   }, []);
@@ -96,7 +68,6 @@ export default function Company() {
           email: data.email || "",
           phone: data.phone || "",
           whatsapp: data.whatsapp || "",
-          site_layout: data.site_layout || "tech_grid",
           address: data.address || "",
           city: data.city || "",
           country: data.country || "",
@@ -108,7 +79,6 @@ export default function Company() {
           brand_color_start: data.brand_color_start || "#004A99",
           brand_color_mid: data.brand_color_mid || "#008B8B",
           brand_color_end: data.brand_color_end || "#32CD32",
-          storefront_settings: { ...DEFAULT_STOREFRONT, ...(data.storefront_settings || {}) },
         });
         setLogoPreview(data.logo || "");
       }
@@ -131,7 +101,6 @@ export default function Company() {
     setLoading(true);
     try {
       const savedData = await api.company.save(companyData);
-      // Update local state with saved data
       const start = savedData.brand_color_start || "#004A99";
       const mid   = savedData.brand_color_mid   || "#008B8B";
       const end   = savedData.brand_color_end   || "#32CD32";
@@ -144,7 +113,6 @@ export default function Company() {
         email: savedData.email || "",
         phone: savedData.phone || "",
         whatsapp: savedData.whatsapp || "",
-        site_layout: savedData.site_layout || "tech_grid",
         address: savedData.address || "",
         city: savedData.city || "",
         country: savedData.country || "",
@@ -156,7 +124,6 @@ export default function Company() {
         brand_color_start: start,
         brand_color_mid: mid,
         brand_color_end: end,
-        storefront_settings: { ...DEFAULT_STOREFRONT, ...(savedData.storefront_settings || {}) },
       });
       setLogoPreview(savedData.logo || "");
       refreshLayout();
@@ -168,270 +135,15 @@ export default function Company() {
     }
   };
 
-  const sf = companyData.storefront_settings;
-
   return (
     <AdminLayout>
       <div className="w-full">
         <div className="px-6 pt-6 pb-0">
           <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Settings</p>
           <h1 className="text-2xl font-bold text-foreground mb-4">My Company</h1>
-          <div className="flex border-b border-border-subtle">
-            {(["general", "storefront"] as const).map(tab => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 font-mono-tech text-[11px] uppercase tracking-widest border-b-2 transition-colors ${
-                  activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab === "general" ? "General" : "Storefront Content"}
-              </button>
-            ))}
-          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="w-full">
-          {activeTab === "storefront" && (
-            <div className="space-y-0">
-              {/* Hero Section */}
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Hero Section</h2>
-                {/* Hero Image */}
-                <div className="mb-6">
-                  <label className="field-label mb-2 block">Hero Center Image</label>
-                  <div className="flex items-start gap-4">
-                    <div className="w-40 h-48 bg-admin-bg border border-admin-border flex items-center justify-center overflow-hidden shrink-0">
-                      {sf.hero_image
-                        ? <img src={sf.hero_image} alt="Hero" className="w-full h-full object-cover" />
-                        : <span className="text-[10px] text-muted-foreground font-mono-tech uppercase">Default photo</span>
-                      }
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2 px-4 py-2 bg-admin-surface border border-admin-border text-admin-text text-sm hover:bg-admin-bg cursor-pointer transition-colors">
-                        <Upload size={13} /> Upload Image
-                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) compressImage(f, 1200, 0.9).then(url => setSF({ hero_image: url })).catch(() => {}); }} />
-                      </label>
-                      {sf.hero_image && (
-                        <button type="button" onClick={() => setSF({ hero_image: "" })} className="flex items-center gap-2 px-4 py-2 border border-admin-border text-admin-text text-sm hover:bg-admin-bg transition-colors">
-                          <Trash2 size={13} /> Remove
-                        </button>
-                      )}
-                      <p className="text-xs text-muted-foreground">Replaces the default camera photo.<br/>Recommended: 4:5 portrait ratio.</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="field-label">Tagline (small badge text)</label>
-                    <input className="field-input" value={sf.hero_tagline || ""} onChange={e => setSF({ hero_tagline: e.target.value })} placeholder="Your Vision / Our Gear" />
-                  </div>
-                  <div>
-                    <label className="field-label">Heading Line 1</label>
-                    <input className="field-input" value={sf.hero_heading_1 || ""} onChange={e => setSF({ hero_heading_1: e.target.value })} placeholder="CAPTURE" />
-                  </div>
-                  <div>
-                    <label className="field-label">Heading Line 2 (bold/accent)</label>
-                    <input className="field-input" value={sf.hero_heading_2 || ""} onChange={e => setSF({ hero_heading_2: e.target.value })} placeholder="EVERYTHING" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="field-label">Sub-text</label>
-                    <textarea className="field-input" rows={2} value={sf.hero_subtext || ""} onChange={e => setSF({ hero_subtext: e.target.value })} placeholder="Professional cameras, podcast setups…" />
-                  </div>
-                  <div>
-                    <label className="field-label">Brands Count</label>
-                    <input className="field-input" value={sf.hero_brands_count || ""} onChange={e => setSF({ hero_brands_count: e.target.value })} placeholder="50+" />
-                  </div>
-                  <div>
-                    <label className="field-label">Products Count</label>
-                    <input className="field-input" value={sf.hero_products_count || ""} onChange={e => setSF({ hero_products_count: e.target.value })} placeholder="2,400+" />
-                  </div>
-                  <div>
-                    <label className="field-label">Badge Line 1 (Auth)</label>
-                    <input className="field-input" value={sf.hero_badge_1 || ""} onChange={e => setSF({ hero_badge_1: e.target.value })} placeholder="[AUTH] Authorized dealer…" />
-                  </div>
-                  <div>
-                    <label className="field-label">Badge Line 2 (Shipping)</label>
-                    <input className="field-input" value={sf.hero_badge_2 || ""} onChange={e => setSF({ hero_badge_2: e.target.value })} placeholder="[SHIP] Same-day shipping…" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="field-label">Badge Line 3 (Support)</label>
-                    <input className="field-input" value={sf.hero_badge_3 || ""} onChange={e => setSF({ hero_badge_3: e.target.value })} placeholder="[SUPPORT] Expert advice…" />
-                  </div>
-                </div>
-              </div>
-
-              {/* About Section */}
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">About Section</h2>
-                {/* About Image */}
-                <div className="mb-6">
-                  <label className="field-label mb-2 block">About Section Image</label>
-                  <div className="flex items-start gap-4">
-                    <div className="w-40 h-40 bg-admin-bg border border-admin-border flex items-center justify-center overflow-hidden shrink-0">
-                      {sf.about_image
-                        ? <img src={sf.about_image} alt="About" className="w-full h-full object-cover" />
-                        : <span className="text-[10px] text-muted-foreground font-mono-tech uppercase">Default photo</span>
-                      }
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2 px-4 py-2 bg-admin-surface border border-admin-border text-admin-text text-sm hover:bg-admin-bg cursor-pointer transition-colors">
-                        <Upload size={13} /> Upload Image
-                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) compressImage(f, 1200, 0.9).then(url => setSF({ about_image: url })).catch(() => {}); }} />
-                      </label>
-                      {sf.about_image && (
-                        <button type="button" onClick={() => setSF({ about_image: "" })} className="flex items-center gap-2 px-4 py-2 border border-admin-border text-admin-text text-sm hover:bg-admin-bg transition-colors">
-                          <Trash2 size={13} /> Remove
-                        </button>
-                      )}
-                      <p className="text-xs text-muted-foreground">Replaces the default microphone photo.<br/>Recommended: 1:1 square ratio.</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="field-label">Section Tagline</label>
-                    <input className="field-input" value={sf.about_tagline || ""} onChange={e => setSF({ about_tagline: e.target.value })} placeholder="About Us" />
-                  </div>
-                  <div>
-                    <label className="field-label">Section Heading</label>
-                    <input className="field-input" value={sf.about_heading || ""} onChange={e => setSF({ about_heading: e.target.value })} placeholder="Built for the creator…" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="field-label">Body Text</label>
-                    <textarea className="field-input" rows={4} value={sf.about_body || ""} onChange={e => setSF({ about_body: e.target.value })} placeholder="We don't just sell equipment…" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="field-label">Stat 1 Value</label>
-                      <input className="field-input" value={sf.about_stat_1_value || ""} onChange={e => setSF({ about_stat_1_value: e.target.value })} placeholder="7+" />
-                    </div>
-                    <div>
-                      <label className="field-label">Stat 1 Label</label>
-                      <input className="field-input" value={sf.about_stat_1_label || ""} onChange={e => setSF({ about_stat_1_label: e.target.value })} placeholder="Years" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="field-label">Stat 2 Value</label>
-                      <input className="field-input" value={sf.about_stat_2_value || ""} onChange={e => setSF({ about_stat_2_value: e.target.value })} placeholder="12K+" />
-                    </div>
-                    <div>
-                      <label className="field-label">Stat 2 Label</label>
-                      <input className="field-input" value={sf.about_stat_2_label || ""} onChange={e => setSF({ about_stat_2_label: e.target.value })} placeholder="Customers" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="field-label">Stat 3 Value</label>
-                      <input className="field-input" value={sf.about_stat_3_value || ""} onChange={e => setSF({ about_stat_3_value: e.target.value })} placeholder="4.9★" />
-                    </div>
-                    <div>
-                      <label className="field-label">Stat 3 Label</label>
-                      <input className="field-input" value={sf.about_stat_3_label || ""} onChange={e => setSF({ about_stat_3_label: e.target.value })} placeholder="Rating" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ticker Banner */}
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Scrolling Ticker Banner</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="field-label">Background Color</label>
-                    <div className="flex items-center gap-3">
-                      <input type="color" value={sf.ticker_bg || "#ffffff"} onChange={e => setSF({ ticker_bg: e.target.value })} className="w-12 h-10 cursor-pointer bg-transparent border-0 p-0" />
-                      <input className="field-input flex-1" value={sf.ticker_bg || "#ffffff"} onChange={e => setSF({ ticker_bg: e.target.value })} placeholder="#ffffff" maxLength={7} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="field-label">Text Color</label>
-                    <div className="flex items-center gap-3">
-                      <input type="color" value={sf.ticker_text_color || "#000000"} onChange={e => setSF({ ticker_text_color: e.target.value })} className="w-12 h-10 cursor-pointer bg-transparent border-0 p-0" />
-                      <input className="field-input flex-1" value={sf.ticker_text_color || "#000000"} onChange={e => setSF({ ticker_text_color: e.target.value })} placeholder="#000000" maxLength={7} />
-                    </div>
-                  </div>
-                </div>
-                {/* Live preview */}
-                <div className="w-full py-2 mb-6 overflow-hidden border border-border-subtle" style={{ background: sf.ticker_bg || "#ffffff" }}>
-                  <div className="flex gap-12 px-6">
-                    {(sf.ticker_items || []).map((item, i) => (
-                      <span key={i} className="font-bold text-[10px] tracking-widest uppercase whitespace-nowrap" style={{ color: sf.ticker_text_color || "#000000" }}>{item || "…"}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {(sf.ticker_items || []).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        className="field-input flex-1"
-                        value={item}
-                        onChange={e => setTickerItem(i, e.target.value)}
-                        placeholder={`Ticker item ${i + 1}`}
-                      />
-                      <button type="button" onClick={() => removeTickerItem(i)} className="p-2 text-muted-foreground hover:text-destructive transition-colors">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button" onClick={addTickerItem} className="flex items-center gap-2 text-xs text-primary hover:underline mt-2">
-                    <Plus size={13} /> Add item
-                  </button>
-                </div>
-              </div>
-
-              {/* Social Links */}
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Social Links</h2>
-                <p className="text-xs text-muted-foreground mb-5">
-                  Only links you fill in here will appear in the storefront footer.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="field-label">Instagram URL</label>
-                    <input
-                      className="field-input"
-                      value={sf.instagram_url || ""}
-                      onChange={(e) => setSF({ instagram_url: e.target.value })}
-                      placeholder="https://instagram.com/yourpage"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">YouTube URL</label>
-                    <input
-                      className="field-input"
-                      value={sf.youtube_url || ""}
-                      onChange={(e) => setSF({ youtube_url: e.target.value })}
-                      placeholder="https://youtube.com/@yourchannel"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Twitter / X URL</label>
-                    <input
-                      className="field-input"
-                      value={sf.twitter_url || ""}
-                      onChange={(e) => setSF({ twitter_url: e.target.value })}
-                      placeholder="https://x.com/yourhandle"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Newsletter URL</label>
-                    <input
-                      className="field-input"
-                      value={sf.newsletter_url || ""}
-                      onChange={(e) => setSF({ newsletter_url: e.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "general" && (
-            <>
           {/* Row 1: Logo + Basic Information — 50/50 */}
           <div className="grid grid-cols-1 lg:grid-cols-2">
             <div className="border-b border-r border-border-subtle bg-chassis p-6">
@@ -487,57 +199,50 @@ export default function Company() {
             </div>
           </div>
 
-          {/* Row 2: Address + Additional (left) | Website Layout (right) — 50/50 */}
-          <div className="grid grid-cols-1 xl:grid-cols-2">
-            <div className="space-y-0 border-r border-border-subtle">
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Address Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-foreground mb-2">Street Address</label>
-                    <input type="text" value={companyData.address} onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-foreground mb-2">City</label>
-                    <input type="text" value={companyData.city} onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-foreground mb-2">Postal Code</label>
-                    <input type="text" value={companyData.postal_code} onChange={(e) => setCompanyData({ ...companyData, postal_code: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-foreground mb-2">Country</label>
-                    <input type="text" value={companyData.country} onChange={(e) => setCompanyData({ ...companyData, country: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-foreground mb-2">Currency</label>
-                    <select value={companyData.currency} onChange={(e) => setCompanyData({ ...companyData, currency: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary">
-                      <option value="UGX">UGX - Ugandan Shilling</option>
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                      <option value="KES">KES - Kenyan Shilling</option>
-                      <option value="TZS">TZS - Tanzanian Shilling</option>
-                      <option value="RWF">RWF - Rwandan Franc</option>
-                    </select>
-                  </div>
-                </div>
+          {/* Row 2: Address + Additional */}
+          <div className="border-b border-border-subtle bg-chassis p-6">
+            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Address Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm text-foreground mb-2">Street Address</label>
+                <input type="text" value={companyData.address} onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
               </div>
-              <div className="border-b border-border-subtle bg-chassis p-6">
-                <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Additional Information</h2>
-                <label className="block text-sm text-foreground mb-2">Company Description</label>
-                <textarea value={companyData.description} onChange={(e) => setCompanyData({ ...companyData, description: e.target.value })} rows={6} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary resize-none" placeholder="Brief description of your company..." />
+              <div>
+                <label className="block text-sm text-foreground mb-2">City</label>
+                <input type="text" value={companyData.city} onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
               </div>
-            </div>
-            <div className="p-4 sm:p-6 bg-chassis border-b border-border-subtle">
-              <LayoutPicker value={companyData.site_layout} onChange={(key) => setCompanyData({ ...companyData, site_layout: key })} />
+              <div>
+                <label className="block text-sm text-foreground mb-2">Postal Code</label>
+                <input type="text" value={companyData.postal_code} onChange={(e) => setCompanyData({ ...companyData, postal_code: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground mb-2">Country</label>
+                <input type="text" value={companyData.country} onChange={(e) => setCompanyData({ ...companyData, country: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground mb-2">Currency</label>
+                <select value={companyData.currency} onChange={(e) => setCompanyData({ ...companyData, currency: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary">
+                  <option value="UGX">UGX - Ugandan Shilling</option>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="KES">KES - Kenyan Shilling</option>
+                  <option value="TZS">TZS - Tanzanian Shilling</option>
+                  <option value="RWF">RWF - Rwandan Franc</option>
+                </select>
+              </div>
             </div>
           </div>
+          <div className="border-b border-border-subtle bg-chassis p-6">
+            <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-4">Additional Information</h2>
+            <label className="block text-sm text-foreground mb-2">Company Description</label>
+            <textarea value={companyData.description} onChange={(e) => setCompanyData({ ...companyData, description: e.target.value })} rows={6} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary resize-none" placeholder="Brief description of your company..." />
+          </div>
 
-          {/* Row 3: Brand Colors */}
+          {/* Brand Colors */}
           <div className="border-b border-border-subtle bg-chassis p-6">
             <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase mb-1">Brand Colors</h2>
-            <p className="text-xs text-muted-foreground mb-5">Controls the gradient used on buttons, active states, and accent text across the entire website.</p>
+            <p className="text-xs text-muted-foreground mb-5">Controls the gradient used on buttons, active states, and accent text across the admin panel and POS.</p>
 
             {/* Live gradient preview bar */}
             <div
@@ -666,10 +371,8 @@ export default function Company() {
               Active: {theme === "dark" ? "Dark" : "Light"} — saved automatically
             </p>
           </div>
-            </>
-          )}
 
-          {/* Save Button — always visible */}
+          {/* Save Button */}
           <div className="flex justify-end px-6 py-4 border-t border-border-subtle">
             <button type="submit" disabled={loading} className="flex items-center gap-2 px-6 py-3 bg-primary text-background font-bold uppercase tracking-widest hover:bg-primary/90 transition-colors disabled:opacity-50">
               <Save size={16} />

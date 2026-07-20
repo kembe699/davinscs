@@ -62,9 +62,6 @@ router.post("/complete", async (req, res) => {
       brand_color_start,
       brand_color_mid,
       brand_color_end,
-      site_layout,
-      // Storefront headline (optional quick-set)
-      tagline,
       // Currency
       primary_currency,
       secondary_currency,
@@ -144,16 +141,14 @@ router.post("/complete", async (req, res) => {
         }
 
         // 3. Create company settings
-        const storefrontSettings = tagline ? { hero_tagline: tagline } : {};
         const baseCurrency = String(primary_currency || "").trim().toUpperCase();
 
         await client.query(
           `INSERT INTO company_settings
              (company_name, address, city, country, phone, email, website, tax_id,
-              whatsapp, logo_url, site_layout, currency,
-              brand_color_start, brand_color_mid, brand_color_end,
-              storefront_settings, receipt_footer)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+              whatsapp, logo_url, currency,
+              brand_color_start, brand_color_mid, brand_color_end, receipt_footer)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
           [
             company_name,
             address || "",
@@ -165,13 +160,11 @@ router.post("/complete", async (req, res) => {
             tax_id || "",
             whatsapp || "",
             logo || "",
-            site_layout || "tech_grid",
             baseCurrency,
             brand_color_start || "#004A99",
             brand_color_mid || "#008B8B",
             brand_color_end || "#32CD32",
-            JSON.stringify(storefrontSettings),
-            `Thank you for shopping at ${company_name}!`,
+            `Thank you for your business with ${company_name}!`,
           ]
         );
 

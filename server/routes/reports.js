@@ -127,46 +127,6 @@ router.get("/sales/by-product", requireAuth, async (req, res) => {
 });
 
 // POS vs Website comparison
-router.get("/sales/comparison", requireAuth, async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
-    const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
-    const endDate = end_date || new Date().toISOString().split('T')[0];
-
-    // POS sales
-    const posSales = await pool.query(
-      `SELECT 
-        COUNT(*) as total_orders,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(AVG(total_amount), 0) as average_order_value
-       FROM pos_sales
-       WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false`,
-      [startDate, endDate]
-    );
-
-    // Website orders
-    const webOrders = await pool.query(
-      `SELECT 
-        COUNT(*) as total_orders,
-        COALESCE(SUM(total), 0) as total_revenue,
-        COALESCE(AVG(total), 0) as average_order_value
-       FROM customer_orders
-       WHERE DATE(created_at) BETWEEN $1 AND $2 AND status != 'cancelled'`,
-      [startDate, endDate]
-    );
-
-    res.json({
-      pos: posSales.rows[0],
-      website: webOrders.rows[0],
-      total_revenue: parseInt(posSales.rows[0].total_revenue) + parseInt(webOrders.rows[0].total_revenue),
-      total_orders: parseInt(posSales.rows[0].total_orders) + parseInt(webOrders.rows[0].total_orders)
-    });
-  } catch (err) {
-    console.error("Error in comparison report:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 // Sales by scheme / price list
 router.get("/sales/by-scheme", requireAuth, async (req, res) => {
   try {
@@ -534,7 +494,7 @@ router.get("/inventory/out-of-stock", requireAuth, async (req, res) => {
 
 // ============ TRENDING/ANALYTICS REPORTS ============
 
-// Most trending products (POS + Website combined)
+// Most trending products
 router.get("/trending/products", requireAuth, async (req, res) => {
   try {
     const { start_date, end_date, limit } = req.query;
@@ -542,157 +502,24 @@ router.get("/trending/products", requireAuth, async (req, res) => {
     const endDate = end_date || new Date().toISOString().split('T')[0];
     const maxLimit = limit || 20;
 
-    // POS sales
-    let posSales = { rows: [] };
-    try {
-      posSales = await pool.query(
-        `SELECT 
-          si.product_id,
-          si.product_name,
-          SUM(si.quantity) as quantity_sold,
-          COALESCE(SUM(si.subtotal), 0) as revenue,
-          'POS' as source
-         FROM pos_sale_items si
-         JOIN pos_sales s ON si.sale_id = s.id
-         WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
-         GROUP BY si.product_id, si.product_name`,
-        [startDate, endDate]
-      );
-    } catch (err) {
-      console.error("POS trending query error:", err.message);
-    }
+    const { rows } = await pool.query(
+      `SELECT
+        si.product_id,
+        si.product_name,
+        SUM(si.quantity) as total_quantity,
+        COALESCE(SUM(si.subtotal), 0) as total_revenue
+       FROM pos_sale_items si
+       JOIN pos_sales s ON si.sale_id = s.id
+       WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false
+       GROUP BY si.product_id, si.product_name
+       ORDER BY total_revenue DESC
+       LIMIT $3`,
+      [startDate, endDate, maxLimit]
+    );
 
-    // Website orders
-    let webOrders = { rows: [] };
-    try {
-      webOrders = await pool.query(
-        `SELECT 
-          oi.product_id,
-          p.name as product_name,
-          SUM(oi.quantity) as quantity_sold,
-          COALESCE(SUM(oi.price * oi.quantity), 0) as revenue,
-          'Website' as source
-         FROM order_items oi
-         JOIN customer_orders co ON oi.order_id = co.id
-         JOIN products p ON oi.product_id = p.id
-         WHERE DATE(co.created_at) BETWEEN $1 AND $2 AND co.status != 'cancelled'
-         GROUP BY oi.product_id, p.name`,
-        [startDate, endDate]
-      );
-    } catch (err) {
-      console.log("Order items table not available");
-    }
-
-    // Combine and aggregate
-    const combined = {};
-    
-    [...posSales.rows, ...webOrders.rows].forEach(item => {
-      const key = item.product_id;
-      if (!combined[key]) {
-        combined[key] = {
-          product_id: item.product_id,
-          product_name: item.product_name,
-          total_quantity: 0,
-          total_revenue: 0,
-          pos_quantity: 0,
-          pos_revenue: 0,
-          web_quantity: 0,
-          web_revenue: 0
-        };
-      }
-      
-      combined[key].total_quantity += parseInt(item.quantity_sold);
-      combined[key].total_revenue += parseInt(item.revenue);
-      
-      if (item.source === 'POS') {
-        combined[key].pos_quantity = parseInt(item.quantity_sold);
-        combined[key].pos_revenue = parseInt(item.revenue);
-      } else {
-        combined[key].web_quantity = parseInt(item.quantity_sold);
-        combined[key].web_revenue = parseInt(item.revenue);
-      }
-    });
-
-    const result = Object.values(combined)
-      .sort((a, b) => b.total_revenue - a.total_revenue)
-      .slice(0, maxLimit);
-
-    res.json(result);
+    res.json(rows);
   } catch (err) {
     console.error("Error in trending products report:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// POS vs Website detailed comparison
-router.get("/trending/pos-vs-web", requireAuth, async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
-    const startDate = start_date || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
-    const endDate = end_date || new Date().toISOString().split('T')[0];
-
-    // Daily breakdown
-    const dailyPOS = await pool.query(
-      `SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as orders,
-        COALESCE(SUM(total_amount), 0) as revenue
-       FROM pos_sales
-       WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false
-       GROUP BY DATE(created_at)
-       ORDER BY date`,
-      [startDate, endDate]
-    );
-
-    const dailyWeb = await pool.query(
-      `SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as orders,
-        COALESCE(SUM(total), 0) as revenue
-       FROM customer_orders
-       WHERE DATE(created_at) BETWEEN $1 AND $2 AND status != 'cancelled'
-       GROUP BY DATE(created_at)
-       ORDER BY date`,
-      [startDate, endDate]
-    );
-
-    // Combine daily data
-    const dailyData = {};
-    
-    dailyPOS.rows.forEach(row => {
-      const dateKey = row.date.toISOString().split('T')[0];
-      dailyData[dateKey] = {
-        date: dateKey,
-        pos_orders: parseInt(row.orders),
-        pos_revenue: parseInt(row.revenue),
-        web_orders: 0,
-        web_revenue: 0
-      };
-    });
-
-    dailyWeb.rows.forEach(row => {
-      const dateKey = row.date.toISOString().split('T')[0];
-      if (!dailyData[dateKey]) {
-        dailyData[dateKey] = {
-          date: dateKey,
-          pos_orders: 0,
-          pos_revenue: 0,
-          web_orders: parseInt(row.orders),
-          web_revenue: parseInt(row.revenue)
-        };
-      } else {
-        dailyData[dateKey].web_orders = parseInt(row.orders);
-        dailyData[dateKey].web_revenue = parseInt(row.revenue);
-      }
-    });
-
-    const result = Object.values(dailyData).sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    res.json(result);
-  } catch (err) {
-    console.error("Error in POS vs Web comparison:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -870,7 +697,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
     const endDate   = end_date   || new Date().toISOString().split('T')[0];
 
     // ── REVENUE ──────────────────────────────────────────────────────────
-    let posRevenue = 0, invoiceRevenue = 0, webRevenue = 0;
+    let posRevenue = 0, invoiceRevenue = 0;
 
     try {
       const { rows } = await pool.query(
@@ -888,15 +715,6 @@ router.get("/income-statement", requireAuth, async (req, res) => {
         [startDate, endDate]
       );
       invoiceRevenue = parseInt(rows[0].total) || 0;
-    } catch (e) {}
-
-    try {
-      const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(total),0)::bigint as total FROM customer_orders
-         WHERE DATE(created_at) BETWEEN $1 AND $2 AND status != 'cancelled'`,
-        [startDate, endDate]
-      );
-      webRevenue = parseInt(rows[0].total) || 0;
     } catch (e) {}
 
     // ── COGS (from actual sale items × cost_price) ────────────────────
@@ -949,7 +767,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       otherAccountingExpenses = parseInt(rows[0].total) || 0;
     } catch (e) {}
 
-    const totalRevenue      = posRevenue + invoiceRevenue + webRevenue;
+    const totalRevenue      = posRevenue + invoiceRevenue;
     const grossProfit       = totalRevenue - cogsAmount;
     const totalOpExpenses   = procurementExpenses + cashDrawerExpenses + otherAccountingExpenses;
     const netIncome         = grossProfit - totalOpExpenses;
@@ -960,7 +778,6 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       revenue: [
         { label: 'POS Sales',           amount: posRevenue },
         { label: 'Invoice Collections', amount: invoiceRevenue },
-        { label: 'Website Orders',      amount: webRevenue },
       ].filter(r => r.amount > 0),
       total_revenue:    totalRevenue,
       cogs:             cogsAmount,
