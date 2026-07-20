@@ -707,7 +707,7 @@ export const api = {
       list: () => request<ApiGRN[]>("/api/procurement/grn"),
       get: (id: number) => request<ApiGRN & { items: ApiGRNItem[] }>(`/api/procurement/grn/${id}`),
       create: (data: { po_id: number; received_date: string; items: { po_item_id: number; received_quantity: number; notes?: string }[]; notes?: string }) =>
-        request<ApiGRN>("/api/procurement/grn", { method: "POST", body: JSON.stringify(data) }),
+        request<ApiGRN & { bill?: ApiSupplierBill }>("/api/procurement/grn", { method: "POST", body: JSON.stringify(data) }),
       print: (id: number) => request<any>(`/api/procurement/grn/${id}/print`),
     },
     bills: {
@@ -848,6 +848,7 @@ export const api = {
       notes?: string;
       price_list_id?: number;
       promotion_id?: number;
+      status?: string;
     }) => request<POSSale>("/api/pos/sales", { method: "POST", body: JSON.stringify(data) }),
     getSales: (params?: {
       start_date?: string;
@@ -860,6 +861,11 @@ export const api = {
       return request<POSSale[]>(`/api/pos/sales${qs ? `?${qs}` : ""}`);
     },
     getSale: (id: number) => request<POSSale>(`/api/pos/sales/${id}`),
+    getHeldSales: () => request<POSSale[]>("/api/pos/sales/held"),
+    completeHeldSale: (id: number, payment_type_id: number) =>
+      request<POSSale>(`/api/pos/sales/${id}/complete`, { method: "PUT", body: JSON.stringify({ payment_type_id }) }),
+    cancelHeldSale: (id: number) =>
+      request<{ message: string }>(`/api/pos/sales/${id}/cancel-hold`, { method: "PUT" }),
     voidSale: (id: number) =>
       request<{ message: string }>(`/api/pos/sales/${id}/void`, { method: "POST" }),
     refundSale: (id: number, items: Array<{ product_id: number; quantity: number }>, refund_method?: string, reason?: string) =>

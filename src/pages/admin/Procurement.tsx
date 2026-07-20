@@ -51,18 +51,6 @@ export default function ProcurementEnhanced() {
     items: [] as { po_item_id: number; received_quantity: number; notes?: string }[]
   });
   
-  // Bill form
-  const [creatingBill, setCreatingBill] = useState(false);
-  const [billForm, setBillForm] = useState({
-    supplier_id: 0,
-    grn_id: undefined as number | undefined,
-    po_id: undefined as number | undefined,
-    bill_date: new Date().toISOString().split('T')[0],
-    due_date: "",
-    total_amount: 0,
-    notes: ""
-  });
-  
   // Payment form
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
@@ -216,26 +204,6 @@ export default function ProcurementEnhanced() {
     }
   };
 
-  const handleGRNSelectedForBill = async (grnId: number) => {
-    if (!grnId) {
-      setBillForm(prev => ({ ...prev, grn_id: undefined, supplier_id: 0, po_id: undefined, total_amount: 0 }));
-      return;
-    }
-    try {
-      const grn = await api.procurement.grn.get(grnId);
-      const total = grn.items.reduce((sum, item) => sum + item.ordered_quantity * item.unit_price, 0);
-      setBillForm(prev => ({
-        ...prev,
-        grn_id: grnId,
-        supplier_id: grn.supplier_id,
-        po_id: grn.po_id || undefined,
-        total_amount: total,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load GRN");
-    }
-  };
-
   const handleBillSelectedForPayment = (billId: number) => {
     if (!billId) {
       setPaymentForm(prev => ({ ...prev, bill_id: undefined, supplier_id: 0, amount: 0 }));
@@ -261,13 +229,15 @@ export default function ProcurementEnhanced() {
     setError("");
     try {
       const created = await api.procurement.grn.create(grnForm);
-      await Promise.all([loadGRNs(), loadPOs()]);
+      await Promise.all([loadGRNs(), loadPOs(), loadBills()]);
       toast(
-        created?.grn_number
-          ? `GRN ${created.grn_number} created successfully.`
-          : "GRN created successfully.",
+        created?.bill
+          ? `GRN ${created.grn_number} and Bill ${created.bill.bill_number} created successfully.`
+          : created?.grn_number
+            ? `GRN ${created.grn_number} created successfully.`
+            : "GRN created successfully.",
         "success",
-        "Created"
+        "Received"
       );
       setCreatingGRN(false);
       setSelectedPOForGRN(null);
@@ -279,36 +249,6 @@ export default function ProcurementEnhanced() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to create GRN";
-      setError(msg);
-      toast(msg, "error", "Failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCreateBill = async () => {
-    if (!billForm.supplier_id || !billForm.total_amount) {
-      setError("Supplier and amount required");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      await api.procurement.bills.create(billForm);
-      toast("Supplier bill created successfully.", "success", "Created");
-      await loadBills();
-      setCreatingBill(false);
-      setBillForm({
-        supplier_id: 0,
-        grn_id: undefined,
-        po_id: undefined,
-        bill_date: new Date().toISOString().split('T')[0],
-        due_date: "",
-        total_amount: 0,
-        notes: ""
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create bill";
       setError(msg);
       toast(msg, "error", "Failed");
     } finally {
@@ -633,6 +573,7 @@ export default function ProcurementEnhanced() {
         }))
       });
       setCreatingGRN(true);
+      setTab("grn");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load PO");
     }
@@ -1044,7 +985,7 @@ export default function ProcurementEnhanced() {
                           <button
                             onClick={() => startGRNFromPO(po.id)}
                             className="px-2 py-1 text-xs text-primary hover:underline ml-2"
-                            title="Create GRN"
+                            title="Receive goods — creates the GRN and supplier bill automatically"
                           >
                             Receive
                           </button>
@@ -1062,19 +1003,14 @@ export default function ProcurementEnhanced() {
         {tab === "grn" && (
           <div>
             {!creatingGRN && (
-              <div className="mb-4">
-                <button
-                  onClick={() => { setCreatingGRN(true); setSelectedPOForGRN(null); setGRNForm({ po_id: 0, received_date: new Date().toISOString().split('T')[0], notes: "", items: [] }); }}
-                  className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 flex items-center gap-2"
-                >
-                  <Plus size={16} /> New GRN
-                </button>
-              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                To receive goods, click <strong>Receive</strong> on a purchase order in the Purchase Orders tab — it creates the GRN and supplier bill together.
+              </p>
             )}
 
             {creatingGRN && (
               <div className="border border-border-subtle p-4 mb-4 bg-chassis">
-                <h3 className="text-sm font-bold mb-4">{selectedPOForGRN ? `Create GRN for PO: ${selectedPOForGRN.po_number}` : "Create GRN"}</h3>
+                <h3 className="text-sm font-bold mb-4">{selectedPOForGRN ? `Receive PO: ${selectedPOForGRN.po_number}` : "Receive Goods"}</h3>
 
                 <div className="mb-4">
                   <div className="grid grid-cols-3 gap-2">
@@ -1082,20 +1018,20 @@ export default function ProcurementEnhanced() {
                       1. Select PO
                     </div>
                     <div className={`px-3 py-2 border text-[10px] font-mono-tech uppercase tracking-widest ${grnStep >= 2 ? "border-primary/30 text-primary bg-primary/5" : "border-border-subtle text-muted-foreground"}`}>
-                      2. Enter Qty
+                      2. Confirm Qty
                     </div>
                     <div className={`px-3 py-2 border text-[10px] font-mono-tech uppercase tracking-widest ${grnStep >= 3 ? "border-primary/30 text-primary bg-primary/5" : "border-border-subtle text-muted-foreground"}`}>
-                      3. Create GRN
+                      3. GRN + Bill
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
                     {saving
-                      ? "Creating GRN..."
+                      ? "Creating GRN and supplier bill..."
                       : !selectedPOForGRN
                         ? "Select a purchase order to begin."
                         : !grnAnyReceiveQty
                           ? "Enter received quantities for at least one item."
-                          : "Ready to create the GRN."}
+                          : "Ready — this will create the GRN and the supplier bill together."}
                   </div>
                 </div>
 
@@ -1196,7 +1132,7 @@ export default function ProcurementEnhanced() {
                     disabled={saving || !selectedPOForGRN || !grnAnyReceiveQty}
                     className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {saving ? "Creating..." : "Create GRN"}
+                    {saving ? "Creating..." : "Confirm Receipt & Create Bill"}
                   </button>
                   <button
                     onClick={() => { setCreatingGRN(false); setSelectedPOForGRN(null); }}
@@ -1255,80 +1191,9 @@ export default function ProcurementEnhanced() {
         {/* Bills Tab */}
         {tab === "bills" && (
           <div>
-            <div className="mb-4">
-              <button
-                onClick={() => setCreatingBill(!creatingBill)}
-                className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 flex items-center gap-2"
-              >
-                <Plus size={16} /> New Bill
-              </button>
-            </div>
-
-            {creatingBill && (
-              <div className="border border-border-subtle p-4 mb-4 bg-chassis">
-                <h3 className="text-sm font-bold mb-4">New Bill</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <select
-                    value={billForm.supplier_id}
-                    onChange={(e) => setBillForm({ ...billForm, supplier_id: parseInt(e.target.value) })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  >
-                    <option value={0}>Select Supplier *</option>
-                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                  <select
-                    value={billForm.grn_id || ""}
-                    onChange={(e) => handleGRNSelectedForBill(e.target.value ? parseInt(e.target.value) : 0)}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  >
-                    <option value="">Select GRN (auto-fills supplier &amp; amount)</option>
-                    {grns.map(g => <option key={g.id} value={g.id}>{g.grn_number} — {g.supplier_name}</option>)}
-                  </select>
-                  <input
-                    type="date"
-                    value={billForm.bill_date}
-                    onChange={(e) => setBillForm({ ...billForm, bill_date: e.target.value })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  />
-                  <input
-                    type="date"
-                    placeholder="Due Date"
-                    value={billForm.due_date}
-                    onChange={(e) => setBillForm({ ...billForm, due_date: e.target.value })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Total Amount *"
-                    value={billForm.total_amount}
-                    onChange={(e) => setBillForm({ ...billForm, total_amount: parseInt(e.target.value) || 0 })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  />
-                </div>
-                <textarea
-                  placeholder="Notes"
-                  value={billForm.notes}
-                  onChange={(e) => setBillForm({ ...billForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-background border border-border-subtle text-xs mb-4"
-                  rows={2}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCreateBill}
-                    disabled={saving}
-                    className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {saving ? "Creating..." : "Create Bill"}
-                  </button>
-                  <button
-                    onClick={() => setCreatingBill(false)}
-                    className="px-4 py-2 border border-border-subtle text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className="text-xs text-muted-foreground mb-4">
+              Supplier bills are created automatically when goods are received against a purchase order — see the Purchase Orders tab.
+            </p>
 
             <div className="border border-border-subtle overflow-hidden">
               <table className="w-full text-sm">

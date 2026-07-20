@@ -18,15 +18,15 @@ router.get("/daily-sales", requireAuth, async (req, res) => {
         COALESCE(SUM(discount_amount), 0) as total_discounts,
         COALESCE(AVG(total_amount), 0) as average_sale
        FROM pos_sales
-       WHERE DATE(created_at) = $1 AND voided = false`,
+       WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'`,
       [targetDate]
     );
-    
+
     const paymentBreakdown = await pool.query(
       `SELECT pt.name, COUNT(*) as count, COALESCE(SUM(s.total_amount), 0) as total
        FROM pos_sales s
        JOIN payment_types pt ON s.payment_type_id = pt.id
-       WHERE DATE(s.created_at) = $1 AND s.voided = false
+       WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'
        GROUP BY pt.name`,
       [targetDate]
     );
@@ -54,7 +54,7 @@ router.get("/hourly-sales", requireAuth, async (req, res) => {
         COUNT(*) as sales_count,
         COALESCE(SUM(total_amount), 0) as total_amount
        FROM pos_sales
-       WHERE DATE(created_at) = $1 AND voided = false
+       WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'
        GROUP BY EXTRACT(HOUR FROM created_at)
        ORDER BY hour`,
       [targetDate]
@@ -82,7 +82,7 @@ router.get("/top-products", requireAuth, async (req, res) => {
         COUNT(DISTINCT si.sale_id) as times_sold
       FROM pos_sale_items si
       JOIN pos_sales s ON si.sale_id = s.id
-      WHERE s.voided = false
+      WHERE s.voided = false AND s.status != 'held'
     `;
     const params = [];
     let paramCount = 1;
@@ -128,7 +128,7 @@ router.get("/top-customers", requireAuth, async (req, res) => {
         COALESCE(AVG(s.total_amount), 0) as average_purchase
       FROM customers c
       JOIN pos_sales s ON c.id = s.customer_id
-      WHERE s.voided = false
+      WHERE s.voided = false AND s.status != 'held'
     `;
     const params = [];
     let paramCount = 1;
@@ -170,7 +170,7 @@ router.get("/payment-methods", requireAuth, async (req, res) => {
         COUNT(s.id) as transaction_count,
         COALESCE(SUM(s.total_amount), 0) as total_amount
       FROM payment_types pt
-      LEFT JOIN pos_sales s ON pt.id = s.payment_type_id AND s.voided = false
+      LEFT JOIN pos_sales s ON pt.id = s.payment_type_id AND s.voided = false AND s.status != 'held'
       WHERE 1=1
     `;
     const params = [];
@@ -211,7 +211,7 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
         COUNT(*) as sales_count,
         COALESCE(SUM(total_amount), 0) as total_amount
        FROM pos_sales
-       WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false
+       WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'
        GROUP BY EXTRACT(MONTH FROM created_at)
        ORDER BY month`,
       [targetYear]
@@ -247,7 +247,7 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
         COALESCE(SUM(discount_amount), 0) as total_discounts,
         COALESCE(SUM(subtotal), 0) as subtotal
        FROM pos_sales
-       WHERE DATE(created_at) = $1 AND voided = false${sessionFilter}`,
+       WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'${sessionFilter}`,
       params
     );
     
@@ -256,17 +256,17 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
       `SELECT pt.name, COUNT(*) as count, COALESCE(SUM(s.total_amount), 0) as total
        FROM pos_sales s
        JOIN payment_types pt ON s.payment_type_id = pt.id
-       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'${sessionFilter}
        GROUP BY pt.name`,
       params
     );
-    
+
     // Top products
     const topProducts = await pool.query(
       `SELECT si.product_name, SUM(si.quantity) as quantity, COALESCE(SUM(si.subtotal), 0) as revenue
        FROM pos_sale_items si
        JOIN pos_sales s ON si.sale_id = s.id
-       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'${sessionFilter}
        GROUP BY si.product_name
        ORDER BY revenue DESC
        LIMIT 10`,
@@ -301,7 +301,7 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
               COALESCE(SUM(s.discount_amount), 0) as total_discounts
        FROM pos_sales s
        JOIN users u ON s.user_id = u.id
-       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'${sessionFilter}
        GROUP BY u.id, u.email
        ORDER BY total_sales DESC`,
       params
@@ -323,7 +323,7 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
        FROM pos_sales s
        JOIN currencies c ON c.id = COALESCE(s.sale_currency_id,
          (SELECT id FROM currencies WHERE is_base = TRUE LIMIT 1))
-       WHERE DATE(s.created_at) = $1 AND s.voided = false${sessionFilter}
+       WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'${sessionFilter}
        GROUP BY c.id, c.code, c.symbol, c.is_base
        ORDER BY base_total DESC`,
       params

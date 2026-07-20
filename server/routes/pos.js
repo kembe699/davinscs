@@ -153,21 +153,35 @@ router.post("/sales", requireAuth, async (req, res) => {
       });
       
       if (!isService) {
-        // Update inventory
-        await client.query(
-          "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
-          [item.quantity, product.id]
-        );
-        
-        // Record stock movement
-        await client.query(
-          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
-           VALUES ($1, 'sale', $2, 'pos_sale', 0, $3, 'POS Sale')`,
-          [product.id, -item.quantity, user_id]
-        );
+        if (status === 'held') {
+          // Hold — reserve the stock so it can't be sold elsewhere, but don't
+          // deduct it yet. Deduction happens when the hold is confirmed/paid.
+          await client.query(
+            "UPDATE products SET quantity_reserved = quantity_reserved + $1, updated_at = NOW() WHERE id = $2",
+            [item.quantity, product.id]
+          );
+          await client.query(
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+             VALUES ($1, 'hold', $2, 'pos_sale', 0, $3, 'POS Sale Held')`,
+            [product.id, item.quantity, user_id]
+          );
+        } else {
+          // Update inventory
+          await client.query(
+            "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
+            [item.quantity, product.id]
+          );
+
+          // Record stock movement
+          await client.query(
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+             VALUES ($1, 'sale', $2, 'pos_sale', 0, $3, 'POS Sale')`,
+            [product.id, -item.quantity, user_id]
+          );
+        }
       }
     }
-    
+
     const total_discount = discount_amount || 0;
     const total_amount = subtotal + tax_amount - total_discount;
     const sale_number = generateSaleNumber();
@@ -240,6 +254,9 @@ router.post("/sales", requireAuth, async (req, res) => {
     }
     
     // ── Accounting journal entries ─────────────────────────────────────
+    // Held sales aren't confirmed revenue yet — entries post when the hold
+    // is completed via PUT /sales/:id/complete instead.
+    if ((status || 'completed') === 'completed') {
     try {
       const acctRows = await client.query(
         `SELECT id, code FROM accounts WHERE code IN ('1000','1100','1200','4000','5000') AND is_active = true`
@@ -276,6 +293,7 @@ router.post("/sales", requireAuth, async (req, res) => {
     } catch (acctErr) {
       // Non-fatal: log but don't fail the sale
       console.error('Accounting journal error (sale still saved):', acctErr.message);
+    }
     }
 
     // Auto-record cash sales as cash_movements 'in' for the active session
@@ -344,6 +362,227 @@ router.post("/sales", requireAuth, async (req, res) => {
   }
 });
 
+// Get all held sales — visible to every cashier (shared queue), any date
+router.get("/sales/held", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name,
+             json_agg(json_build_object(
+               'id', si.id,
+               'product_id', si.product_id,
+               'product_name', si.product_name,
+               'quantity', si.quantity,
+               'unit_price', si.unit_price,
+               'discount_amount', si.discount_amount,
+               'tax_amount', si.tax_amount,
+               'subtotal', si.subtotal
+             ) ORDER BY si.id) as items
+      FROM pos_sales s
+      LEFT JOIN customers c ON s.customer_id = c.id
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN pos_sale_items si ON s.id = si.sale_id
+      WHERE s.status = 'held' AND s.voided = false
+      GROUP BY s.id, c.id, u.id
+      ORDER BY s.created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Confirm payment on a held sale — releases the reservation, deducts stock,
+// and posts the accounting/cash entries now that it's actually paid.
+router.put("/sales/:id/complete", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { payment_type_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!payment_type_id) {
+    return res.status(400).json({ error: "Payment type is required" });
+  }
+
+  const client = await getSchemaClient();
+  try {
+    await client.query("BEGIN");
+
+    const saleResult = await client.query(
+      "SELECT * FROM pos_sales WHERE id = $1 AND status = 'held' AND voided = false FOR UPDATE",
+      [id]
+    );
+    if (!saleResult.rows[0]) {
+      throw new Error("Held sale not found or already resolved");
+    }
+    const sale = saleResult.rows[0];
+
+    const itemsResult = await client.query(
+      `SELECT si.*, p.product_type, p.cost_price
+       FROM pos_sale_items si
+       JOIN products p ON si.product_id = p.id
+       WHERE si.sale_id = $1`,
+      [id]
+    );
+
+    // Get or auto-open a cash drawer session for this user
+    const sessionResult = await client.query(
+      "SELECT id FROM cash_drawer_sessions WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC LIMIT 1",
+      [user_id]
+    );
+    let session_id = sessionResult.rows[0]?.id || null;
+    if (!session_id) {
+      const openSessionResult = await client.query(
+        "INSERT INTO cash_drawer_sessions (user_id, status, opened_at) VALUES ($1, 'open', NOW()) RETURNING id",
+        [user_id]
+      );
+      session_id = openSessionResult.rows[0].id;
+    }
+
+    for (const item of itemsResult.rows) {
+      if (item.product_type !== 'service') {
+        // Release the hold and consume the stock
+        await client.query(
+          "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, quantity_reserved = quantity_reserved - $1, updated_at = NOW() WHERE id = $2",
+          [item.quantity, item.product_id]
+        );
+        await client.query(
+          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+           VALUES ($1, 'sale', $2, 'pos_sale', $3, $4, 'Held sale completed')`,
+          [item.product_id, -item.quantity, id, user_id]
+        );
+      }
+    }
+
+    await client.query(
+      "UPDATE pos_sales SET status = 'completed', payment_status = 'paid', payment_type_id = $1, session_id = $2 WHERE id = $3",
+      [payment_type_id, session_id, id]
+    );
+
+    // Accounting journal entries — same shape as a normal completed sale
+    try {
+      const acctRows = await client.query(
+        `SELECT id, code FROM accounts WHERE code IN ('1000','1100','1200','4000','5000') AND is_active = true`
+      );
+      const acct = {};
+      acctRows.rows.forEach(r => { acct[r.code] = r.id; });
+      const today = new Date().toISOString().split('T')[0];
+
+      if (sale.total_amount > 0 && acct['4000']) {
+        const drAcct = sale.sale_type === 'credit' ? (acct['1100'] || acct['1000']) : (acct['1000'] || acct['1100']);
+        if (drAcct) {
+          const { rows: tx1 } = await client.query(
+            `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+            [today, sale.sale_number, `POS Sale Revenue – ${sale.sale_number}`, user_id]
+          );
+          const tid1 = tx1[0].id;
+          await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid1, drAcct, sale.total_amount]);
+          await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid1, acct['4000'], sale.total_amount]);
+        }
+      }
+
+      const total_cogs = itemsResult.rows.reduce((s, it) => s + Math.round((it.cost_price || 0) * it.quantity), 0);
+      if (total_cogs > 0 && acct['5000'] && acct['1200']) {
+        const { rows: tx2 } = await client.query(
+          `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+          [today, sale.sale_number, `COGS – ${sale.sale_number}`, user_id]
+        );
+        const tid2 = tx2[0].id;
+        await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid2, acct['5000'], total_cogs]);
+        await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid2, acct['1200'], total_cogs]);
+      }
+    } catch (acctErr) {
+      console.error('Accounting journal error (hold completed, entries skipped):', acctErr.message);
+    }
+
+    // Cash movement, if paid in cash
+    const ptResult = await client.query("SELECT code FROM payment_types WHERE id = $1", [payment_type_id]);
+    if (ptResult.rows[0]?.code === 'cash') {
+      await client.query(
+        `INSERT INTO cash_movements (session_id, user_id, type, amount, reason) VALUES ($1, $2, 'in', $3, $4)`,
+        [session_id, user_id, sale.total_amount, `POS Sale ${sale.sale_number}`]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    const completeSale = await pool.query(
+      `SELECT s.*, json_agg(json_build_object(
+          'id', si.id, 'product_id', si.product_id, 'product_name', si.product_name,
+          'quantity', si.quantity, 'unit_price', si.unit_price,
+          'discount_amount', si.discount_amount, 'tax_amount', si.tax_amount, 'subtotal', si.subtotal
+        ) ORDER BY si.id) as items
+       FROM pos_sales s
+       LEFT JOIN pos_sale_items si ON s.id = si.sale_id
+       WHERE s.id = $1
+       GROUP BY s.id`,
+      [id]
+    );
+
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'HELD_SALE_COMPLETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+    res.json(completeSale.rows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: err.message || "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
+// Cancel a held sale — releases the reservation, never touched quantity_on_hand
+router.put("/sales/:id/cancel-hold", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const user_id = req.user.id;
+
+  const client = await getSchemaClient();
+  try {
+    await client.query("BEGIN");
+
+    const saleResult = await client.query(
+      "SELECT * FROM pos_sales WHERE id = $1 AND status = 'held' AND voided = false FOR UPDATE",
+      [id]
+    );
+    if (!saleResult.rows[0]) {
+      throw new Error("Held sale not found or already resolved");
+    }
+    const sale = saleResult.rows[0];
+
+    const itemsResult = await client.query(
+      `SELECT si.*, p.product_type FROM pos_sale_items si JOIN products p ON si.product_id = p.id WHERE si.sale_id = $1`,
+      [id]
+    );
+
+    for (const item of itemsResult.rows) {
+      if (item.product_type !== 'service') {
+        await client.query(
+          "UPDATE products SET quantity_reserved = quantity_reserved - $1, updated_at = NOW() WHERE id = $2",
+          [item.quantity, item.product_id]
+        );
+        await client.query(
+          `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
+           VALUES ($1, 'hold_release', $2, 'pos_sale', $3, $4, 'Held sale cancelled')`,
+          [item.product_id, item.quantity, id, user_id]
+        );
+      }
+    }
+
+    await client.query(
+      "UPDATE pos_sales SET voided = true, voided_at = NOW(), voided_by = $1 WHERE id = $2",
+      [user_id, id]
+    );
+
+    await client.query("COMMIT");
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'HELD_SALE_CANCELLED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number }, ip: req.ip });
+    res.json({ message: "Held sale cancelled" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: err.message || "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
 // Get all sales
 router.get("/sales", requireAuth, async (req, res) => {
   const { start_date, end_date, customer_id, payment_status, sale_type } = req.query;
@@ -356,7 +595,7 @@ router.get("/sales", requireAuth, async (req, res) => {
       LEFT JOIN customers c ON s.customer_id = c.id
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN payment_types pt ON s.payment_type_id = pt.id
-      WHERE s.voided = false
+      WHERE s.voided = false AND s.status != 'held'
     `;
     const params = [];
     let paramCount = 1;

@@ -16,7 +16,7 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
         COUNT(*) as count,
         COALESCE(SUM(total_amount), 0) as sales
        FROM pos_sales
-       WHERE EXTRACT(YEAR FROM created_at) = $1
+       WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'
        GROUP BY month, month_num
        ORDER BY month_num`,
       [year]
@@ -53,6 +53,8 @@ router.get("/top-products", requireAuth, async (req, res) => {
         COALESCE(SUM(psi.subtotal), 0) as total
        FROM pos_sale_items psi
        JOIN products p ON psi.product_id = p.id
+       JOIN pos_sales s ON psi.sale_id = s.id
+       WHERE s.voided = false AND s.status != 'held'
        GROUP BY p.id, p.name, p.category
        ORDER BY total DESC
        LIMIT $1`,
@@ -80,7 +82,7 @@ router.get("/sales-summary", requireAuth, async (req, res) => {
     const { rows: totalRows } = await pool.query(
       `SELECT COALESCE(SUM(total_amount), 0) as total_sales, COUNT(*) as total_count
        FROM pos_sales
-       WHERE EXTRACT(YEAR FROM created_at) = $1`,
+       WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'`,
       [year]
     );
     
@@ -90,7 +92,7 @@ router.get("/sales-summary", requireAuth, async (req, res) => {
         TO_CHAR(created_at, 'Month') as month,
         COALESCE(SUM(total_amount), 0) as amount
        FROM pos_sales
-       WHERE EXTRACT(YEAR FROM created_at) = $1
+       WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'
        GROUP BY TO_CHAR(created_at, 'Month'), EXTRACT(MONTH FROM created_at)
        ORDER BY amount DESC
        LIMIT 1`,
@@ -118,7 +120,7 @@ router.get("/hourly-sales", requireAuth, async (req, res) => {
         COUNT(*) as count,
         COALESCE(SUM(total_amount), 0) as amount
        FROM pos_sales
-       WHERE DATE(created_at) = CURRENT_DATE
+       WHERE DATE(created_at) = CURRENT_DATE AND voided = false AND status != 'held'
        GROUP BY hour
        ORDER BY hour`
     );

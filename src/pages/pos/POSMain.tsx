@@ -41,6 +41,9 @@ export default function POSMain() {
   const [discountValue, setDiscountValue] = useState(0);
   const [heldSales, setHeldSales] = useState<Array<any>>([]);
   const [showHeldSales, setShowHeldSales] = useState(false);
+  const [confirmingHeldSaleId, setConfirmingHeldSaleId] = useState<number | null>(null);
+  const [confirmPaymentTypeId, setConfirmPaymentTypeId] = useState<number | null>(null);
+  const [processingHold, setProcessingHold] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
   const [paymentMode, setPaymentMode] = useState<'cash' | 'credit'>('cash');
   const [creditCustomerName, setCreditCustomerName] = useState('');
@@ -96,12 +99,14 @@ export default function POSMain() {
     loadSecondaryCurrency();
     loadSchemes();
     loadPromotions();
+    loadHeldSales();
 
     const intervalId = setInterval(() => {
       loadData();
       checkCashDrawer();
       loadSchemes();
       loadPromotions();
+      loadHeldSales();
     }, 10000);
 
     return () => clearInterval(intervalId);
@@ -268,6 +273,14 @@ export default function POSMain() {
     }
   };
 
+  const loadHeldSales = async () => {
+    try {
+      setHeldSales(await api.pos.getHeldSales());
+    } catch (err) {
+      console.error("Failed to load held sales:", err);
+    }
+  };
+
   const checkCashDrawer = async () => {
     try {
       const session = await api.cashDrawer.getCurrent();
@@ -372,7 +385,7 @@ export default function POSMain() {
     }
 
     try {
-      const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
+      const { total } = calculateTotals();
 
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
@@ -391,17 +404,16 @@ export default function POSMain() {
 
       const sale = await api.pos.createSale(saleData);
 
-      // Store held sale locally
-      const heldSale = {
-        ...sale,
-        items: cart,
+      // Print the "held — not paid" order slip for the customer
+      printSaleOrder({
+        sale_number: sale.sale_number,
         customerName: customerName || 'Walk-in Customer',
-        subtotal,
-        taxAmount,
+        items: cart,
         total,
-      };
+      });
 
-      setHeldSales([...heldSales, heldSale]);
+      // Refresh from the backend so the Held Sales list stays authoritative
+      await loadHeldSales();
 
       // Clear current cart
       setCart([]);
@@ -504,12 +516,60 @@ export default function POSMain() {
   };
 
 
-  const loadHeldSale = (heldSale: any) => {
-    setCart(heldSale.items);
-    setCustomerName(heldSale.customerName);
-    setCartDiscount(heldSale.items.reduce((sum: number, item: any) => sum + item.discount, 0));
-    setHeldSales(heldSales.filter(s => s.id !== heldSale.id));
-    setShowHeldSales(false);
+  const handleConfirmHeldSale = async (sale: any) => {
+    if (!confirmPaymentTypeId) {
+      toast("Please select a payment type", "warning", "Required");
+      return;
+    }
+    setProcessingHold(true);
+    try {
+      const completed = await api.pos.completeHeldSale(sale.id, confirmPaymentTypeId);
+
+      const completedSaleData = {
+        ...completed,
+        items: (completed.items || []).map((item: any) => ({
+          product: { name: item.product_name },
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount: item.discount_amount,
+        })),
+        customerName: completed.customer_name || 'Walk-in Customer',
+        subtotal: completed.subtotal,
+        taxAmount: completed.tax_amount,
+        total: completed.total_amount,
+        discountAmount: completed.discount_amount,
+        paymentTypeName: paymentTypes.find(pt => pt.id === confirmPaymentTypeId)?.name || 'Cash',
+      };
+      setCompletedSale(completedSaleData);
+
+      const html = buildReceiptBody(completedSaleData);
+      printThermal(`Receipt_${completed.sale_number}`, html);
+
+      await loadHeldSales();
+      setConfirmingHeldSaleId(null);
+      setConfirmPaymentTypeId(null);
+      setShowHeldSales(false);
+      setShowReceipt(true);
+      toast(`Sale ${completed.sale_number} completed`, "success", "Payment Confirmed");
+    } catch (err: any) {
+      toast(err.message || "Failed to confirm payment", "error", "Error");
+    } finally {
+      setProcessingHold(false);
+    }
+  };
+
+  const handleCancelHeldSale = async (sale: any) => {
+    if (!confirm(`Cancel held sale ${sale.sale_number}? Reserved stock will be released.`)) return;
+    setProcessingHold(true);
+    try {
+      await api.pos.cancelHeldSale(sale.id);
+      await loadHeldSales();
+      toast(`Held sale ${sale.sale_number} cancelled`, "success", "Cancelled");
+    } catch (err: any) {
+      toast(err.message || "Failed to cancel held sale", "error", "Error");
+    } finally {
+      setProcessingHold(false);
+    }
   };
 
   const handleCreditPayment = async () => {
@@ -1550,7 +1610,7 @@ export default function POSMain() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto flex flex-col">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700/50">
               <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">Held Sales</h2>
-              <button onClick={() => setShowHeldSales(false)} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-100 rounded-full"><X size={20} /></button>
+              <button onClick={() => { setShowHeldSales(false); setConfirmingHeldSaleId(null); }} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-100 rounded-full"><X size={20} /></button>
             </div>
 
             {heldSales.length === 0 ? (
@@ -1559,36 +1619,96 @@ export default function POSMain() {
                 <p>No sales currently on hold.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {heldSales.map((sale) => (
-                  <button
-                    key={sale.id}
-                    onClick={() => loadHeldSale(sale)}
-                    className="bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700/50 rounded-xl p-5 hover:border-[#10B981] hover:shadow-md transition-all text-left flex flex-col group"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1">{sale.sale_number}</p>
-                        <p className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2">
-                          <User size={16} className="text-gray-400 dark:text-gray-500" />
-                          {sale.customerName}
+              <div className="grid grid-cols-1 gap-4">
+                {heldSales.map((sale) => {
+                  const isConfirming = confirmingHeldSaleId === sale.id;
+                  return (
+                    <div
+                      key={sale.id}
+                      className="bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700/50 rounded-xl p-5 flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1">{sale.sale_number}</p>
+                          <p className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2">
+                            <User size={16} className="text-gray-400 dark:text-gray-500" />
+                            {sale.customer_name || 'Walk-in Customer'}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full flex items-center justify-center">
+                          <ShoppingCart size={18} className="text-[#10B981]" />
+                        </div>
+                      </div>
+
+                      {/* Read-only line items */}
+                      <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 mb-3">
+                        {(sale.items || []).map((item: any) => (
+                          <div key={item.id} className="flex justify-between">
+                            <span>{item.quantity} × {item.product_name}</span>
+                            <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-3 border-t border-gray-50 dark:border-gray-700/50 flex justify-between items-end mb-3">
+                        <span className="text-xs opacity-70 text-gray-500 dark:text-gray-400">
+                          {new Date(sale.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <p className="text-xl font-bold text-[#10B981]">
+                          {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
                         </p>
                       </div>
-                      <div className="w-10 h-10 bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full flex items-center justify-center group-hover:bg-[#10B981] transition-colors">
-                        <ShoppingCart size={18} className="text-[#10B981] group-hover:text-white" />
-                      </div>
+
+                      {isConfirming ? (
+                        <div className="space-y-3 bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3">
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Payment Method</label>
+                          <select
+                            value={confirmPaymentTypeId || ""}
+                            onChange={(e) => setConfirmPaymentTypeId(Number(e.target.value))}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[#1A1A2E] dark:text-gray-100 outline-none"
+                          >
+                            <option value="" disabled>Select payment type…</option>
+                            {paymentTypes.map(pt => (
+                              <option key={pt.id} value={pt.id}>{pt.name}</option>
+                            ))}
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleConfirmHeldSale(sale)}
+                              disabled={processingHold || !confirmPaymentTypeId}
+                              className="flex-1 py-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all disabled:opacity-50"
+                            >
+                              {processingHold ? "Processing…" : "Complete Sale"}
+                            </button>
+                            <button
+                              onClick={() => { setConfirmingHeldSaleId(null); setConfirmPaymentTypeId(null); }}
+                              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-lg"
+                            >
+                              Back
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setConfirmingHeldSaleId(sale.id); setConfirmPaymentTypeId(paymentTypes[0]?.id ?? null); }}
+                            disabled={processingHold}
+                            className="flex-1 py-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all disabled:opacity-50"
+                          >
+                            Confirm Payment
+                          </button>
+                          <button
+                            onClick={() => handleCancelHeldSale(sale)}
+                            disabled={processingHold}
+                            className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-lg hover:bg-red-100 disabled:opacity-50"
+                          >
+                            Cancel Hold
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-end">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
-                        {sale.items.length} item(s)<br />
-                        <span className="text-xs opacity-70">{new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <p className="text-xl font-bold text-[#10B981]">
-                        {formatCurrencySync(sale.total, baseCurrency?.symbol || 'UGX', false)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

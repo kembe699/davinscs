@@ -114,7 +114,8 @@ router.post("/", requireAuth, async (req, res) => {
     `, [grnNumber, po_id, supplier_id, received_date, notes, req.user.id]);
     
     const grnId = grnResult.rows[0].id;
-    
+    let billTotal = 0;
+
     // Process each item
     for (const item of items) {
       const { po_item_id, received_quantity, notes: itemNotes } = item;
@@ -179,12 +180,31 @@ router.post("/", requireAuth, async (req, res) => {
       
       // Create stock movement
       await client.query(`
-        INSERT INTO stock_movements 
+        INSERT INTO stock_movements
         (product_id, movement_type, quantity, reference_type, reference_id, created_by)
         VALUES ($1, 'purchase', $2, 'grn', $3, $4)
       `, [finalProductId, received_quantity, grnId, req.user.id]);
+
+      billTotal += received_quantity * unit_price;
     }
-    
+
+    // Auto-generate the supplier bill for what was actually received in this GRN
+    let bill = null;
+    if (billTotal > 0) {
+      const billNumber = `BILL-${Date.now()}`;
+      const dueDate = new Date(received_date);
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      const billResult = await client.query(`
+        INSERT INTO supplier_bills
+        (bill_number, supplier_id, grn_id, po_id, bill_date, due_date, total_amount, notes, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [billNumber, supplier_id, grnId, po_id, received_date, dueDate.toISOString().split('T')[0], billTotal, `Auto-generated from GRN ${grnNumber}`, req.user.id]);
+
+      bill = billResult.rows[0];
+    }
+
     // Update PO status
     const allItemsResult = await client.query(
       "SELECT SUM(quantity) as total_qty, SUM(received_quantity) as total_received FROM purchase_order_items WHERE po_id = $1",
@@ -200,7 +220,7 @@ router.post("/", requireAuth, async (req, res) => {
     );
     
     await client.query("COMMIT");
-    res.status(201).json(grnResult.rows[0]);
+    res.status(201).json({ ...grnResult.rows[0], bill });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);
