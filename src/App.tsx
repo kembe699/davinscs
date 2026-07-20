@@ -30,6 +30,7 @@ import TaxRates from "./pages/admin/TaxRates.tsx";
 import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
 import PriceLists from "./pages/admin/PriceLists.tsx";
 import Invoices from "./pages/admin/Invoices.tsx";
+import Receipts from "./pages/admin/Receipts.tsx";
 import Promotions from "./pages/admin/Promotions.tsx";
 import CashflowReport from "./pages/admin/CashflowReport.tsx";
 import AuditTrail from "./pages/admin/AuditTrail.tsx";
@@ -137,6 +138,7 @@ const App = () => (
               <Route path="admin/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
               <Route path="admin/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
               <Route path="admin/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+              <Route path="admin/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
               <Route path="admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
               <Route path="admin/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
               <Route path="admin/cashflow" element={<ProtectedRoute><CashflowReport /></ProtectedRoute>} />
