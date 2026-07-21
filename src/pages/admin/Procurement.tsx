@@ -1329,9 +1329,22 @@ export default function ProcurementEnhanced() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
+                        {bill.status !== 'paid' && (
+                          <button
+                            onClick={() => {
+                              handleBillSelectedForPayment(bill.id);
+                              setCreatingPayment(true);
+                              setTab("payments");
+                            }}
+                            className="px-2 py-1 text-xs text-primary hover:underline inline-flex items-center gap-1 font-bold"
+                            title="Pay Bill"
+                          >
+                            <Wallet size={14} /> Pay
+                          </button>
+                        )}
                         <button
                           onClick={() => handlePrintBill(bill.id)}
-                          className="px-2 py-1 text-xs text-primary hover:underline"
+                          className="px-2 py-1 text-xs text-primary hover:underline ml-2"
                           title="Print Bill"
                         >
                           <Printer size={14} />
