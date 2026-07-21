@@ -1,16 +1,9 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-const fromAddress = `"FlippedPOS" <${process.env.SMTP_USER}>`;
+const resend = new Resend(process.env.RESEND_API_KEY);
+const fromAddress = process.env.EMAIL_FROM || 'FlippedPOS <notifications@flippedpos.com>';
 
 export const sendWelcomeEmail = async (email, businessName, customerCode, schemaName) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
@@ -35,7 +28,7 @@ export const sendWelcomeEmail = async (email, businessName, customerCode, schema
     </div>
   `;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: 'Welcome to FlippedPOS - Your Account Details',
@@ -68,7 +61,7 @@ export const sendInvoiceCreatedEmail = async (email, invoiceNumber, planName, am
     </div>
   `;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: `New Invoice ${invoiceNumber} - FlippedPOS`,
@@ -100,7 +93,7 @@ export const sendInvoicePaidEmail = async (email, invoiceNumber, amount, newExpi
     </div>
   `;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: `Payment Receipt for Invoice ${invoiceNumber} - FlippedPOS`,
@@ -130,7 +123,7 @@ export const sendExpiryReminderEmail = async (email, businessName, expiryDate) =
     </div>
   `;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: 'Action Required: Your FlippedPOS subscription is expiring soon',
@@ -141,40 +134,56 @@ export const sendExpiryReminderEmail = async (email, businessName, expiryDate) =
   }
 };
 
-export const sendOrderStatusEmail = async (email, orderNumber, newStatus, trackingNumber = null) => {
-  const statusColor = newStatus === 'delivered' ? '#16a34a' : 
-                      newStatus === 'shipped' ? '#9333ea' : 
-                      newStatus === 'cancelled' ? '#dc2626' : 
-                      newStatus === 'processing' ? '#eab308' : '#3b82f6';
-                      
-  const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-  
+export const sendPasswordResetEmail = async (email, resetLink) => {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
-        <h2 style="color:#ffffff;margin:0 0 16px;">Order Status Update</h2>
+        <h2 style="color:#ffffff;margin:0 0 16px;">Password Reset Request</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
-          Your order <strong>#${orderNumber}</strong> has been updated.
+          Click the link below to reset your password. It expires in 1 hour.
         </p>
-        <div style="margin-bottom:24px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
-          <table style="width:100%;border-collapse:collapse;">
-            <tr><td style="padding:8px 0;color:#71717a;font-size:13px;width:120px;">Order Number</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${orderNumber}</td></tr>
-            <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">New Status</td><td style="padding:8px 0;color:${statusColor};font-size:15px;font-weight:bold;">${statusText}</td></tr>
-            ${trackingNumber ? `<tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Tracking Number</td><td style="padding:8px 0;color:#ffffff;font-size:13px;font-family:monospace;">${trackingNumber}</td></tr>` : ''}
-          </table>
-        </div>
-        <p style="color:#52525b;font-size:12px;margin-top:32px;">Thank you for shopping with us!</p>
+        <a href="${resetLink}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;">Reset Password</a>
+        <p style="color:#52525b;font-size:12px;margin-top:32px;">If you did not request this, ignore this email.</p>
       </div>
     </div>
   `;
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromAddress,
       to: email,
-      subject: `Order Update: #${orderNumber} is now ${statusText}`,
+      subject: 'Password Reset — FlippedPOS',
       html,
     });
   } catch (error) {
-    console.error('Error sending order status email:', error);
+    console.error('Error sending password reset email:', error);
   }
+};
+
+export const sendContactEnquiryEmail = async ({ name, email, phone, message }) => {
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#0d1117;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(90deg,#004A99,#008B8B,#32CD32);padding:4px 0;"></div>
+      <div style="padding:32px;">
+        <h2 style="color:#ffffff;margin:0 0 4px;">New Website Enquiry</h2>
+        <p style="color:#71717a;font-size:13px;margin:0 0 24px;">Sent from the FlippedPOS.com contact form</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;width:100px;">Name</td><td style="padding:8px 0;color:#ffffff;font-size:13px;">${name}</td></tr>
+          <tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Email</td><td style="padding:8px 0;color:#ffffff;font-size:13px;"><a href="mailto:${email}" style="color:#32CD32;">${email}</a></td></tr>
+          ${phone ? `<tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Phone</td><td style="padding:8px 0;color:#ffffff;font-size:13px;">${phone}</td></tr>` : ''}
+        </table>
+        <div style="margin-top:20px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
+          <p style="color:#a1a1aa;font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;">Message</p>
+          <p style="color:#e4e4e7;font-size:15px;line-height:1.6;margin:0;">${message.replace(/\n/g, '<br/>')}</p>
+        </div>
+        <p style="color:#52525b;font-size:11px;margin-top:24px;">Reply directly to this email to respond to ${name}.</p>
+      </div>
+    </div>
+  `;
+  await resend.emails.send({
+    from: 'FlippedPOS Website <notifications@flippedpos.com>',
+    to: 'nilehive23@gmail.com',
+    replyTo: email,
+    subject: `[FlippedPOS Website] New Enquiry from ${name}`,
+    html,
+  });
 };

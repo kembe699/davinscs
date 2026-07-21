@@ -6,7 +6,7 @@ import pool from '../db.js';
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache } from '../middleware/auth.js';
-import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail } from '../utils/email.js';
+import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendContactEnquiryEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
@@ -111,9 +111,7 @@ router.post('/register', async (req, res) => {
       throw provisionErr;
     }
 
-    try {
-      await sendWelcomeEmail(email, businessName, customerCode, schemaName);
-    } catch (e) { console.error('Welcome email error:', e); }
+    sendWelcomeEmail(email, businessName, customerCode, schemaName).catch(e => console.error('Welcome email error:', e));
 
     res.status(201).json({ message: 'Instance created successfully', schemaName, customerCode, tenantSlug });
   } catch (err) {
@@ -1097,40 +1095,7 @@ router.post('/contact', async (req, res) => {
   }
 
   try {
-    const nodemailer = await import('nodemailer');
-    const transporter = nodemailer.default.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"FlippedPOS Website" <${process.env.SMTP_USER}>`,
-      to: 'nilehive23@gmail.com',
-      replyTo: email,
-      subject: `[FlippedPOS Website] New Enquiry from ${name}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#0d1117;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
-          <div style="background:linear-gradient(90deg,#004A99,#008B8B,#32CD32);padding:4px 0;"></div>
-          <div style="padding:32px;">
-            <h2 style="color:#ffffff;margin:0 0 4px;">New Website Enquiry</h2>
-            <p style="color:#71717a;font-size:13px;margin:0 0 24px;">Sent from the FlippedPOS.com contact form</p>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;width:100px;">Name</td><td style="padding:8px 0;color:#ffffff;font-size:13px;">${name}</td></tr>
-              <tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Email</td><td style="padding:8px 0;color:#ffffff;font-size:13px;"><a href="mailto:${email}" style="color:#32CD32;">${email}</a></td></tr>
-              ${phone ? `<tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Phone</td><td style="padding:8px 0;color:#ffffff;font-size:13px;">${phone}</td></tr>` : ''}
-            </table>
-            <div style="margin-top:20px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
-              <p style="color:#a1a1aa;font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;">Message</p>
-              <p style="color:#e4e4e7;font-size:15px;line-height:1.6;margin:0;">${message.replace(/\n/g, '<br/>')}</p>
-            </div>
-            <p style="color:#52525b;font-size:11px;margin-top:24px;">Reply directly to this email to respond to ${name}.</p>
-          </div>
-        </div>
-      `,
-    });
+    await sendContactEnquiryEmail({ name, email, phone, message });
 
     res.json({ ok: true, message: 'Your message has been sent. We\'ll be in touch soon!' });
   } catch (err) {

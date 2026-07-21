@@ -1,10 +1,10 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../db.js";
 import { logAudit } from "../utils/audit.js";
+import { sendPasswordResetEmail } from "../utils/email.js";
 
 
 import { tenantStorage } from "../tenantStorage.js";
@@ -201,21 +201,7 @@ router.post("/forgot-password", async (req, res) => {
       const resetLink = tenantSlug
         ? `${cmsUrl}/${tenantSlug}/admin/reset-password?token=${tokenGenerated}`
         : `${cmsUrl}/admin/reset-password?token=${tokenGenerated}`;
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        tls: { rejectUnauthorized: false },
-      });
-      await transporter.sendMail({
-        from: `"FlippedPOS" <${process.env.SMTP_USER}>`,
-        to: email,
-        subject: "Password Reset \u2014 FlippedPOS",
-        html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
-               <p><a href="${resetLink}">${resetLink}</a></p>
-               <p>If you did not request this, ignore this email.</p>`,
-      });
+      sendPasswordResetEmail(email, resetLink).catch(err => console.error('[forgot-password] email send error:', err));
     }
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch (err) {
