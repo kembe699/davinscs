@@ -6,7 +6,7 @@ import pool from '../db.js';
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache } from '../middleware/auth.js';
-import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendContactEnquiryEmail } from '../utils/email.js';
+import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
@@ -111,7 +111,7 @@ router.post('/register', async (req, res) => {
       throw provisionErr;
     }
 
-    sendWelcomeEmail(email, businessName, customerCode, schemaName).catch(e => console.error('Welcome email error:', e));
+    sendWelcomeEmail(email, businessName, customerCode, schemaName, tenantSlug, trialEndsAt).catch(e => console.error('Welcome email error:', e));
 
     res.status(201).json({ message: 'Instance created successfully', schemaName, customerCode, tenantSlug });
   } catch (err) {
@@ -1129,22 +1129,28 @@ async function runSubscriptionSweep() {
       console.log(`[Subscription Sweep] Sent expiry reminder to ${row.email} (${row.business_name})`);
     }
 
-    // Suspend expired trials
-    const trialRes = await pool.query(
-      `UPDATE public.tenants SET status='suspended'
-       WHERE status='trial' AND trial_ends_at < NOW()
-       RETURNING schema_name`
+    // Find trials and subscriptions that have just lapsed (before suspending, so we still know who to email)
+    const expiringRes = await pool.query(
+      `SELECT t.id, t.business_name, t.schema_name, t.tenant_slug,
+              (SELECT tu.email FROM public.tenant_users tu WHERE tu.tenant_id = t.id LIMIT 1) AS email
+       FROM public.tenants t
+       WHERE (t.status='trial' AND t.trial_ends_at < NOW())
+          OR (t.status='active' AND t.subscription_end IS NOT NULL AND t.subscription_end < NOW())`
     );
-    // Suspend lapsed active subscriptions
-    const subRes = await pool.query(
-      `UPDATE public.tenants SET status='suspended'
-       WHERE status='active' AND subscription_end IS NOT NULL AND subscription_end < NOW()
-       RETURNING schema_name`
-    );
-    const affected = trialRes.rows.length + subRes.rows.length;
-    if (affected > 0) {
-      [...trialRes.rows, ...subRes.rows].forEach(r => clearTenantCache(r.schema_name));
-      console.log(`[Subscription Sweep] Suspended ${affected} tenant(s).`);
+    const toSuspend = expiringRes.rows;
+    if (toSuspend.length > 0) {
+      await pool.query(
+        `UPDATE public.tenants SET status='suspended' WHERE id = ANY($1)`,
+        [toSuspend.map(r => r.id)]
+      );
+      toSuspend.forEach(r => {
+        clearTenantCache(r.schema_name);
+        if (r.email) {
+          sendAccountExpiredEmail(r.email, r.business_name, r.tenant_slug)
+            .catch(e => console.error('[Subscription Sweep] Expired email error:', e));
+        }
+      });
+      console.log(`[Subscription Sweep] Suspended ${toSuspend.length} tenant(s).`);
     }
   } catch (err) {
     console.error('[Subscription Sweep] Error:', err.message);

@@ -5,8 +5,12 @@ dotenv.config();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromAddress = process.env.EMAIL_FROM || 'FlippedPOS <notifications@flippedpos.com>';
 
-export const sendWelcomeEmail = async (email, businessName, customerCode, schemaName) => {
+export const sendWelcomeEmail = async (email, businessName, customerCode, schemaName, tenantSlug, trialEndsAt) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
+  const posUrl = `${process.env.APP_BASE_URL || 'https://app.flippedpos.com'}${tenantSlug ? '/' + tenantSlug : ''}/admin`;
+  const trialRow = trialEndsAt
+    ? `<tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Trial Ends</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${new Date(trialEndsAt).toLocaleDateString()}</td></tr>`
+    : '';
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
@@ -19,10 +23,13 @@ export const sendWelcomeEmail = async (email, businessName, customerCode, schema
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;width:120px;">Customer Code</td><td style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:bold;">${customerCode}</td></tr>
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Login Email</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${email}</td></tr>
+            ${tenantSlug ? `<tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Your POS Link</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;"><a href="${posUrl}" style="color:#32CD32;">${posUrl}</a></td></tr>` : ''}
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Database Schema</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;font-family:monospace;">${schemaName}</td></tr>
+            ${trialRow}
           </table>
         </div>
-        <a href="${portalUrl}/account" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;">Access Customer Portal</a>
+        <a href="${posUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;margin-right:8px;">Open Your POS</a>
+        <a href="${portalUrl}/account" style="display:inline-block;background:transparent;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;border:1px solid #27272a;">Customer Portal</a>
         <p style="color:#52525b;font-size:12px;margin-top:32px;">If you have any questions, simply reply to this email.</p>
       </div>
     </div>
@@ -131,6 +138,33 @@ export const sendExpiryReminderEmail = async (email, businessName, expiryDate) =
     });
   } catch (error) {
     console.error('Error sending expiry reminder email:', error);
+  }
+};
+
+export const sendAccountExpiredEmail = async (email, businessName, tenantSlug) => {
+  const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+      <div style="padding:32px;">
+        <h2 style="color:#ffffff;margin:0 0 16px;">Your FlippedPOS Subscription Has Expired</h2>
+        <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
+          Hi ${businessName},<br/><br/>
+          Your FlippedPOS trial or subscription has expired and your instance${tenantSlug ? ` (<strong>${tenantSlug}</strong>)` : ''} has been suspended. Your data is safe and nothing has been deleted — access will be restored as soon as a new subscription invoice is paid.
+        </p>
+        <a href="${portalUrl}/account/billing" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;">Renew Now</a>
+        <p style="color:#52525b;font-size:12px;margin-top:32px;">If you believe this is a mistake, simply reply to this email.</p>
+      </div>
+    </div>
+  `;
+  try {
+    await resend.emails.send({
+      from: fromAddress,
+      to: email,
+      subject: 'Action Required: Your FlippedPOS subscription has expired',
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending account expired email:', error);
   }
 };
 
