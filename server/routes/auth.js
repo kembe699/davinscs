@@ -197,7 +197,7 @@ router.post("/forgot-password", async (req, res) => {
         [schemaName]
       );
       const tenantSlug = tenantRes.rows[0]?.tenant_slug;
-      const cmsUrl = process.env.CMS_URL || process.env.APP_URL || "https://davinscs.onrender.com";
+      const cmsUrl = process.env.CMS_URL || process.env.APP_BASE_URL || "https://app.flippedpos.com";
       const resetLink = tenantSlug
         ? `${cmsUrl}/${tenantSlug}/admin/reset-password?token=${tokenGenerated}`
         : `${cmsUrl}/admin/reset-password?token=${tokenGenerated}`;
