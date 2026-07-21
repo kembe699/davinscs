@@ -32,15 +32,13 @@ router.get("/", optionalTenantContext, async (req, res) => {
         tax_id: rows[0].tax_id || "",
         website: rows[0].website || "",
         whatsapp: rows[0].whatsapp || "",
-        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer || "",
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        storefront_settings: rows[0].storefront_settings || {},
         currency: rows[0].currency || "UGX"
       };
-      
+
       res.json(response);
     } else {
       res.json(null);
@@ -53,7 +51,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
 
 // Create or update company settings
 router.post("/", requireAuth, async (req, res) => {
-  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, site_layout, description, brand_color_start, brand_color_mid, brand_color_end, storefront_settings, currency } = req.body;
+  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, description, brand_color_start, brand_color_mid, brand_color_end, currency } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: "Company name is required" });
@@ -65,16 +63,16 @@ router.post("/", requireAuth, async (req, res) => {
     
     if (existing.rows[0]) {
       const { rows } = await pool.query(
-        `UPDATE company_settings 
-         SET company_name = $1, address = $2, phone = $3, email = $4, 
-             tax_id = $5, logo_url = $6, city = $7, country = $8, 
+        `UPDATE company_settings
+         SET company_name = $1, address = $2, phone = $3, email = $4,
+             tax_id = $5, logo_url = $6, city = $7, country = $8,
              postal_code = $9, website = $10, receipt_footer = $11,
-             whatsapp = $12, site_layout = $13,
-             brand_color_start = $14, brand_color_mid = $15, brand_color_end = $16,
-             storefront_settings = $17, currency = $18,
+             whatsapp = $12,
+             brand_color_start = $13, brand_color_mid = $14, brand_color_end = $15,
+             currency = $16,
              updated_at = NOW()
-         WHERE id = $19 RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', JSON.stringify(storefront_settings || {}), currency || 'UGX', existing.rows[0].id]
+         WHERE id = $17 RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', currency || 'UGX', existing.rows[0].id]
       );
       const response = {
         name: rows[0].company_name,
@@ -88,20 +86,18 @@ router.post("/", requireAuth, async (req, res) => {
         tax_id: rows[0].tax_id,
         website: rows[0].website,
         whatsapp: rows[0].whatsapp || "",
-        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer,
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        storefront_settings: rows[0].storefront_settings || {},
         currency: rows[0].currency || "UGX"
       };
       res.json(response);
     } else {
       const { rows } = await pool.query(
-        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, site_layout, currency, brand_color_start, brand_color_mid, brand_color_end, storefront_settings) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, site_layout || 'tech_grid', currency || 'UGX', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', JSON.stringify(storefront_settings || {})]
+        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, currency, brand_color_start, brand_color_mid, brand_color_end)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, currency || 'UGX', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32']
       );
       const response = {
         name: rows[0].company_name,
@@ -115,12 +111,10 @@ router.post("/", requireAuth, async (req, res) => {
         tax_id: rows[0].tax_id,
         website: rows[0].website,
         whatsapp: rows[0].whatsapp || "",
-        site_layout: rows[0].site_layout || "tech_grid",
         description: rows[0].receipt_footer,
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        storefront_settings: rows[0].storefront_settings || {},
         currency: rows[0].currency || "UGX"
       };
       res.json(response);
