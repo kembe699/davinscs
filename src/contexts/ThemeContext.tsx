@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem("app_theme") as Theme) || "light";
+    return (localStorage.getItem("app_theme") as Theme) || "dark";
   });
 
   const [saving] = useState(false);
@@ -27,7 +27,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Sync theme from localStorage when user changes (login/logout)
   // Does NOT touch document.documentElement — ThemeWrapper handles scoped DOM application
   useEffect(() => {
-    const savedTheme = (localStorage.getItem(getThemeKey()) as Theme) || "light";
+    const savedTheme = (localStorage.getItem(getThemeKey()) as Theme) || "dark";
     setThemeState(savedTheme);
   }, [getThemeKey]);
 
