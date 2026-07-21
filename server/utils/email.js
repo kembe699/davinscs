@@ -12,14 +12,14 @@ export const sendWelcomeEmail = async (email, businessName, customerCode, schema
     ? `<tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Trial Ends</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${new Date(trialEndsAt).toLocaleDateString()}</td></tr>`
     : '';
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">Welcome to FlippedPOS!</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
           Hi ${businessName},<br/><br/>
           Your FlippedPOS instance has been successfully provisioned. Here are your account details:
         </p>
-        <div style="margin-bottom:24px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
+        <div style="margin-bottom:24px;background:#262626;border:1px solid #3a3a3a;border-radius:8px;padding:16px;">
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;width:120px;">Customer Code</td><td style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:bold;">${customerCode}</td></tr>
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Login Email</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${email}</td></tr>
@@ -29,7 +29,7 @@ export const sendWelcomeEmail = async (email, businessName, customerCode, schema
           </table>
         </div>
         <a href="${posUrl}" style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;margin-right:8px;">Open Your POS</a>
-        <a href="${portalUrl}/account" style="display:inline-block;background:transparent;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;border:1px solid #27272a;">Customer Portal</a>
+        <a href="${portalUrl}/account" style="display:inline-block;background:transparent;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;font-size:14px;border:1px solid #3a3a3a;">Customer Portal</a>
         <p style="color:#52525b;font-size:12px;margin-top:32px;">If you have any questions, simply reply to this email.</p>
       </div>
     </div>
@@ -49,13 +49,13 @@ export const sendWelcomeEmail = async (email, businessName, customerCode, schema
 export const sendInvoiceCreatedEmail = async (email, invoiceNumber, planName, amount) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">New Invoice Generated</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
           A new invoice has been generated for your account.
         </p>
-        <div style="margin-bottom:24px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
+        <div style="margin-bottom:24px;background:#262626;border:1px solid #3a3a3a;border-radius:8px;padding:16px;">
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;width:120px;">Invoice Number</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${invoiceNumber}</td></tr>
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">Plan</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${planName || 'FlippedPOS Subscription'}</td></tr>
@@ -82,13 +82,13 @@ export const sendInvoiceCreatedEmail = async (email, invoiceNumber, planName, am
 export const sendInvoicePaidEmail = async (email, invoiceNumber, amount, newExpiry) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">Payment Received</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
           Thank you! We have received your payment for invoice <strong>${invoiceNumber}</strong>.
         </p>
-        <div style="margin-bottom:24px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
+        <div style="margin-bottom:24px;background:#262626;border:1px solid #3a3a3a;border-radius:8px;padding:16px;">
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;width:120px;">Amount Paid</td><td style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:bold;">$${amount}</td></tr>
             <tr><td style="padding:8px 0;color:#71717a;font-size:13px;">New Expiry Date</td><td style="padding:8px 0;color:#e4e4e7;font-size:13px;">${new Date(newExpiry).toLocaleDateString()}</td></tr>
@@ -114,7 +114,7 @@ export const sendInvoicePaidEmail = async (email, invoiceNumber, amount, newExpi
 export const sendExpiryReminderEmail = async (email, businessName, expiryDate) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">Action Required: Subscription Expiring Soon</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
@@ -144,7 +144,7 @@ export const sendExpiryReminderEmail = async (email, businessName, expiryDate) =
 export const sendAccountExpiredEmail = async (email, businessName, tenantSlug) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">Your FlippedPOS Subscription Has Expired</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
@@ -170,7 +170,7 @@ export const sendAccountExpiredEmail = async (email, businessName, tenantSlug) =
 
 export const sendPasswordResetEmail = async (email, resetLink) => {
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 16px;">Password Reset Request</h2>
         <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
@@ -195,7 +195,7 @@ export const sendPasswordResetEmail = async (email, resetLink) => {
 
 export const sendContactEnquiryEmail = async ({ name, email, phone, message }) => {
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#0d1117;color:#e4e4e7;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#1f1f1f;color:#e4e4e7;border:1px solid #3a3a3a;border-radius:12px;overflow:hidden;">
       <div style="background:linear-gradient(90deg,#004A99,#008B8B,#32CD32);padding:4px 0;"></div>
       <div style="padding:32px;">
         <h2 style="color:#ffffff;margin:0 0 4px;">New Website Enquiry</h2>
@@ -205,7 +205,7 @@ export const sendContactEnquiryEmail = async ({ name, email, phone, message }) =
           <tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Email</td><td style="padding:8px 0;color:#ffffff;font-size:13px;"><a href="mailto:${email}" style="color:#32CD32;">${email}</a></td></tr>
           ${phone ? `<tr><td style="padding:8px 0;color:#a1a1aa;font-size:13px;">Phone</td><td style="padding:8px 0;color:#ffffff;font-size:13px;">${phone}</td></tr>` : ''}
         </table>
-        <div style="margin-top:20px;background:#18181b;border:1px solid #27272a;border-radius:8px;padding:16px;">
+        <div style="margin-top:20px;background:#262626;border:1px solid #3a3a3a;border-radius:8px;padding:16px;">
           <p style="color:#a1a1aa;font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;">Message</p>
           <p style="color:#e4e4e7;font-size:15px;line-height:1.6;margin:0;">${message.replace(/\n/g, '<br/>')}</p>
         </div>
