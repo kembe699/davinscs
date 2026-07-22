@@ -100,7 +100,11 @@ export default function Products() {
         }
       }
 
-      let created = 0, skipped = 0;
+      // Skip rows that duplicate a product already in the store or another row in this file
+      const existingProductKeys = new Set(products.map((p) => `${p.name.trim().toLowerCase()}|${p.brand.trim().toLowerCase()}`));
+      const seenInFile = new Set<string>();
+
+      let created = 0, skipped = 0, duplicates = 0;
       for (const row of rows) {
         const name     = String(row["name"] ?? row["Name"] ?? "").trim();
         const brand    = String(row["brand"] ?? row["Brand"] ?? "").trim();
@@ -109,6 +113,10 @@ export default function Products() {
         const price    = Number(String(rawPrice).replace(/,/g, "").trim());
 
         if (!name || !brand || !category || !price) { skipped++; continue; }
+
+        const dedupeKey = `${name.toLowerCase()}|${brand.toLowerCase()}`;
+        if (existingProductKeys.has(dedupeKey) || seenInFile.has(dedupeKey)) { duplicates++; continue; }
+        seenInFile.add(dedupeKey);
 
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
         const cost_price = Number(String(row["cost_price"] ?? row["Cost Price"] ?? 0).replace(/,/g, ""));
@@ -128,13 +136,17 @@ export default function Products() {
             in_stock,
             tag: "", specs: [], image_url: "", is_featured: false,
           } as any);
+          existingProductKeys.add(dedupeKey);
           created++;
         } catch {
           skipped++;
         }
       }
       load();
-      setImportMsg({ type: "ok", text: `Imported ${created} product(s)${skipped ? `, ${skipped} skipped (missing required fields or duplicate slug)` : ""}.` });
+      const parts = [`Imported ${created} product(s)`];
+      if (duplicates) parts.push(`${duplicates} duplicate(s) skipped`);
+      if (skipped) parts.push(`${skipped} skipped (missing required fields or error)`);
+      setImportMsg({ type: "ok", text: parts.join(", ") + "." });
     } catch (err: any) {
       setImportMsg({ type: "err", text: err?.message || "Import failed — check file format." });
     } finally {

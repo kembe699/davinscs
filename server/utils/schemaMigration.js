@@ -788,6 +788,19 @@ export async function migrateTenant(schemaName = "public") {
         ALTER TABLE products ALTER COLUMN cost_price SET DEFAULT 0;
       END IF;
     END $$;
+
+    DO $$
+    DECLARE col_type TEXT;
+    BEGIN
+      SELECT data_type INTO col_type
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name   = 'products'
+          AND column_name  = 'price';
+      IF col_type = 'integer' THEN
+        ALTER TABLE products ALTER COLUMN price TYPE NUMERIC(15,2) USING price::numeric(15,2);
+      END IF;
+    END $$;
   `);
   console.log("\u2705 Migrations applied");
 }
