@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Printer, Home, LayoutGrid, List } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { openPrintWindow, printDocument, printThermal } from "@/utils/printUtils";
-import { buildThermalReceipt } from "@/utils/receiptUtils";
+import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 import IdleWarningModal from "@/components/IdleWarningModal";
@@ -32,8 +32,6 @@ export default function POSMain() {
   const [cashDrawerSession, setCashDrawerSession] = useState<CashDrawerSession | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [completedSale, setCompletedSale] = useState<any>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -467,13 +465,14 @@ export default function POSMain() {
     openPrintWindow(`Held Sale — ${sale.sale_number}`, body);
   };
 
-  const buildReceiptBody = (sale: any): string => {
+  const buildReceiptBody = async (sale: any): Promise<string> => {
     const items = (sale.items || []).map((item: any) => ({
       name: item.product?.name || item.product_name || '',
       quantity: item.quantity,
       unit_price: item.unit_price,
       total: item.unit_price * item.quantity - (item.discount || 0),
     }));
+    const qrDataUrl = await generateReceiptQrDataUrl(sale.sale_number);
     return buildThermalReceipt({
       sale,
       items,
@@ -482,39 +481,9 @@ export default function POSMain() {
       baseCurrencyCode: baseCurrency?.code || 'UGX',
       secondaryCurrency: secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
       exchangeRate,
+      qrDataUrl,
     });
   };
-
-  const handlePrintReceipt = (sale: any) => {
-    const html = buildReceiptBody(sale);
-    // Use hidden iframe to bypass popup blockers and go straight to print dialogue
-    const frameId = 'pos-receipt-print-frame';
-    let frame = document.getElementById(frameId) as HTMLIFrameElement | null;
-    if (!frame) {
-      frame = document.createElement('iframe');
-      frame.id = frameId;
-      frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:80mm;height:1px;border:none;visibility:hidden;';
-      document.body.appendChild(frame);
-    }
-    const doc = frame.contentWindow?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(`<!DOCTYPE html><html><head>
-      <title>Receipt - ${sale.sale_number}</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; width: 80mm; }
-        pre { white-space: pre-wrap; word-break: break-word; }
-        table { width: 100%; border-collapse: collapse; }
-        @page { size: 80mm auto; margin: 4mm 2mm; }
-        @media print { html, body { width: 80mm; } }
-      </style>
-    </head><body>${html}</body></html>`);
-    doc.close();
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-  };
-
 
   const handleConfirmHeldSale = async (sale: any) => {
     if (!confirmPaymentTypeId) {
@@ -540,16 +509,14 @@ export default function POSMain() {
         discountAmount: completed.discount_amount,
         paymentTypeName: paymentTypes.find(pt => pt.id === confirmPaymentTypeId)?.name || 'Cash',
       };
-      setCompletedSale(completedSaleData);
 
-      const html = buildReceiptBody(completedSaleData);
+      const html = await buildReceiptBody(completedSaleData);
       printThermal(`Receipt_${completed.sale_number}`, html);
 
       await loadHeldSales();
       setConfirmingHeldSaleId(null);
       setConfirmPaymentTypeId(null);
       setShowHeldSales(false);
-      setShowReceipt(true);
       toast(`Sale ${completed.sale_number} completed`, "success", "Payment Confirmed");
     } catch (err: any) {
       toast(err.message || "Failed to confirm payment", "error", "Error");
@@ -655,9 +622,6 @@ export default function POSMain() {
         customerName: customerName || 'Walk-in Customer',
       };
 
-      // Store completed sale data for receipt modal
-      setCompletedSale(completedSaleData);
-
       // Fetch currency data fresh for print (avoids any stale-state issue)
       let printSecondary: { id: number; code: string; symbol: string } | null = null;
       let printRate: number | null = null;
@@ -686,6 +650,7 @@ export default function POSMain() {
         unit_price: item.unit_price,
         total: item.unit_price * item.quantity - (item.discount || 0),
       }));
+      const qrDataUrl = await generateReceiptQrDataUrl(completedSaleData.sale_number);
       const html = buildThermalReceipt({
         sale: completedSaleData,
         items: receiptItems,
@@ -694,18 +659,19 @@ export default function POSMain() {
         baseCurrencyCode: baseCurrency?.code || 'SSP',
         secondaryCurrency: printSecondary,
         exchangeRate: printRate,
+        qrDataUrl,
       });
       printThermal(`Receipt_${completedSaleData.sale_number}`, html);
 
-      // Clear cart
+      // Clear cart, ready for the next sale
       setCart([]);
       setCartDiscount(0);
       setAppliedPromotion(null);
       setDiscountValue(0);
+      setCustomerName('');
       setShowPaymentModal(false);
 
-      // Show receipt modal
-      setShowReceipt(true);
+      toast(`Sale ${completedSaleData.sale_number} completed`, "success", "Payment Successful");
     } catch (err: any) {
       toast(err.message || "Failed to process sale", "error", "Payment Failed");
     }
@@ -1402,60 +1368,6 @@ export default function POSMain() {
           </div>
         </div>
       )}
-
-      {/* Receipt Modal */}
-      {showReceipt && completedSale && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '92vh' }}>
-
-            {/* Fixed Header */}
-            <div className="flex flex-col items-center pt-6 px-6 pb-4 shrink-0">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: 'linear-gradient(135deg,#1565C0,#00A896,#56C02B)' }}>
-                <ShoppingCart size={28} className="text-white" />
-              </div>
-              <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100">Payment Successful!</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Sale #{completedSale.sale_number}</p>
-            </div>
-
-            {/* Scrollable Receipt Body */}
-            <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl w-full flex justify-center border border-gray-100 dark:border-gray-700/50 shadow-inner">
-                <div
-                  style={{ width: '100%', maxWidth: '80mm', backgroundColor: 'white', padding: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', fontSize: '12px' }}
-                  dangerouslySetInnerHTML={{ __html: buildReceiptBody(completedSale) }}
-                />
-              </div>
-            </div>
-
-            {/* Fixed Footer — always visible */}
-            <div className="shrink-0 p-4 pt-3 border-t border-gray-100 dark:border-gray-700/50 bg-white dark:bg-gray-800 rounded-b-2xl flex gap-3">
-              {/* Print button */}
-              <button
-                onClick={() => handlePrintReceipt(completedSale)}
-                title="Print Receipt"
-                className="shrink-0 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-[#00A896] hover:text-[#00A896] text-gray-500 dark:text-gray-300 transition-all shadow-sm"
-              >
-                <Printer size={20} />
-              </button>
-              {/* New Sale button */}
-              <button
-                onClick={() => {
-                  setShowReceipt(false);
-                  setCart([]);
-                  setCartDiscount(0);
-                  setCustomerName('');
-                  setAppliedPromotion(null);
-                }}
-                className="pos-accent-bg flex-1 py-3 md:py-4 font-bold rounded-xl text-base md:text-lg transition-all shadow-lg"
-              >
-                Start New Sale
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
 
       {/* Customer Modal */}
       {showCustomerModal && (

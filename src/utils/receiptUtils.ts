@@ -1,6 +1,26 @@
 /** Shared thermal receipt builder — 80mm POS format.
  *  Used by POSMain (live sale) and SalesHistory (reprint). */
 
+import QRCode from 'qrcode';
+
+/** The URL a scan of the receipt's QR code should land on. */
+export function getReceiptVerifyUrl(saleNumber: string): string {
+  const tenantSlug = window.location.pathname.split('/')[1] || '';
+  return `${window.location.origin}/${tenantSlug}/verify/${saleNumber}`;
+}
+
+/** Renders the QR code locally as a data URI so printing never depends on a
+ *  third-party image request completing in time (or at all). Falls back to
+ *  the external QR image service only if local generation somehow fails. */
+export async function generateReceiptQrDataUrl(saleNumber: string): Promise<string> {
+  const url = getReceiptVerifyUrl(saleNumber);
+  try {
+    return await QRCode.toDataURL(url, { width: 160, margin: 1, errorCorrectionLevel: 'M' });
+  } catch {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(url)}`;
+  }
+}
+
 export interface ReceiptItem {
   name: string;
   quantity: number;
@@ -35,10 +55,13 @@ export interface ReceiptOptions {
   baseCurrencyCode?: string;
   secondaryCurrency?: { id: number; code: string; symbol: string } | null;
   exchangeRate?: number | null;
+  /** Pre-generated QR data URI (from generateReceiptQrDataUrl). If omitted,
+   *  falls back to the external qrserver.com image URL. */
+  qrDataUrl?: string;
 }
 
 export function buildThermalReceipt(opts: ReceiptOptions): string {
-  const { sale, items, companyData: co, baseCurrencySymbol, baseCurrencyCode, secondaryCurrency, exchangeRate } = opts;
+  const { sale, items, companyData: co, baseCurrencySymbol, baseCurrencyCode, secondaryCurrency, exchangeRate, qrDataUrl } = opts;
 
   const sym  = baseCurrencySymbol || 'UGX';
   const rate = sale.exchange_rate_used ? Number(sale.exchange_rate_used) : (exchangeRate ?? null);
@@ -81,8 +104,7 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const amtWoVat = total - taxAmount;
   const netAmt = total;
 
-  const tenantSlug = window.location.pathname.split('/')[1] || '';
-  const receiptUrl = `${window.location.origin}/${tenantSlug}/verify/${sale.sale_number}`;
+  const qrSrc = qrDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(getReceiptVerifyUrl(sale.sale_number))}`;
 
   const css = `
     @page { size: 80mm auto; margin: 4mm 3mm; }
@@ -176,7 +198,7 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
 <div class="row"><span>Verification Code :</span><span class="bold">${Date.now()}${Math.floor(Math.random()*1000)}</span></div>
 
 <div class="qr-container">
-  <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(receiptUrl)}" style="width:80px; height:80px;" />
+  <img src="${qrSrc}" style="width:80px; height:80px;" />
 </div>
 
 <div class="footer-line">Received By : _______________________</div>

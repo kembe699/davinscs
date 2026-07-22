@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { buildThermalReceipt } from "@/utils/receiptUtils";
+import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 
 export default function ReceiptVerify() {
   // tenantSlug comes from the URL: /:tenantSlug/verify/:saleNumber
@@ -27,6 +27,7 @@ export default function ReceiptVerify() {
         }
 
         // Build HTML
+        const qrDataUrl = await generateReceiptQrDataUrl(data.sale.sale_number);
         const html = buildThermalReceipt({
           sale: data.sale,
           items: data.items.map((i: any) => ({
@@ -37,6 +38,7 @@ export default function ReceiptVerify() {
           })),
           companyData: data.company,
           baseCurrencySymbol: data.company?.currency || "UGX",
+          qrDataUrl,
         });
 
         setHtmlContent(html);

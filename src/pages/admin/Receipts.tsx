@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { printThermal } from "@/utils/printUtils";
-import { buildThermalReceipt } from "@/utils/receiptUtils";
+import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 
 // Local calendar date (YYYY-MM-DD) — NOT toISOString(), which converts to UTC
 // and rolls back a day whenever local time is ahead of UTC.
@@ -107,7 +107,7 @@ export default function Receipts() {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!detail) return;
     const items = (detail.items || []).map((item: any) => ({
       name: item.product_name || "",
@@ -126,6 +126,7 @@ export default function Receipts() {
       total: detail.total_amount,
       paymentTypeName: getPaymentTypeName(detail.payment_type_id),
     };
+    const qrDataUrl = await generateReceiptQrDataUrl(detail.sale_number);
     const html = buildThermalReceipt({
       sale,
       items,
@@ -136,6 +137,7 @@ export default function Receipts() {
         ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol }
         : null,
       exchangeRate,
+      qrDataUrl,
     });
     printThermal(`Receipt_${detail.sale_number}`, html);
   };

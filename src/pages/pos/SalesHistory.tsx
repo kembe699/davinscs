@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { printThermal } from "@/utils/printUtils";
-import { buildThermalReceipt } from "@/utils/receiptUtils";
+import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 
 // Local calendar date (YYYY-MM-DD) — NOT toISOString(), which converts to UTC
 // and rolls back a day whenever local time is ahead of UTC.
@@ -143,7 +143,7 @@ export default function SalesHistory() {
     loadData();
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selectedSale) { toast("Please select a sale to print", "warning", "Nothing Selected"); return; }
     const items = (saleItems || []).map((item: any) => ({
       name:       item.product_name || '',
@@ -162,6 +162,7 @@ export default function SalesHistory() {
       total:           selectedSale.total_amount,
       paymentTypeName: getPaymentTypeName(selectedSale.payment_type_id),
     };
+    const qrDataUrl = await generateReceiptQrDataUrl(selectedSale.sale_number);
     const html = buildThermalReceipt({
       sale,
       items,
@@ -170,6 +171,7 @@ export default function SalesHistory() {
       baseCurrencyCode:   baseCurrency?.code   || 'UGX',
       secondaryCurrency:  secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
       exchangeRate,
+      qrDataUrl,
     });
     printThermal(`Receipt_${selectedSale.sale_number}`, html);
   };
