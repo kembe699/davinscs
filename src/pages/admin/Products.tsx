@@ -84,6 +84,22 @@ export default function Products() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
+      // Auto-create any categories referenced in the file that don't exist yet
+      const existingSlugs = new Set(categoryList.map((c) => c.slug));
+      const seenCategories = new Set<string>();
+      for (const row of rows) {
+        const rawCategory = String(row["category"] ?? row["Category"] ?? "").trim();
+        const categorySlug = rawCategory.toLowerCase();
+        if (!categorySlug || existingSlugs.has(categorySlug) || seenCategories.has(categorySlug)) continue;
+        seenCategories.add(categorySlug);
+        try {
+          await api.categories.create({ slug: categorySlug, name: rawCategory, sort_order: 0 });
+          existingSlugs.add(categorySlug);
+        } catch {
+          // likely already exists (409) — product import proceeds regardless
+        }
+      }
+
       let created = 0, skipped = 0;
       for (const row of rows) {
         const name     = String(row["name"] ?? row["Name"] ?? "").trim();
@@ -105,8 +121,8 @@ export default function Products() {
         try {
           await api.products.create({
             slug, name, brand, category,
-            price: Math.round(price * 100),
-            cost_price: Math.round(cost_price * 100),
+            price,
+            cost_price,
             barcode, description,
             quantity_on_hand, reorder_level,
             in_stock,
@@ -161,7 +177,7 @@ export default function Products() {
               <Trash2 size={14} /> Delete
             </button>
             <button
-              onClick={() => { const csv = 'name,brand,category,price,cost_price,barcode,description,quantity,reorder_level\n' + filtered.map(p => `"${p.name}","${p.brand}",${p.category},${p.price/100},${(p.cost_price||0)/100},${(p as any).barcode||''},,${(p as any).quantity_on_hand||0},${(p as any).reorder_level||0}`).join('\n'); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); link.download = 'products.csv'; link.click(); }}
+              onClick={() => { const csv = 'name,brand,category,price,cost_price,barcode,description,quantity,reorder_level\n' + filtered.map(p => `"${p.name}","${p.brand}",${p.category},${p.price},${p.cost_price||0},${(p as any).barcode||''},,${(p as any).quantity_on_hand||0},${(p as any).reorder_level||0}`).join('\n'); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); link.download = 'products.csv'; link.click(); }}
               className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
             >
               <Download size={14} /> Export
