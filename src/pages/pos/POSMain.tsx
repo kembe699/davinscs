@@ -7,7 +7,7 @@ import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
-import { openPrintWindow, printDocument, printThermal } from "@/utils/printUtils";
+import { printDocument, printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
@@ -43,6 +43,7 @@ export default function POSMain() {
   const [confirmPaymentTypeId, setConfirmPaymentTypeId] = useState<number | null>(null);
   const [processingHold, setProcessingHold] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [holdingCart, setHoldingCart] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
   const [paymentMode, setPaymentMode] = useState<'cash' | 'credit'>('cash');
   const [creditCustomerName, setCreditCustomerName] = useState('');
@@ -383,9 +384,8 @@ export default function POSMain() {
       return;
     }
 
+    setHoldingCart(true);
     try {
-      const { total } = calculateTotals();
-
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
         price_list_id: selectedSchemeId || undefined,
@@ -403,14 +403,6 @@ export default function POSMain() {
 
       const sale = await api.pos.createSale(saleData);
 
-      // Print the "held — not paid" order slip for the customer
-      printSaleOrder({
-        sale_number: sale.sale_number,
-        customerName: customerName || 'Walk-in Customer',
-        items: cart,
-        total,
-      });
-
       // Refresh from the backend so the Held Sales list stays authoritative
       await loadHeldSales();
 
@@ -422,48 +414,9 @@ export default function POSMain() {
       toast(`Sale ${sale.sale_number} held successfully`, "success", "Sale Held");
     } catch (err: any) {
       toast(err.message || "Failed to hold sale", "error", "Error");
+    } finally {
+      setHoldingCart(false);
     }
-  };
-
-  const printSaleOrder = (sale: any) => {
-    const s = baseCurrency?.symbol || 'UGX';
-    const fmt = (n: number) => `${s} ${Number(n || 0).toLocaleString()}`;
-    const itemRows = sale.items.map((item: any) => `
-      <tr>
-        <td>${item.product.name}</td>
-        <td class="num">${item.quantity}</td>
-        <td class="num">${fmt(item.product.price)}</td>
-        <td class="num">${fmt(item.product.price * item.quantity)}</td>
-      </tr>`).join('');
-    const body = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2980b9;padding-bottom:14px;margin-bottom:14px;">
-        <div>
-          <div style="font-size:18px;font-weight:bold;color:#2c3e50;">HELD SALE ORDER</div>
-          <div style="font-size:10px;color:#666;margin-top:4px;">*** NOT PAID — HELD FOR LATER ***</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:22px;font-weight:bold;color:#2980b9;letter-spacing:2px;">HOLD</div>
-          <div style="font-size:13px;color:#2c3e50;font-weight:bold;margin-top:4px;">${sale.sale_number}</div>
-          <div style="font-size:10px;color:#666;margin-top:2px;">Date: ${new Date().toLocaleDateString()}</div>
-        </div>
-      </div>
-      <div style="background:#f7f9fb;border:1px solid #dce3ea;padding:10px 14px;margin:14px 0;">
-        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Customer</div>
-        <div style="font-size:13px;font-weight:bold;color:#2c3e50;">${sale.customerName || 'Walk-in Customer'}</div>
-      </div>
-      <div style="font-size:11px;font-weight:bold;color:#2c3e50;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Items</div>
-      <table>
-        <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
-        <tbody>${itemRows}</tbody>
-        <tfoot><tr><td colspan="3" class="num">Total</td><td class="num">${fmt(sale.total)}</td></tr></tfoot>
-      </table>
-      <div style="margin-top:20px;padding:10px;background:#fff3e0;border:1px solid #f59e0b;font-size:11px;text-align:center;color:#92400e;font-weight:bold;">
-        *** HELD SALE — NOT YET PAID ***
-      </div>
-      <div style="margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#888;text-align:center;">
-        Printed on ${new Date().toLocaleString()}
-      </div>`;
-    openPrintWindow(`Held Sale — ${sale.sale_number}`, body);
   };
 
   const buildReceiptBody = async (sale: any): Promise<string> => {
@@ -1168,11 +1121,12 @@ export default function POSMain() {
             <div className="flex gap-2 mt-2 md:mt-3">
               <button
                 onClick={handleHoldSale}
-                disabled={cart.length === 0}
-                className="flex-1 py-2 md:py-3 bg-white dark:bg-gray-800 border-2 text-[#00A896] font-semibold rounded-lg md:rounded-xl text-[11px] md:text-sm hover:bg-[#00A896]/5 transition-colors disabled:opacity-50 disabled:text-gray-400"
+                disabled={cart.length === 0 || holdingCart}
+                className="flex-1 py-2 md:py-3 bg-white dark:bg-gray-800 border-2 text-[#00A896] font-semibold rounded-lg md:rounded-xl text-[11px] md:text-sm hover:bg-[#00A896]/5 transition-colors disabled:opacity-50 disabled:text-gray-400 flex items-center justify-center gap-2"
                 style={{ borderColor: '#00A896' }}
               >
-                Hold
+                {holdingCart && <span className="size-3.5 border-2 border-[#00A896]/40 border-t-[#00A896] rounded-full animate-spin" />}
+                {holdingCart ? "Holding…" : "Hold"}
               </button>
               {heldSales.length > 0 && (
                 <button

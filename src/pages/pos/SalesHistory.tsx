@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, RefreshCw, Printer, Trash2, RotateCcw, CheckCircle } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
@@ -21,6 +22,7 @@ function toLocalDateStr(d: Date): string {
 
 export default function SalesHistory() {
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
@@ -225,6 +227,10 @@ export default function SalesHistory() {
       toast("Please select a sale to delete", "warning", "Nothing Selected");
       return;
     }
+    if (!isAdmin) {
+      toast("Only an admin can delete a sale", "warning", "Not Allowed");
+      return;
+    }
     setPendingConfirm({
       message: `Delete sale ${selectedSale.sale_number}? This action cannot be undone.`,
       action: async () => {
@@ -314,13 +320,15 @@ export default function SalesHistory() {
           >
             <RotateCcw size={14} /> Refund / Return
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={!selectedSale}
-            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-admin-danger text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Trash2 size={14} /> Delete
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleDelete}
+              disabled={!selectedSale}
+              className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-admin-danger text-sm hover:bg-white dark:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
         </div>
       </div>
 

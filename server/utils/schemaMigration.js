@@ -619,6 +619,7 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS exchange_rate_used DECIMAL(15,6);
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS voided BOOLEAN DEFAULT FALSE;
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS voided_by INTEGER REFERENCES users(id);
+    ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS voided_at TIMESTAMPTZ;
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS promotion_id INTEGER REFERENCES promotions(id);
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS promotion_name VARCHAR(255);
     ALTER TABLE pos_sales   ADD COLUMN IF NOT EXISTS original_sale_id INTEGER REFERENCES pos_sales(id);

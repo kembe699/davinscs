@@ -688,11 +688,15 @@ router.get("/sales/:id", requireAuth, async (req, res) => {
   }
 });
 
-// Void sale
+// Void sale (admin only)
 router.post("/sales/:id/void", requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: "Only an admin can delete/void a sale" });
+  }
+
   const { id } = req.params;
   const user_id = req.user.id;
-  
+
   const client = await getSchemaClient();
   
   try {
