@@ -30,10 +30,10 @@ router.get("/verify/:sale_number", async (req, res) => {
     if (!sale) return res.status(404).json({ error: "Sale not found" });
 
     const itemsResult = await pool.query(
-      `SELECT si.*, p.name as product_name, p.sku 
+      `SELECT si.*, COALESCE(p.name, si.product_name) as product_name, p.barcode
        FROM "${schema}".pos_sale_items si
-       JOIN "${schema}".products p ON si.product_id = p.id
-       WHERE si.sale_id = $1`, 
+       LEFT JOIN "${schema}".products p ON si.product_id = p.id
+       WHERE si.sale_id = $1`,
       [sale.id]
     );
     const items = itemsResult.rows;

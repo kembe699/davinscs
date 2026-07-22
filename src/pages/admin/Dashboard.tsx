@@ -48,17 +48,17 @@ export default function Dashboard() {
       
       // Calculate financial metrics
       const _sales = sales as any[];
-      const totalRevenue = _sales.reduce((sum: number, sale) => sum + sale.total_amount, 0);
-      const totalCost = _sales.reduce((sum: number, sale) => sum + sale.subtotal, 0);
-      const totalTax = _sales.reduce((sum: number, sale) => sum + sale.tax_amount, 0);
-      const totalDiscount = _sales.reduce((sum: number, sale) => sum + (sale.discount_amount || 0), 0);
-      
+      const totalRevenue = _sales.reduce((sum: number, sale) => sum + Number(sale.total_amount || 0), 0);
+      const totalCost = _sales.reduce((sum: number, sale) => sum + Number(sale.subtotal || 0), 0);
+      const totalTax = _sales.reduce((sum: number, sale) => sum + Number(sale.tax_amount || 0), 0);
+      const totalDiscount = _sales.reduce((sum: number, sale) => sum + Number(sale.discount_amount || 0), 0);
+
       // Get today's sales
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todaySales = sales.filter((s: any) => new Date(s.created_at) >= today);
-      const todayRevenue = todaySales.reduce((sum: number, sale: any) => sum + sale.total_amount, 0);
-      
+      const todayRevenue = todaySales.reduce((sum: number, sale: any) => sum + Number(sale.total_amount || 0), 0);
+
       // Get yesterday's sales for comparison
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -66,7 +66,7 @@ export default function Dashboard() {
         const saleDate = new Date(s.created_at);
         return saleDate >= yesterday && saleDate < today;
       });
-      const yesterdayRevenue = yesterdaySales.reduce((sum: number, sale: any) => sum + sale.total_amount, 0);
+      const yesterdayRevenue = yesterdaySales.reduce((sum: number, sale: any) => sum + Number(sale.total_amount || 0), 0);
       
       const revenueChange = yesterdayRevenue > 0 
         ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 
