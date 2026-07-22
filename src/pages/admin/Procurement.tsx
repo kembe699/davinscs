@@ -21,7 +21,8 @@ export default function ProcurementEnhanced() {
   const [currencies, setCurrencies] = useState<ApiCurrency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+  const [exportingReport, setExportingReport] = useState(false);
+
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
 
   // Supplier form
@@ -212,36 +213,74 @@ export default function ProcurementEnhanced() {
     { header: "Date", dataKey: "date" },
     { header: "Bill #", dataKey: "bill_number" },
     { header: "Reference", dataKey: "reference" },
-    { header: "Total", dataKey: "total_amount" },
+    { header: "Item", dataKey: "item" },
+    { header: "Qty", dataKey: "quantity" },
+    { header: "Unit Price", dataKey: "unit_price" },
+    { header: "Line Total", dataKey: "line_total" },
+    { header: "Bill Total", dataKey: "bill_total" },
     { header: "Paid", dataKey: "paid_amount" },
     { header: "Balance", dataKey: "balance" },
     { header: "Status", dataKey: "status" },
   ];
 
-  const buildSupplierReportRows = (supplierId: number) =>
-    bills
-      .filter(b => b.supplier_id === supplierId)
-      .map(b => ({
+  // One row per item per bill (reusing/populating the same cache the Payment
+  // History row-expansion uses) so the export mirrors what's shown on screen.
+  const buildSupplierReportRows = async (supplierId: number) => {
+    const supplierBills = bills.filter(b => b.supplier_id === supplierId);
+    const rows: any[] = [];
+    for (const b of supplierBills) {
+      let items = billItemsMap[b.id];
+      if (!items) {
+        try {
+          items = ((await api.procurement.bills.print(b.id)) as any).items || [];
+          setBillItemsMap(prev => ({ ...prev, [b.id]: items! }));
+        } catch {
+          items = [];
+        }
+      }
+      const billTotal = Number(b.total_amount || 0);
+      const paid = Number(b.paid_amount || 0);
+      const balance = billTotal - paid;
+      const base = {
         date: b.bill_date ? new Date(b.bill_date).toLocaleDateString() : "",
         bill_number: b.bill_number,
         reference: (b as any).po_number || (b as any).grn_number || "—",
-        total_amount: Number(b.total_amount || 0),
-        paid_amount: Number(b.paid_amount || 0),
-        balance: Number(b.total_amount || 0) - Number(b.paid_amount || 0),
+        bill_total: billTotal,
+        paid_amount: paid,
+        balance,
         status: b.status,
-      }));
+      };
+      if (items.length === 0) {
+        rows.push({ ...base, item: "—", quantity: "", unit_price: "", line_total: "" });
+      } else {
+        items.forEach((it: any) => {
+          const qty = Number(it.received_quantity || 0);
+          const price = Number(it.unit_price || 0);
+          rows.push({ ...base, item: it.product_name || "—", quantity: qty, unit_price: price, line_total: qty * price });
+        });
+      }
+    }
+    return rows;
+  };
 
-  const handleDownloadSupplierReport = (supplier: ApiSupplier, format: "excel" | "pdf") => {
-    const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
-    const opts = {
-      reportTitle: `Supplier Report - ${supplier.name}`,
-      dateRange: `Generated ${new Date().toLocaleDateString()}`,
-      companyInfo,
-      data: buildSupplierReportRows(supplier.id),
-      columns: supplierReportColumns,
-      currency: sym,
-    };
-    if (format === "excel") exportToExcel(opts); else exportToPDF(opts);
+  const handleDownloadSupplierReport = async (supplier: ApiSupplier, format: "excel" | "pdf") => {
+    setExportingReport(true);
+    try {
+      const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
+      const opts = {
+        reportTitle: `Supplier Report - ${supplier.name}`,
+        dateRange: `Generated ${new Date().toLocaleDateString()}`,
+        companyInfo,
+        data: await buildSupplierReportRows(supplier.id),
+        columns: supplierReportColumns,
+        currency: sym,
+      };
+      if (format === "excel") exportToExcel(opts); else exportToPDF(opts);
+    } catch (err: any) {
+      toast(err.message || "Failed to build report", "error", "Export Failed");
+    } finally {
+      setExportingReport(false);
+    }
   };
 
   const allSuppliersReportColumns = [
@@ -951,17 +990,21 @@ export default function ProcurementEnhanced() {
                             <div className="flex items-center justify-between mb-2">
                               <h4 className="text-xs font-bold text-foreground">Payment History</h4>
                               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                <span className="text-[9px] font-mono-tech text-muted-foreground uppercase tracking-widest mr-1">Supplier Report</span>
+                                <span className="text-[9px] font-mono-tech text-muted-foreground uppercase tracking-widest mr-1">
+                                  {exportingReport ? "Building report…" : "Supplier Report"}
+                                </span>
                                 <button
                                   onClick={() => handleDownloadSupplierReport(supplier, "excel")}
-                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1"
+                                  disabled={exportingReport}
+                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1 disabled:opacity-50"
                                   title="Download this supplier's report as Excel"
                                 >
                                   <FileSpreadsheet size={12} /> Excel
                                 </button>
                                 <button
                                   onClick={() => handleDownloadSupplierReport(supplier, "pdf")}
-                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1"
+                                  disabled={exportingReport}
+                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1 disabled:opacity-50"
                                   title="Download this supplier's report as PDF"
                                 >
                                   <FileText size={12} /> PDF
