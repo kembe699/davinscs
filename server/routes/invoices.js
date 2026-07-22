@@ -167,8 +167,9 @@ router.post("/:id/payments", requireAuth, async (req, res) => {
     if (inv.length === 0) return res.status(404).json({ error: "Not found" });
 
     const invoice = inv[0];
-    const newPaid = invoice.paid_amount + parseInt(amount);
-    const balance = invoice.total_amount - newPaid;
+    const totalAmount = Number(invoice.total_amount);
+    const newPaid = Number(invoice.paid_amount) + parseFloat(amount);
+    const balance = totalAmount - newPaid;
     const status = balance <= 0 ? "paid" : newPaid > 0 ? "partial" : "unpaid";
 
     await client.query(
@@ -177,11 +178,11 @@ router.post("/:id/payments", requireAuth, async (req, res) => {
       [invoiceId, amount, payment_method || "Cash", notes || null, req.user.id]
     );
 
-    const clampedPaid = Math.min(newPaid, invoice.total_amount);
+    const clampedPaid = Math.min(newPaid, totalAmount);
     const { rows } = await client.query(
       `UPDATE invoices SET paid_amount=$1, balance=$2, status=$3, updated_at=NOW()
        WHERE id=$4 RETURNING *`,
-      [clampedPaid, invoice.total_amount - clampedPaid, status, invoiceId]
+      [clampedPaid, totalAmount - clampedPaid, status, invoiceId]
     );
 
     await client.query("COMMIT");

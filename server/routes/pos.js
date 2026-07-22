@@ -133,8 +133,8 @@ router.post("/sales", requireAuth, async (req, res) => {
         }
       }
       
-      const unit_price = item.unit_price || product.price;
-      const item_discount = item.discount_amount || 0;
+      const unit_price = Number(item.unit_price || product.price);
+      const item_discount = Number(item.discount_amount || 0);
       const item_subtotal = (unit_price * item.quantity) - item_discount;
       const item_tax = Math.round(item_subtotal * (product.tax_rate / 100));
       
