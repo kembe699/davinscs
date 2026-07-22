@@ -801,6 +801,35 @@ export async function migrateTenant(schemaName = "public") {
         ALTER TABLE products ALTER COLUMN price TYPE NUMERIC(15,2) USING price::numeric(15,2);
       END IF;
     END $$;
+
+    DO $$
+    DECLARE
+      t RECORD;
+    BEGIN
+      FOR t IN
+        SELECT * FROM (VALUES
+          ('purchase_orders', 'total_amount'),
+          ('purchase_order_items', 'unit_price'),
+          ('grn_items', 'unit_price'),
+          ('supplier_bills', 'total_amount'),
+          ('supplier_bills', 'paid_amount'),
+          ('supplier_payments', 'amount')
+        ) AS cols(table_name, column_name)
+      LOOP
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name   = t.table_name
+            AND column_name  = t.column_name
+            AND data_type    = 'integer'
+        ) THEN
+          EXECUTE format(
+            'ALTER TABLE %I ALTER COLUMN %I TYPE NUMERIC(15,2) USING %I::numeric(15,2)',
+            t.table_name, t.column_name, t.column_name
+          );
+        END IF;
+      END LOOP;
+    END $$;
   `);
   console.log("\u2705 Migrations applied");
 }

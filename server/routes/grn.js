@@ -143,12 +143,24 @@ router.post("/", requireAuth, async (req, res) => {
       // If item_name exists but no product_id, create new product
       if (!product_id && item_name) {
         const slug = item_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+        let defaultCategory = (await client.query(
+          `SELECT slug FROM categories ORDER BY sort_order ASC, name ASC LIMIT 1`
+        )).rows[0]?.slug;
+        if (!defaultCategory) {
+          defaultCategory = 'uncategorized';
+          await client.query(
+            `INSERT INTO categories (slug, name, sort_order, image_url) VALUES ($1,$2,$3,$4) ON CONFLICT (slug) DO NOTHING`,
+            [defaultCategory, 'Uncategorized', 999, '']
+          );
+        }
+
         const productResult = await client.query(`
-          INSERT INTO products 
+          INSERT INTO products
           (slug, name, brand, price, category, in_stock, quantity_on_hand)
           VALUES ($1, $2, $3, $4, $5, true, 0)
           RETURNING id
-        `, [slug, item_name, '', unit_price, 'cameras']);
+        `, [slug, item_name, '', unit_price, defaultCategory]);
         
         finalProductId = productResult.rows[0].id;
         

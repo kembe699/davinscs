@@ -95,55 +95,57 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // POST create payment
 router.post("/", requireAuth, async (req, res) => {
-  const { supplier_id, bill_id, payment_date, amount, payment_method, reference, notes } = req.body;
-  
-  if (!supplier_id || !payment_date || !amount || !payment_method) {
+  const { supplier_id, bill_id, payment_date, payment_method, reference, notes } = req.body;
+  const amount = parseFloat(req.body.amount);
+
+  if (!supplier_id || !payment_date || !amount || isNaN(amount) || !payment_method) {
     return res.status(400).json({ error: "Supplier, date, amount, and method required" });
   }
-  
+
   const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
-    
+
     const paymentNumber = `PAY-${Date.now()}`;
-    
+
     // Create payment
     const paymentResult = await client.query(`
-      INSERT INTO supplier_payments 
+      INSERT INTO supplier_payments
       (payment_number, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, created_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [paymentNumber, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, req.user.id]);
-    
+
     // If payment is against a bill, update bill
     if (bill_id) {
       const billResult = await client.query(
         "SELECT total_amount, paid_amount FROM supplier_bills WHERE id = $1",
         [bill_id]
       );
-      
+
       if (!billResult.rows[0]) {
         await client.query("ROLLBACK");
         return res.status(404).json({ error: "Bill not found" });
       }
-      
-      const { total_amount, paid_amount } = billResult.rows[0];
-      const newPaidAmount = paid_amount + amount;
-      
-      if (newPaidAmount > total_amount) {
+
+      const totalAmount = Number(billResult.rows[0].total_amount);
+      const paidAmount = Number(billResult.rows[0].paid_amount);
+      const newPaidAmount = paidAmount + amount;
+
+      if (newPaidAmount > totalAmount) {
         await client.query("ROLLBACK");
         return res.status(400).json({ error: "Payment exceeds bill amount" });
       }
       
-      const newStatus = newPaidAmount >= total_amount ? 'paid' : 'partial';
-      
+      const newStatus = newPaidAmount >= totalAmount ? 'paid' : 'partial';
+
       await client.query(`
-        UPDATE supplier_bills 
+        UPDATE supplier_bills
         SET paid_amount = $1, status = $2, updated_at = NOW()
         WHERE id = $3
       `, [newPaidAmount, newStatus, bill_id]);
     }
-    
+
     await client.query("COMMIT");
     res.status(201).json(paymentResult.rows[0]);
   } catch (err) {
@@ -172,25 +174,27 @@ router.delete("/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Payment not found" });
     }
     
-    const { bill_id, amount } = paymentResult.rows[0];
-    
+    const { bill_id } = paymentResult.rows[0];
+    const amount = Number(paymentResult.rows[0].amount);
+
     // Delete payment
     await client.query("DELETE FROM supplier_payments WHERE id = $1", [req.params.id]);
-    
+
     // If payment was against a bill, update bill
     if (bill_id) {
       const billResult = await client.query(
         "SELECT total_amount, paid_amount FROM supplier_bills WHERE id = $1",
         [bill_id]
       );
-      
+
       if (billResult.rows[0]) {
-        const { total_amount, paid_amount } = billResult.rows[0];
-        const newPaidAmount = paid_amount - amount;
-        const newStatus = newPaidAmount <= 0 ? 'unpaid' : newPaidAmount >= total_amount ? 'paid' : 'partial';
-        
+        const totalAmount = Number(billResult.rows[0].total_amount);
+        const paidAmount = Number(billResult.rows[0].paid_amount);
+        const newPaidAmount = paidAmount - amount;
+        const newStatus = newPaidAmount <= 0 ? 'unpaid' : newPaidAmount >= totalAmount ? 'paid' : 'partial';
+
         await client.query(`
-          UPDATE supplier_bills 
+          UPDATE supplier_bills
           SET paid_amount = $1, status = $2, updated_at = NOW()
           WHERE id = $3
         `, [newPaidAmount, newStatus, bill_id]);

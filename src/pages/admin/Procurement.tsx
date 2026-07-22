@@ -940,7 +940,7 @@ export default function ProcurementEnhanced() {
                                       ...newItems[idx],
                                       product_id: pid,
                                       item_name: undefined,
-                                      unit_price: prod ? (prod.cost_price ?? prod.price) : newItems[idx].unit_price,
+                                      unit_price: prod ? Number(prod.cost_price ?? prod.price) : newItems[idx].unit_price,
                                     };
                                     setPoForm({ ...poForm, items: newItems });
                                   }}
@@ -984,12 +984,13 @@ export default function ProcurementEnhanced() {
                               <td className="px-3 py-2">
                                 <input
                                   type="number"
-                                  placeholder="e.g. 5000 = $50.00"
+                                  placeholder="e.g. 50.00"
                                   min={0}
+                                  step="any"
                                   value={item.unit_price || ""}
                                   onChange={(e) => {
                                     const newItems = [...poForm.items];
-                                    newItems[idx].unit_price = parseInt(e.target.value) || 0;
+                                    newItems[idx].unit_price = parseFloat(e.target.value) || 0;
                                     setPoForm({ ...poForm, items: newItems });
                                   }}
                                   className="w-full px-2 py-1 bg-background border border-border-subtle text-xs text-right"
@@ -1409,7 +1410,7 @@ export default function ProcurementEnhanced() {
                     type="number"
                     placeholder="Amount *"
                     value={paymentForm.amount}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   />
                   <select

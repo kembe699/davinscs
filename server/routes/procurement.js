@@ -130,26 +130,36 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Supplier, date, and items required" });
   }
   
+  const parsedItems = items.map((item) => ({
+    ...item,
+    quantity: parseFloat(item.quantity),
+    unit_price: parseFloat(item.unit_price),
+  }));
+  const invalidItem = parsedItems.find((item) => isNaN(item.quantity) || isNaN(item.unit_price));
+  if (invalidItem) {
+    return res.status(400).json({ error: "Each item needs a valid quantity and unit price" });
+  }
+
   const client = await getSchemaClient();
   try {
     await client.query("BEGIN");
-    
+
     const poNumber = `PO-${Date.now()}`;
-    const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    
+    const totalAmount = parsedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
     const poResult = await client.query(
-      `INSERT INTO purchase_orders 
-       (po_number, supplier_id, order_date, total_amount, notes, created_by, currency_id, currency_code, currency_symbol) 
+      `INSERT INTO purchase_orders
+       (po_number, supplier_id, order_date, total_amount, notes, created_by, currency_id, currency_code, currency_symbol)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [poNumber, supplier_id, order_date, totalAmount, notes, req.user.id, currency_id, currency_code, currency_symbol]
     );
-    
+
     const poId = poResult.rows[0].id;
-    
-    for (const item of items) {
+
+    for (const item of parsedItems) {
       await client.query(
-        `INSERT INTO purchase_order_items 
-         (po_id, product_id, item_name, quantity, unit_price) 
+        `INSERT INTO purchase_order_items
+         (po_id, product_id, item_name, quantity, unit_price)
          VALUES ($1, $2, $3, $4, $5)`,
         [poId, item.product_id || null, item.item_name || null, item.quantity, item.unit_price]
       );
