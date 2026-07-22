@@ -2,9 +2,10 @@ import { useEffect, useState, Fragment } from "react";
 import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download, ChevronDown, ChevronUp, ShoppingCart, Truck, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download, ChevronDown, ChevronUp, ShoppingCart, Truck, Wallet, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { companyHeaderHTML, downloadDocument, printDocument } from "@/utils/printUtils";
+import { exportToExcel, exportToPDF, CompanyInfo } from "@/utils/reportExports";
 
 type Tab = "suppliers" | "purchase-orders" | "grn" | "bills" | "payments";
 
@@ -29,6 +30,16 @@ export default function ProcurementEnhanced() {
   const [supplierForm, setSupplierForm] = useState({ name: "", contact_person: "", email: "", phone: "", address: "" });
   const [expandedSupplierId, setExpandedSupplierId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Payment history row expansion (shows the bill's line items)
+  const [expandedPaymentBillId, setExpandedPaymentBillId] = useState<number | null>(null);
+  const [billItemsMap, setBillItemsMap] = useState<Record<number, any[]>>({});
+  const [loadingBillItemsFor, setLoadingBillItemsFor] = useState<number | null>(null);
+
+  // Company info for report exports
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
+    name: "Your Company Name", address: "", phone: "", email: ""
+  });
   
   // PO form
   const [creatingPO, setCreatingPO] = useState(false);
@@ -134,6 +145,20 @@ export default function ProcurementEnhanced() {
       setLoading(false);
     };
     load();
+
+    api.company.get().then((info: any) => {
+      if (info) {
+        setCompanyInfo({
+          name: info.name || "Your Company Name",
+          address: info.address || "",
+          phone: info.phone || "",
+          email: info.email || "",
+          website: info.website,
+          tax_id: info.tax_id,
+          logo: info.logo || "",
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   // Everything needed is already loaded (pos/grns/bills/payments) — no extra fetch required.
@@ -160,6 +185,104 @@ export default function ProcurementEnhanced() {
       balance,
       payments: supplierPayments,
     };
+  };
+
+  // Toggle a Payment History row open, fetching (and caching) that bill's line items on first expand
+  const togglePaymentRow = async (billId: number | undefined) => {
+    if (!billId) return;
+    if (expandedPaymentBillId === billId) {
+      setExpandedPaymentBillId(null);
+      return;
+    }
+    setExpandedPaymentBillId(billId);
+    if (!billItemsMap[billId]) {
+      setLoadingBillItemsFor(billId);
+      try {
+        const bill = await api.procurement.bills.print(billId);
+        setBillItemsMap(prev => ({ ...prev, [billId]: (bill as any).items || [] }));
+      } catch {
+        setBillItemsMap(prev => ({ ...prev, [billId]: [] }));
+      } finally {
+        setLoadingBillItemsFor(null);
+      }
+    }
+  };
+
+  const supplierReportColumns = [
+    { header: "Date", dataKey: "date" },
+    { header: "Bill #", dataKey: "bill_number" },
+    { header: "Reference", dataKey: "reference" },
+    { header: "Total", dataKey: "total_amount" },
+    { header: "Paid", dataKey: "paid_amount" },
+    { header: "Balance", dataKey: "balance" },
+    { header: "Status", dataKey: "status" },
+  ];
+
+  const buildSupplierReportRows = (supplierId: number) =>
+    bills
+      .filter(b => b.supplier_id === supplierId)
+      .map(b => ({
+        date: b.bill_date ? new Date(b.bill_date).toLocaleDateString() : "",
+        bill_number: b.bill_number,
+        reference: (b as any).po_number || (b as any).grn_number || "—",
+        total_amount: Number(b.total_amount || 0),
+        paid_amount: Number(b.paid_amount || 0),
+        balance: Number(b.total_amount || 0) - Number(b.paid_amount || 0),
+        status: b.status,
+      }));
+
+  const handleDownloadSupplierReport = (supplier: ApiSupplier, format: "excel" | "pdf") => {
+    const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
+    const opts = {
+      reportTitle: `Supplier Report - ${supplier.name}`,
+      dateRange: `Generated ${new Date().toLocaleDateString()}`,
+      companyInfo,
+      data: buildSupplierReportRows(supplier.id),
+      columns: supplierReportColumns,
+      currency: sym,
+    };
+    if (format === "excel") exportToExcel(opts); else exportToPDF(opts);
+  };
+
+  const allSuppliersReportColumns = [
+    { header: "Supplier", dataKey: "supplier" },
+    { header: "Contact", dataKey: "contact" },
+    { header: "Phone", dataKey: "phone" },
+    { header: "Orders", dataKey: "orders" },
+    { header: "GRNs", dataKey: "grns" },
+    { header: "Bills", dataKey: "bills" },
+    { header: "Total Ordered", dataKey: "total_ordered" },
+    { header: "Total Billed", dataKey: "total_billed" },
+    { header: "Total Paid", dataKey: "total_paid" },
+    { header: "Balance Owed", dataKey: "balance" },
+  ];
+
+  const handleDownloadAllSuppliersReport = (format: "excel" | "pdf") => {
+    const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
+    const data = suppliers.map(s => {
+      const ov = getSupplierOverview(s.id);
+      return {
+        supplier: s.name,
+        contact: s.contact_person || "—",
+        phone: s.phone || "—",
+        orders: ov.poCount,
+        grns: ov.grnCount,
+        bills: ov.billCount,
+        total_ordered: ov.totalOrdered,
+        total_billed: ov.totalBilled,
+        total_paid: ov.totalPaid,
+        balance: ov.balance,
+      };
+    });
+    const opts = {
+      reportTitle: "All Suppliers Report",
+      dateRange: `Generated ${new Date().toLocaleDateString()}`,
+      companyInfo,
+      data,
+      columns: allSuppliersReportColumns,
+      currency: sym,
+    };
+    if (format === "excel") exportToExcel(opts); else exportToPDF(opts);
   };
 
   const handleSaveSupplier = async () => {
@@ -648,7 +771,7 @@ export default function ProcurementEnhanced() {
         {/* Suppliers Tab */}
         {tab === "suppliers" && (
           <div>
-            <div className="mb-4">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
                   setEditingSupplierId(null);
@@ -658,6 +781,24 @@ export default function ProcurementEnhanced() {
                 className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 flex items-center gap-2"
               >
                 <Plus size={16} /> New Supplier
+              </button>
+              <div className="flex-1" />
+              <span className="text-[9px] font-mono-tech text-muted-foreground uppercase tracking-widest mr-1">All Suppliers Report</span>
+              <button
+                onClick={() => handleDownloadAllSuppliersReport("excel")}
+                disabled={suppliers.length === 0}
+                className="px-3 py-2 border border-border-subtle text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50 flex items-center gap-2"
+                title="Download all suppliers report as Excel"
+              >
+                <FileSpreadsheet size={14} /> Excel
+              </button>
+              <button
+                onClick={() => handleDownloadAllSuppliersReport("pdf")}
+                disabled={suppliers.length === 0}
+                className="px-3 py-2 border border-border-subtle text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50 flex items-center gap-2"
+                title="Download all suppliers report as PDF"
+              >
+                <FileText size={14} /> PDF
               </button>
             </div>
 
@@ -807,7 +948,26 @@ export default function ProcurementEnhanced() {
                               </div>
                             </div>
 
-                            <h4 className="text-xs font-bold text-foreground mb-2">Payment History</h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-xs font-bold text-foreground">Payment History</h4>
+                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-[9px] font-mono-tech text-muted-foreground uppercase tracking-widest mr-1">Supplier Report</span>
+                                <button
+                                  onClick={() => handleDownloadSupplierReport(supplier, "excel")}
+                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1"
+                                  title="Download this supplier's report as Excel"
+                                >
+                                  <FileSpreadsheet size={12} /> Excel
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadSupplierReport(supplier, "pdf")}
+                                  className="px-2 py-1 border border-border-subtle text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center gap-1"
+                                  title="Download this supplier's report as PDF"
+                                >
+                                  <FileText size={12} /> PDF
+                                </button>
+                              </div>
+                            </div>
                             {ov.payments.length === 0 ? (
                               <p className="text-xs text-muted-foreground">No payments recorded for this supplier yet.</p>
                             ) : (
@@ -815,6 +975,7 @@ export default function ProcurementEnhanced() {
                                 <table className="w-full text-xs">
                                   <thead>
                                     <tr className="bg-chassis border-b border-border-subtle">
+                                      <th className="w-6"></th>
                                       <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Date</th>
                                       <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">For</th>
                                       <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Method</th>
@@ -823,15 +984,60 @@ export default function ProcurementEnhanced() {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-border-subtle">
-                                    {ov.payments.map(p => (
-                                      <tr key={p.id}>
-                                        <td className="px-3 py-2 text-muted-foreground">{new Date(p.payment_date).toLocaleDateString()}</td>
-                                        <td className="px-3 py-2 text-foreground">{p.bill_number || "—"}</td>
-                                        <td className="px-3 py-2 text-muted-foreground capitalize">{p.payment_method?.replace('_', ' ')}</td>
-                                        <td className="px-3 py-2 text-right font-mono-tech text-foreground">{sym}{Number(p.amount).toLocaleString()}</td>
-                                        <td className="px-3 py-2 text-muted-foreground">{p.notes || "—"}</td>
-                                      </tr>
-                                    ))}
+                                    {ov.payments.map(p => {
+                                      const rowExpanded = !!p.bill_id && expandedPaymentBillId === p.bill_id;
+                                      const items = p.bill_id ? billItemsMap[p.bill_id] : undefined;
+                                      const isLoadingItems = p.bill_id && loadingBillItemsFor === p.bill_id;
+                                      return (
+                                        <Fragment key={p.id}>
+                                          <tr
+                                            onClick={() => togglePaymentRow(p.bill_id)}
+                                            className={p.bill_id ? "cursor-pointer hover:bg-chassis/50 transition-colors" : ""}
+                                          >
+                                            <td className="px-2 py-2 text-muted-foreground">
+                                              {p.bill_id ? (rowExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : null}
+                                            </td>
+                                            <td className="px-3 py-2 text-muted-foreground">{new Date(p.payment_date).toLocaleDateString()}</td>
+                                            <td className="px-3 py-2 text-foreground">{p.bill_number || "—"}</td>
+                                            <td className="px-3 py-2 text-muted-foreground capitalize">{p.payment_method?.replace('_', ' ')}</td>
+                                            <td className="px-3 py-2 text-right font-mono-tech text-foreground">{sym}{Number(p.amount).toLocaleString()}</td>
+                                            <td className="px-3 py-2 text-muted-foreground">{p.notes || "—"}</td>
+                                          </tr>
+                                          {rowExpanded && (
+                                            <tr className="bg-background/50">
+                                              <td colSpan={6} className="px-4 py-3">
+                                                {isLoadingItems ? (
+                                                  <p className="text-muted-foreground">Loading items…</p>
+                                                ) : !items || items.length === 0 ? (
+                                                  <p className="text-muted-foreground">No items recorded for this bill.</p>
+                                                ) : (
+                                                  <table className="w-full">
+                                                    <thead>
+                                                      <tr className="text-muted-foreground">
+                                                        <th className="text-left py-1 font-mono-tech text-[9px] uppercase tracking-widest">Item</th>
+                                                        <th className="text-right py-1 font-mono-tech text-[9px] uppercase tracking-widest">Qty</th>
+                                                        <th className="text-right py-1 font-mono-tech text-[9px] uppercase tracking-widest">Unit Price</th>
+                                                        <th className="text-right py-1 font-mono-tech text-[9px] uppercase tracking-widest">Total</th>
+                                                      </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-border-subtle">
+                                                      {items.map((it: any, i: number) => (
+                                                        <tr key={i}>
+                                                          <td className="py-1 text-foreground">{it.product_name || "—"}</td>
+                                                          <td className="py-1 text-right text-muted-foreground">{Number(it.received_quantity || 0)}</td>
+                                                          <td className="py-1 text-right font-mono-tech text-muted-foreground">{sym}{Number(it.unit_price || 0).toLocaleString()}</td>
+                                                          <td className="py-1 text-right font-mono-tech text-foreground">{sym}{(Number(it.received_quantity || 0) * Number(it.unit_price || 0)).toLocaleString()}</td>
+                                                        </tr>
+                                                      ))}
+                                                    </tbody>
+                                                  </table>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </Fragment>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               </div>
