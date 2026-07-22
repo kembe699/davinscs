@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 
@@ -8,6 +8,7 @@ export default function ReceiptVerify() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [htmlContent, setHtmlContent] = useState("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     async function verifySale() {
@@ -82,11 +83,23 @@ export default function ReceiptVerify() {
         Verified Official Receipt
       </div>
       
-      {/* Container for the receipt to enforce width and style */}
-      <div 
-        className="bg-white shadow-2xl" 
-        style={{ width: '80mm', minHeight: '100mm' }}
-        dangerouslySetInnerHTML={{ __html: htmlContent }} 
+      {/* Receipt renders inside an isolated iframe — the receipt's own <style>
+          (fixed 74mm body width, universal margin/padding reset, etc.) is meant
+          for a private print document. Rendering it via dangerouslySetInnerHTML
+          directly on the page would leak those rules onto the whole document,
+          breaking layout and overriding text color/contrast site-wide. */}
+      <iframe
+        ref={iframeRef}
+        title="Receipt"
+        srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#fff;">${htmlContent}</body></html>`}
+        onLoad={() => {
+          const doc = iframeRef.current?.contentDocument;
+          if (doc && iframeRef.current) {
+            iframeRef.current.style.height = `${doc.documentElement.scrollHeight}px`;
+          }
+        }}
+        className="bg-white shadow-2xl border-0 w-full"
+        style={{ maxWidth: '80mm', minHeight: '100mm' }}
       />
       
       <div className="mt-8 text-xs text-slate-400 font-mono text-center">

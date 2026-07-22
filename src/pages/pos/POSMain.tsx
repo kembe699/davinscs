@@ -42,6 +42,7 @@ export default function POSMain() {
   const [confirmingHeldSaleId, setConfirmingHeldSaleId] = useState<number | null>(null);
   const [confirmPaymentTypeId, setConfirmPaymentTypeId] = useState<number | null>(null);
   const [processingHold, setProcessingHold] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
   const [paymentMode, setPaymentMode] = useState<'cash' | 'credit'>('cash');
   const [creditCustomerName, setCreditCustomerName] = useState('');
@@ -545,6 +546,7 @@ export default function POSMain() {
       return;
     }
     if (cart.length === 0) { toast('Cart is empty', 'warning', 'Empty Cart'); return; }
+    setProcessingPayment(true);
     try {
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
       const invoice = await api.invoices.create({
@@ -575,6 +577,8 @@ export default function POSMain() {
       toast(`Invoice ${invoice.invoice_number} created`, 'success', 'Invoice Created');
     } catch (err: any) {
       toast(err.message || 'Failed to create invoice', 'error', 'Error');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -589,6 +593,7 @@ export default function POSMain() {
       return;
     }
 
+    setProcessingPayment(true);
     try {
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
 
@@ -674,6 +679,8 @@ export default function POSMain() {
       toast(`Sale ${completedSaleData.sale_number} completed`, "success", "Payment Successful");
     } catch (err: any) {
       toast(err.message || "Failed to process sale", "error", "Payment Failed");
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -1351,17 +1358,28 @@ export default function POSMain() {
             <div className="p-6 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/50 flex gap-4 sticky bottom-0 z-10">
               <button
                 onClick={() => { setShowPaymentModal(false); setPaymentMode('cash'); }}
-                className="flex-1 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-50 dark:bg-gray-800/50 transition-colors shadow-sm"
+                disabled={processingPayment}
+                className="flex-1 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-50 dark:bg-gray-800/50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               {paymentMode === 'cash' ? (
-                <button onClick={handlePayment} className="flex-[2] py-4 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-lg shadow-[#10B981]/20">
-                  Confirm Payment
+                <button
+                  onClick={handlePayment}
+                  disabled={processingPayment}
+                  className="flex-[2] py-4 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-lg shadow-[#10B981]/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {processingPayment && <span className="size-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                  {processingPayment ? "Processing…" : "Confirm Payment"}
                 </button>
               ) : (
-                <button onClick={handleCreditPayment} className="flex-[2] py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-500/20">
-                  Create Invoice
+                <button
+                  onClick={handleCreditPayment}
+                  disabled={processingPayment}
+                  className="flex-[2] py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {processingPayment && <span className="size-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                  {processingPayment ? "Processing…" : "Create Invoice"}
                 </button>
               )}
             </div>
