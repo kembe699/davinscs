@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from "react";
+import * as XLSX from "xlsx";
 import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -71,7 +72,7 @@ export default function ProcurementEnhanced() {
     bill_id: undefined as number | undefined,
     payment_date: new Date().toISOString().split('T')[0],
     amount: 0,
-    payment_method: "bank_transfer",
+    payment_method: "cash",
     reference: "",
     notes: ""
   });
@@ -209,25 +210,13 @@ export default function ProcurementEnhanced() {
     }
   };
 
-  const supplierReportColumns = [
-    { header: "Date", dataKey: "date" },
-    { header: "Bill #", dataKey: "bill_number" },
-    { header: "Reference", dataKey: "reference" },
-    { header: "Item", dataKey: "item" },
-    { header: "Qty", dataKey: "quantity" },
-    { header: "Unit Price", dataKey: "unit_price" },
-    { header: "Line Total", dataKey: "line_total" },
-    { header: "Bill Total", dataKey: "bill_total" },
-    { header: "Paid", dataKey: "paid_amount" },
-    { header: "Balance", dataKey: "balance" },
-    { header: "Status", dataKey: "status" },
-  ];
-
-  // One row per item per bill (reusing/populating the same cache the Payment
-  // History row-expansion uses) so the export mirrors what's shown on screen.
-  const buildSupplierReportRows = async (supplierId: number) => {
+  // Grouped by bill (a supplier can have many POs/bills) — each bill's own
+  // totals appear once, with its items listed underneath it, rather than one
+  // flat row-per-item table (which also made "TOTAL" nonsensically sum
+  // bill-number/reference strings as if they were amounts).
+  const buildSupplierReportBills = async (supplierId: number) => {
     const supplierBills = bills.filter(b => b.supplier_id === supplierId);
-    const rows: any[] = [];
+    const result: { bill: ApiSupplierBill; items: any[]; billTotal: number; paid: number; balance: number }[] = [];
     for (const b of supplierBills) {
       let items = billItemsMap[b.id];
       if (!items) {
@@ -240,47 +229,122 @@ export default function ProcurementEnhanced() {
       }
       const billTotal = Number(b.total_amount || 0);
       const paid = Number(b.paid_amount || 0);
-      const balance = billTotal - paid;
-      const base = {
-        date: b.bill_date ? new Date(b.bill_date).toLocaleDateString() : "",
-        bill_number: b.bill_number,
-        reference: (b as any).po_number || (b as any).grn_number || "—",
-        bill_total: billTotal,
-        paid_amount: paid,
-        balance,
-        status: b.status,
-      };
-      if (items.length === 0) {
-        rows.push({ ...base, item: "—", quantity: "", unit_price: "", line_total: "" });
-      } else {
-        items.forEach((it: any) => {
-          const qty = Number(it.received_quantity || 0);
-          const price = Number(it.unit_price || 0);
-          rows.push({ ...base, item: it.product_name || "—", quantity: qty, unit_price: price, line_total: qty * price });
-        });
-      }
+      result.push({ bill: b, items, billTotal, paid, balance: billTotal - paid });
     }
-    return rows;
+    return result;
   };
 
   const handleDownloadSupplierReport = async (supplier: ApiSupplier, format: "excel" | "pdf") => {
     setExportingReport(true);
     try {
-      const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
-      const opts = {
-        reportTitle: `Supplier Report - ${supplier.name}`,
-        dateRange: `Generated ${new Date().toLocaleDateString()}`,
-        companyInfo,
-        data: await buildSupplierReportRows(supplier.id),
-        columns: supplierReportColumns,
-        currency: sym,
-      };
-      if (format === "excel") exportToExcel(opts); else exportToPDF(opts);
+      const billGroups = await buildSupplierReportBills(supplier.id);
+      if (format === "excel") {
+        downloadSupplierReportExcel(supplier, billGroups);
+      } else {
+        downloadSupplierReportPdf(supplier, billGroups);
+      }
     } catch (err: any) {
       toast(err.message || "Failed to build report", "error", "Export Failed");
     } finally {
       setExportingReport(false);
     }
+  };
+
+  type SupplierBillGroup = { bill: ApiSupplierBill; items: any[]; billTotal: number; paid: number; balance: number };
+
+  const downloadSupplierReportExcel = (supplier: ApiSupplier, billGroups: SupplierBillGroup[]) => {
+    const rows: any[][] = [
+      [companyInfo.name],
+      [companyInfo.address],
+      [`Phone: ${companyInfo.phone} | Email: ${companyInfo.email}`],
+      [],
+      [`SUPPLIER REPORT - ${supplier.name.toUpperCase()}`],
+      [`Generated ${new Date().toLocaleDateString()}`],
+      [],
+    ];
+
+    let totalBilled = 0, totalPaid = 0;
+    if (billGroups.length === 0) {
+      rows.push(["No bills recorded for this supplier."]);
+    }
+    for (const { bill, items, billTotal, paid, balance } of billGroups) {
+      totalBilled += billTotal;
+      totalPaid += paid;
+      rows.push([
+        `Bill ${bill.bill_number}`,
+        bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : "",
+        (bill as any).po_number || (bill as any).grn_number || "",
+        bill.status,
+      ]);
+      rows.push(["Item", "Qty", "Unit Price", "Line Total"]);
+      if (items.length === 0) {
+        rows.push(["No items recorded for this bill."]);
+      } else {
+        for (const it of items) {
+          const qty = Number(it.received_quantity || 0);
+          const price = Number(it.unit_price || 0);
+          rows.push([it.product_name || "—", qty, price, qty * price]);
+        }
+      }
+      rows.push(["", "", "Bill Total", billTotal]);
+      rows.push(["", "", "Paid", paid]);
+      rows.push(["", "", "Balance", balance]);
+      rows.push([]);
+    }
+    rows.push([]);
+    rows.push(["", "", "TOTAL BILLED", totalBilled]);
+    rows.push(["", "", "TOTAL PAID", totalPaid]);
+    rows.push(["", "", "BALANCE OWED", totalBilled - totalPaid]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Supplier Report");
+    XLSX.writeFile(wb, `Supplier_Report_${supplier.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const downloadSupplierReportPdf = (supplier: ApiSupplier, billGroups: SupplierBillGroup[]) => {
+    const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
+    const fmt = (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;
+
+    let totalBilled = 0, totalPaid = 0;
+    const sections = billGroups.map(({ bill, items, billTotal, paid, balance }) => {
+      totalBilled += billTotal;
+      totalPaid += paid;
+      const reference = (bill as any).po_number || (bill as any).grn_number || "";
+      const itemRows = items.length
+        ? items.map((it: any) => {
+            const qty = Number(it.received_quantity || 0);
+            const price = Number(it.unit_price || 0);
+            return `<tr><td>${it.product_name || "—"}</td><td class="num">${qty}</td><td class="num">${fmt(price)}</td><td class="num">${fmt(qty * price)}</td></tr>`;
+          }).join("")
+        : `<tr><td colspan="4" class="center" style="color:#888">No items</td></tr>`;
+      return `
+        <div class="section-title">Bill ${bill.bill_number} — ${bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : ""}${reference ? ` — ${reference}` : ""} — <span class="status-badge status-${bill.status}">${bill.status}</span></div>
+        <table>
+          <thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Line Total</th></tr></thead>
+          <tbody>${itemRows}</tbody>
+          <tfoot>
+            <tr><td colspan="3" class="right">Bill Total</td><td class="num">${fmt(billTotal)}</td></tr>
+            <tr><td colspan="3" class="right">Paid</td><td class="num">${fmt(paid)}</td></tr>
+            <tr><td colspan="3" class="right">Balance</td><td class="num">${fmt(balance)}</td></tr>
+          </tfoot>
+        </table>`;
+    }).join("");
+
+    const body = `
+      ${companyHeaderHTML(companyInfo, "SUPPLIER REPORT", supplier.name, `<div class="doc-date">Generated ${new Date().toLocaleDateString()}</div>`)}
+      ${sections || `<p class="no-data">No bills recorded for this supplier.</p>`}
+      <div class="summary">
+        <table class="summary-table">
+          <tr><td>Total Billed</td><td class="num">${fmt(totalBilled)}</td></tr>
+          <tr class="paid-row"><td>Total Paid</td><td class="num">${fmt(totalPaid)}</td></tr>
+          <tr class="balance-row total-row"><td>Balance Owed</td><td class="num">${fmt(totalBilled - totalPaid)}</td></tr>
+        </table>
+      </div>
+      <div class="footer">Generated on ${new Date().toLocaleString()}</div>
+    `;
+    downloadDocument(`Supplier_Report_${supplier.name}`, body);
   };
 
   const allSuppliersReportColumns = [
@@ -462,7 +526,7 @@ export default function ProcurementEnhanced() {
         bill_id: undefined,
         payment_date: new Date().toISOString().split('T')[0],
         amount: 0,
-        payment_method: "bank_transfer",
+        payment_method: "cash",
         reference: "",
         notes: ""
       });
@@ -1667,8 +1731,8 @@ export default function ProcurementEnhanced() {
                     onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   >
-                    <option value="bank_transfer">Bank Transfer</option>
                     <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
                     <option value="check">Check</option>
                     <option value="card">Card</option>
                   </select>

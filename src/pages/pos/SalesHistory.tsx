@@ -47,6 +47,7 @@ export default function SalesHistory() {
   const [refundReason, setRefundReason]         = useState("");
   const [refundProcessing, setRefundProcessing] = useState(false);
   const [refundResult, setRefundResult]         = useState<{ ok: boolean; text: string } | null>(null);
+  const [showVoided, setShowVoided]             = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,7 +59,7 @@ export default function SalesHistory() {
     }, 10000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [showVoided]);
 
   // Re-sync refund item state whenever saleItems reloads (e.g. after a refund)
   useEffect(() => {
@@ -113,7 +114,7 @@ export default function SalesHistory() {
   const loadData = async () => {
     try {
       const [salesData, paymentTypesData] = await Promise.all([
-        api.pos.getSales(),
+        api.pos.getSales(isAdmin && showVoided ? { include_voided: true } : undefined),
         api.paymentTypes.active(),
       ]);
       setSales(salesData);
@@ -232,11 +233,11 @@ export default function SalesHistory() {
       return;
     }
     setPendingConfirm({
-      message: `Delete sale ${selectedSale.sale_number}? This action cannot be undone.`,
+      message: `Permanently delete sale ${selectedSale.sale_number}? This removes the record entirely (not just a void) and cannot be undone.`,
       action: async () => {
         try {
-          await api.pos.voidSale(selectedSale.id);
-          toast("Sale deleted successfully", "success", "Deleted");
+          await api.pos.deleteSale(selectedSale.id);
+          toast("Sale deleted permanently", "success", "Deleted");
           loadData();
           setSelectedSale(null);
         } catch (err: any) {
@@ -328,6 +329,16 @@ export default function SalesHistory() {
             >
               <Trash2 size={14} /> Delete
             </button>
+          )}
+          {isAdmin && (
+            <label className="flex items-center gap-2 px-3 py-2 text-sm text-[#1A1A2E] dark:text-gray-100 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showVoided}
+                onChange={(e) => { setSelectedSale(null); setShowVoided(e.target.checked); }}
+              />
+              Show voided (for cleanup)
+            </label>
           )}
         </div>
       </div>

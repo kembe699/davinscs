@@ -22,6 +22,9 @@ export default function Products() {
   const [category, setCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ApiProduct | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -61,6 +64,53 @@ export default function Products() {
       toast(errorMessage, "error", "Delete Failed");
     } finally {
       setConfirmId(null);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (filtered.every((p) => selectedIds.has(p.id))) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((p) => next.delete(p.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((p) => next.add(p.id));
+        return next;
+      });
+    }
+  };
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selectedIds);
+    let deleted = 0, failed = 0;
+    for (const id of ids) {
+      try {
+        await api.products.delete(id);
+        deleted++;
+      } catch {
+        failed++;
+      }
+    }
+    await load();
+    setSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleting(false);
+    if (failed === 0) {
+      toast(`Deleted ${deleted} product(s).`, "success", "Deleted");
+    } else {
+      toast(`Deleted ${deleted} product(s), ${failed} skipped — still linked to sales, orders, or other records.`, "warning", "Partially Deleted");
     }
   };
 
@@ -188,6 +238,9 @@ export default function Products() {
             <button disabled={!selectedProduct} onClick={() => selectedProduct && setConfirmId(selectedProduct.id)} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50">
               <Trash2 size={14} /> Delete
             </button>
+            <button disabled={selectedIds.size === 0} onClick={() => setConfirmBulkDelete(true)} className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-danger text-xs hover:bg-admin-bg disabled:opacity-50">
+              <Trash2 size={14} /> Delete Selected {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+            </button>
             <button
               onClick={() => { const csv = 'name,brand,category,price,cost_price,barcode,description,quantity,reorder_level\n' + filtered.map(p => `"${p.name}","${p.brand}",${p.category},${p.price},${p.cost_price||0},${(p as any).barcode||''},,${(p as any).quantity_on_hand||0},${(p as any).reorder_level||0}`).join('\n'); const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); link.download = 'products.csv'; link.click(); }}
               className="flex items-center gap-2 px-3 py-2 bg-admin-surface border border-admin-border text-admin-text text-xs hover:bg-admin-bg"
@@ -274,6 +327,13 @@ export default function Products() {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-chassis">
                     <tr className="border-b border-border-subtle">
+                      <th className="w-8 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id))}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase">Name</th>
                       <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase">Category</th>
                       <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase">Brand</th>
@@ -283,12 +343,15 @@ export default function Products() {
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
                     {filtered.map((p) => (
-                      <tr 
-                        key={p.id} 
-                        onClick={() => setSelectedProduct(p)} 
+                      <tr
+                        key={p.id}
+                        onClick={() => setSelectedProduct(p)}
                         onDoubleClick={() => openEditForm(p)}
                         className={`cursor-pointer transition-colors ${selectedProduct?.id === p.id ? 'bg-primary/10' : 'hover:bg-chassis'}`}
                       >
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelectOne(p.id)} />
+                        </td>
                         <td className="px-4 py-3">{p.name}</td>
                         <td className="px-4 py-3 capitalize">{p.category}</td>
                         <td className="px-4 py-3">{p.brand}</td>
@@ -311,6 +374,23 @@ export default function Products() {
               <div className="flex gap-3 justify-end">
                 <button onClick={() => setConfirmId(null)} className="px-4 py-2 border border-admin-border text-admin-text">Cancel</button>
                 <button onClick={() => handleDelete(confirmId)} className="px-4 py-2 bg-admin-danger text-white">Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmBulkDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-admin-surface border border-admin-border p-6 max-w-md">
+              <h3 className="text-lg font-bold text-admin-text mb-4">Confirm Delete</h3>
+              <p className="text-admin-text-secondary mb-6">
+                Delete {selectedIds.size} selected product{selectedIds.size === 1 ? "" : "s"}? Any still linked to sales, orders, or other records will be skipped.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button disabled={bulkDeleting} onClick={() => setConfirmBulkDelete(false)} className="px-4 py-2 border border-admin-border text-admin-text disabled:opacity-50">Cancel</button>
+                <button disabled={bulkDeleting} onClick={handleBulkDelete} className="px-4 py-2 bg-admin-danger text-white disabled:opacity-50">
+                  {bulkDeleting ? "Deleting…" : "Delete"}
+                </button>
               </div>
             </div>
           </div>

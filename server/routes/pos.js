@@ -585,8 +585,11 @@ router.put("/sales/:id/cancel-hold", requireAuth, async (req, res) => {
 
 // Get all sales
 router.get("/sales", requireAuth, async (req, res) => {
-  const { start_date, end_date, customer_id, payment_status, sale_type } = req.query;
+  const { start_date, end_date, customer_id, payment_status, sale_type, include_voided } = req.query;
   const isAdmin = req.user.role === 'admin';
+  // Only admins may opt in to seeing voided sales (e.g. to permanently delete them) —
+  // everyone else, and the default view, still only sees active sales.
+  const showVoided = include_voided === 'true' && isAdmin;
 
   try {
     let query = `
@@ -595,7 +598,7 @@ router.get("/sales", requireAuth, async (req, res) => {
       LEFT JOIN customers c ON s.customer_id = c.id
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN payment_types pt ON s.payment_type_id = pt.id
-      WHERE s.voided = false AND s.status != 'held'
+      WHERE s.status != 'held' ${showVoided ? '' : 'AND s.voided = false'}
     `;
     const params = [];
     let paramCount = 1;
@@ -762,6 +765,78 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
     await client.query("COMMIT");
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_VOIDED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
     res.json({ message: "Sale voided successfully" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: err.message || "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
+// Permanently delete a sale (admin only) — unlike /void (which keeps the
+// record for the audit trail), this actually removes the row and everything
+// tied to it, so it stops blocking product deletion via the FK on
+// pos_sale_items.product_id.
+router.delete("/sales/:id", requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: "Only an admin can permanently delete a sale" });
+  }
+
+  const { id } = req.params;
+  const user_id = req.user.id;
+
+  const client = await getSchemaClient();
+
+  try {
+    await client.query("BEGIN");
+
+    const saleResult = await client.query("SELECT * FROM pos_sales WHERE id = $1", [id]);
+    if (!saleResult.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Sale not found" });
+    }
+    const sale = saleResult.rows[0];
+
+    // If this sale was never voided, apply the same side effects voiding
+    // would have (restore inventory, reverse credit balance) before removing
+    // it, so deleting an active sale doesn't silently leave stock/balances wrong.
+    if (!sale.voided) {
+      const itemsResult = await client.query(
+        `SELECT si.*, p.product_type FROM pos_sale_items si JOIN products p ON si.product_id = p.id WHERE si.sale_id = $1`,
+        [id]
+      );
+      for (const item of itemsResult.rows) {
+        if (item.product_type !== 'service') {
+          await client.query(
+            "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
+            [item.quantity, item.product_id]
+          );
+        }
+      }
+      if (sale.sale_type === 'credit' && sale.customer_id) {
+        await client.query("UPDATE customers SET balance = balance - $1 WHERE id = $2", [sale.total_amount, sale.customer_id]);
+      }
+    }
+
+    // Remove any refund sales recorded against this one first
+    const refundRows = await client.query("SELECT id FROM pos_sales WHERE original_sale_id = $1", [id]);
+    for (const r of refundRows.rows) {
+      await client.query("DELETE FROM customer_payments WHERE credit_sale_id IN (SELECT id FROM credit_sales WHERE sale_id = $1)", [r.id]);
+      await client.query("DELETE FROM credit_sales WHERE sale_id = $1", [r.id]);
+      await client.query("DELETE FROM pos_sales WHERE id = $1", [r.id]); // cascades to pos_sale_items
+    }
+
+    // Remove credit-sale / customer-payment records tied to this sale
+    await client.query("DELETE FROM customer_payments WHERE credit_sale_id IN (SELECT id FROM credit_sales WHERE sale_id = $1)", [id]);
+    await client.query("DELETE FROM credit_sales WHERE sale_id = $1", [id]);
+
+    // Deleting the sale cascades to pos_sale_items automatically
+    await client.query("DELETE FROM pos_sales WHERE id = $1", [id]);
+
+    await client.query("COMMIT");
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_DELETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+    res.json({ message: "Sale permanently deleted" });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);
