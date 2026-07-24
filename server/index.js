@@ -142,8 +142,24 @@ app.use("/api/saas", saasRoutes);
 // Serve React build in production
 if (process.env.NODE_ENV === "production") {
   const distPath = join(__dirname, "..", "dist");
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      // index.html and the service worker script must always be revalidated —
+      // otherwise browsers can keep serving a stale SPA shell (old JS bundle,
+      // old sw.js) indefinitely via heuristic caching, so fixes never reach
+      // returning users until they manually clear their cache.
+      if (filePath.endsWith(".html") || filePath.endsWith("sw.js")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      } else {
+        // Vite build output is content-hashed (e.g. index-BflvbG4x.js), so it's
+        // safe — and desirable — to cache these forever.
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    },
+  }));
   app.get("*", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(join(distPath, "index.html"));
   });
 }
