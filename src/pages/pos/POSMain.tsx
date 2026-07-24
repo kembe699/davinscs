@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
@@ -91,6 +91,9 @@ export default function POSMain() {
   type StockAlert = { product: ApiProduct; kind: "expired" | "out_of_stock" | "low_stock" };
   const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
   const [showStockAlerts, setShowStockAlerts] = useState(false);
+  // Only auto-pop the alert panel once per POS session (first load) — later
+  // polls just keep the badge count fresh instead of reopening the modal.
+  const stockAlertsShownRef = useRef(false);
 
   useEffect(() => {
     loadData();
@@ -267,7 +270,10 @@ export default function POSMain() {
         }
       }
       setStockAlerts(alerts);
-      if (alerts.length > 0) setShowStockAlerts(true);
+      if (alerts.length > 0 && !stockAlertsShownRef.current) {
+        setShowStockAlerts(true);
+        stockAlertsShownRef.current = true;
+      }
     } catch (err) {
       console.error("Failed to load data:", err);
     }
