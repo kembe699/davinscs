@@ -131,6 +131,8 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type VARCHAR(50) DEFAULT 'product';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS expense_account_id INTEGER;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS uom VARCHAR(50) DEFAULT 'pcs';
+    ALTER TABLE products ALTER COLUMN brand DROP NOT NULL;
+    ALTER TABLE products ALTER COLUMN category DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS password_resets (
       id SERIAL PRIMARY KEY,
       email VARCHAR(255) NOT NULL,

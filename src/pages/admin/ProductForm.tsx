@@ -59,12 +59,7 @@ export default function ProductForm() {
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   useEffect(() => {
-    api.categories.list().then((cats) => {
-      setCategories(cats);
-      if (!isEdit && cats.length > 0) {
-        setForm((f) => f.category === "" ? { ...f, category: cats[0].slug } : f);
-      }
-    }).catch(() => {});
+    api.categories.list().then(setCategories).catch(() => {});
     fetch("/api/accounting/accounts", {
       headers: { Authorization: `Bearer ${localStorage.getItem("cms_token")}` },
     })
@@ -188,20 +183,16 @@ export default function ProductForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="sm:col-span-2">
-                    <label className="field-label">Category *</label>
+                    <label className="field-label">Category</label>
                     <select
-                      required value={form.category}
+                      value={form.category}
                       onChange={(e) => set("category", e.target.value)}
                       className="field-input appearance-none"
-                      disabled={categories.length === 0}
                     >
-                      {categories.length === 0 ? (
-                        <option value="">No categories — add one first</option>
-                      ) : (
-                        categories.map((c) => (
-                          <option key={c.id} value={c.slug}>{c.name}</option>
-                        ))
-                      )}
+                      <option value="">— None —</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.slug}>{c.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="sm:col-span-2">
@@ -226,11 +217,11 @@ export default function ProductForm() {
                     />
                   </div>
                   <div>
-                    <label className="field-label">Brand *</label>
+                    <label className="field-label">Brand</label>
                     <input
-                      required type="text" value={form.brand}
+                      type="text" value={form.brand}
                       onChange={(e) => set("brand", e.target.value)}
-                      placeholder="e.g. Samsung"
+                      placeholder="Brand (optional)"
                       className="field-input"
                     />
                   </div>

@@ -162,7 +162,7 @@ export default function Products() {
         const rawPrice = row["price"] ?? row["Price"] ?? "";
         const price    = Number(String(rawPrice).replace(/,/g, "").trim());
 
-        if (!name || !brand || !category || !price) { skipped++; continue; }
+        if (!name || !price) { skipped++; continue; }
 
         const dedupeKey = `${name.toLowerCase()}|${brand.toLowerCase()}`;
         if (existingProductKeys.has(dedupeKey) || seenInFile.has(dedupeKey)) { duplicates++; continue; }
