@@ -886,8 +886,8 @@ export const api = {
       request<{ message: string }>(`/api/pos/sales/${id}/cancel-hold`, { method: "PUT" }),
     voidSale: (id: number) =>
       request<{ message: string }>(`/api/pos/sales/${id}/void`, { method: "POST" }),
-    deleteSale: (id: number) =>
-      request<{ message: string }>(`/api/pos/sales/${id}`, { method: "DELETE" }),
+    deleteSale: (id: number, reason: string) =>
+      request<{ message: string }>(`/api/pos/sales/${id}`, { method: "DELETE", body: JSON.stringify({ reason }) }),
     refundSale: (id: number, items: Array<{ product_id: number; quantity: number }>, refund_method?: string, reason?: string) =>
       request<{ message: string; refund_amount: number; refund_number: string }>(`/api/pos/sales/${id}/refund`, {
         method: "POST",

@@ -852,6 +852,11 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
       type: 'sale_voided',
       title: 'Sale voided',
       body: `${req.user.name || req.user.email} voided ${sale.sale_number} (${Number(sale.total_amount).toLocaleString()})`,
+      data: {
+        sale_number: sale.sale_number,
+        total_amount: sale.total_amount,
+        voided_by: req.user.name || req.user.email,
+      },
       referenceType: 'pos_sale',
       referenceId: sale.id,
     }).catch(() => {});
@@ -872,6 +877,10 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
 router.delete("/sales/:id", requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: "Only an admin can permanently delete a sale" });
+  }
+  const { reason } = req.body || {};
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ error: "A reason is required to permanently delete a sale" });
   }
 
   const { id } = req.params;
@@ -926,13 +935,21 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
     await client.query("DELETE FROM pos_sales WHERE id = $1", [id]);
 
     await client.query("COMMIT");
-    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_DELETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_DELETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount, reason: reason.trim() }, ip: req.ip });
+    // The sale row is gone for good after this — the notification's `data` is
+    // the only place its reason/amount/who-did-it will ever be visible again.
     notifyAdmins({
       type: 'sale_deleted',
       title: 'Sale permanently deleted',
-      body: `${req.user.name || req.user.email} deleted ${sale.sale_number} (${Number(sale.total_amount).toLocaleString()})`,
-      referenceType: 'pos_sale',
-      referenceId: parseInt(id),
+      body: `${req.user.name || req.user.email} deleted ${sale.sale_number} (${Number(sale.total_amount).toLocaleString()}) — ${reason.trim()}`,
+      data: {
+        sale_number: sale.sale_number,
+        total_amount: sale.total_amount,
+        deleted_by: req.user.name || req.user.email,
+        reason: reason.trim(),
+      },
+      // No referenceType/referenceId — the sale row is gone, so there's
+      // nothing left to deep-link to; the notification's own data is it.
     }).catch(() => {});
     res.json({ message: "Sale permanently deleted" });
   } catch (err) {
@@ -952,6 +969,9 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
 
   if (!items || items.length === 0) {
     return res.status(400).json({ error: "No items selected for refund" });
+  }
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ error: "A reason is required to process a refund" });
   }
 
   const client = await getSchemaClient();
@@ -1039,10 +1059,10 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
         refund_number, sale.customer_id, sale.customer_name, user_id, sale.session_id,
         -refund_subtotal, -refund_tax, 0, -refund_total,
         sale.payment_type_id,
-        reason || 'Customer return',
+        reason.trim(),
         parseInt(id),
         refund_method || sale.payment_type_id,
-        reason || null,
+        reason.trim(),
         sale.sale_currency_id,      // immutable: use original sale's currency
         sale.exchange_rate_used,    // immutable: use original sale's rate snapshot
       ]
@@ -1060,14 +1080,24 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
 
     await client.query("COMMIT");
 
-    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_REFUNDED', entityType: 'sale', entityId: parseInt(id), details: { refund_number, refund_total, reason }, ip: req.ip });
+    await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_REFUNDED', entityType: 'sale', entityId: parseInt(id), details: { refund_number, refund_total, reason: reason.trim() }, ip: req.ip });
 
     notifyAdmins({
       type: 'refund_processed',
       title: 'Refund processed',
-      body: `${refund_number} — ${refund_total.toLocaleString()}${reason ? ` (${reason})` : ''}`,
+      body: `${refund_number} — ${refund_total.toLocaleString()} — ${reason.trim()}`,
+      data: {
+        refund_number,
+        refund_total,
+        original_sale_number: sale.sale_number,
+        refunded_by: req.user.name || req.user.email,
+        reason: reason.trim(),
+      },
       referenceType: 'pos_sale',
-      referenceId: parseInt(id),
+      // The refund transaction itself (not the original sale) — that's the
+      // record that actually carries the reason/negative line items, so
+      // that's what tapping the notification should open.
+      referenceId: refundSaleId,
     }).catch(() => {});
 
     res.json({

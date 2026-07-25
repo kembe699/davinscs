@@ -40,7 +40,7 @@ export default function SalesHistory() {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Refund modal state
-  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: () => void } | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; action: (reason?: string) => void } | null>(null);
   const [showRefundModal, setShowRefundModal]   = useState(false);
   const [refundItems, setRefundItems]           = useState<Record<number, { checked: boolean; qty: number }>>({});
   const [refundMethod, setRefundMethod]         = useState("cash");
@@ -210,6 +210,7 @@ export default function SalesHistory() {
       .filter(item => refundItems[item.product_id]?.checked)
       .map(item => ({ product_id: item.product_id, quantity: refundItems[item.product_id].qty }));
     if (selected.length === 0) { toast("Select at least one item to refund.", "warning", "Required"); return; }
+    if (!refundReason.trim()) { toast("A reason is required to process a refund.", "warning", "Reason required"); return; }
     setRefundProcessing(true);
     try {
       const res = await api.pos.refundSale(selectedSale.id, selected, refundMethod, refundReason);
@@ -234,9 +235,9 @@ export default function SalesHistory() {
     }
     setPendingConfirm({
       message: `Permanently delete sale ${selectedSale.sale_number}? This removes the record entirely (not just a void) and cannot be undone.`,
-      action: async () => {
+      action: async (reason) => {
         try {
-          await api.pos.deleteSale(selectedSale.id);
+          await api.pos.deleteSale(selectedSale.id, reason || "");
           toast("Sale deleted permanently", "success", "Deleted");
           loadData();
           setSelectedSale(null);
@@ -556,7 +557,9 @@ export default function SalesHistory() {
 
               {/* Reason */}
               <div>
-                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-gray-100 uppercase tracking-wide mb-2">Reason for return</p>
+                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-gray-100 uppercase tracking-wide mb-2">
+                  Reason for return <span className="text-red-400">*</span>
+                </p>
                 <textarea
                   value={refundReason}
                   onChange={e => setRefundReason(e.target.value)}
@@ -578,7 +581,7 @@ export default function SalesHistory() {
               <div className="flex gap-3">
                 <button
                   onClick={submitRefund}
-                  disabled={refundProcessing || !!refundResult?.ok}
+                  disabled={refundProcessing || !!refundResult?.ok || !refundReason.trim()}
                   className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {refundProcessing ? "Processing…" : <><RotateCcw size={14} /> Process Refund</>}
@@ -600,7 +603,10 @@ export default function SalesHistory() {
         title="Delete Sale"
         message={pendingConfirm?.message || ""}
         confirmLabel="Delete"
-        onConfirm={() => pendingConfirm?.action()}
+        requireReason
+        reasonLabel="Reason for deletion"
+        reasonPlaceholder="e.g. duplicate entry, entered in error…"
+        onConfirm={(reason) => pendingConfirm?.action(reason)}
         onCancel={() => setPendingConfirm(null)}
       />
     </div>
