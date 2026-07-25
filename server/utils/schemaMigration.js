@@ -94,6 +94,29 @@ export async function migrateTenant(schemaName = "public") {
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS pin VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+
+    -- Mobile admin app: push notification device registry + durable feed
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(255) UNIQUE NOT NULL,
+      platform VARCHAR(20) DEFAULT 'android',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      type VARCHAR(50) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      body TEXT DEFAULT '',
+      data JSONB DEFAULT '{}',
+      reference_type VARCHAR(50),
+      reference_id INTEGER,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
+
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
       slug VARCHAR(100) UNIQUE NOT NULL,
@@ -472,6 +495,13 @@ export async function migrateTenant(schemaName = "public") {
       -- Add business_type column if it doesn't exist (e.g. 'food' enables the Tables feature)
       BEGIN
         ALTER TABLE company_settings ADD COLUMN business_type VARCHAR(50) DEFAULT '';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
+
+      -- Large-sale push alert threshold (NULL = feature off, no admin UI yet)
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN large_sale_threshold INTEGER;
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;

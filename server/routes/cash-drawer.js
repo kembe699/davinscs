@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
+import { notifyAdmins } from "../utils/notifications.js";
 
 const router = express.Router();
 
@@ -122,6 +123,20 @@ router.post("/close", requireAuth, async (req, res) => {
     );
     
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_SESSION_CLOSED', entityType: 'cash_drawer', entityId: session.id, details: { closing_cash, expected_cash, cash_difference }, ip: req.ip });
+
+    // Instant shift report on admins' phones — the full breakdown (payment
+    // split, top products) is fetched on-demand by the app via
+    // GET /api/pos-reports/end-of-day?session_id=… when the notification is
+    // opened, so this stays a fast fire-and-forget push, not a second report run.
+    const variance = cash_difference !== 0 ? ` · cash ${cash_difference > 0 ? '+' : ''}${cash_difference.toLocaleString()}` : '';
+    notifyAdmins({
+      type: 'shift_closed',
+      title: `Shift closed — ${req.user.name || req.user.email}`,
+      body: `Sales ${Number(salesResult.rows[0].total_sales).toLocaleString()}${variance}`,
+      referenceType: 'cash_drawer_session',
+      referenceId: session.id,
+    }).catch(() => {});
+
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");

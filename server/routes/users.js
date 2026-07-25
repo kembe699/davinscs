@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, u.name, u.pin, u.role, u.role_id, u.created_at, r.name AS role_name
+      `SELECT u.id, u.email, u.name, u.pin, u.role, u.role_id, u.is_active, u.created_at, r.name AS role_name
        FROM users u
        LEFT JOIN roles r ON r.id = u.role_id
        ORDER BY u.created_at ASC`
@@ -107,6 +107,30 @@ router.put("/:id/role", requireAuth, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_ROLE_CHANGED', entityType: 'user', entityId: id, details: { role_id: role_id || null }, ip: req.ip });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Suspend / reactivate a user — used by the admin mobile app's Staff screen.
+// Suspending doesn't delete anything; it just blocks future logins (checked
+// in POST /api/auth/login) and invalidates the session on their next request
+// (checked in requireAuth).
+router.put("/:id/status", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const { is_active } = req.body;
+  if (typeof is_active !== "boolean") return res.status(400).json({ error: "is_active must be true or false" });
+  if (id === req.user.id && !is_active) return res.status(400).json({ error: "Cannot suspend your own account" });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users SET is_active = $1 WHERE id = $2
+       RETURNING id, email, name, role, role_id, is_active, created_at`,
+      [is_active, id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    await logAudit({ userId: req.user.id, userEmail: req.user.email, action: is_active ? 'USER_REACTIVATED' : 'USER_SUSPENDED', entityType: 'user', entityId: id, details: null, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
     console.error(err);

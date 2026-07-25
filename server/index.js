@@ -27,6 +27,8 @@ import promotionsRoutes from "./routes/promotions.js";
 import countriesRoutes from "./routes/countries.js";
 import companyRoutes from "./routes/company.js";
 import tablesRoutes from "./routes/tables.js";
+import deviceTokensRoutes from "./routes/device-tokens.js";
+import notificationsRoutes from "./routes/notifications.js";
 import posRoutes from "./routes/pos.js";
 import cashDrawerRoutes from "./routes/cash-drawer.js";
 import posReportsRoutes from "./routes/pos-reports.js";
@@ -41,6 +43,7 @@ import customersRoutes from "./routes/customers.js";
 import quotationsRoutes from "./routes/quotations.js";
 import setupRoutes from "./routes/setup.js";
 import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
+import { startDailyDigestJob } from "./jobs/dailyDigest.js";
 
 dotenv.config();
 
@@ -126,6 +129,8 @@ app.use("/api/promotions", promotionsRoutes);
 app.use("/api/countries", countriesRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/tables", tablesRoutes);
+app.use("/api/device-tokens", deviceTokensRoutes);
+app.use("/api/notifications", notificationsRoutes);
 app.use("/api/pos", posRoutes);
 app.use("/api/cash-drawer", cashDrawerRoutes);
 app.use("/api/pos-reports", posReportsRoutes);
@@ -183,6 +188,7 @@ migrateTenant("public")
   .then(() => autoSeed())
   .then(() => {
     initSaasSchedulers();
+    startDailyDigestJob();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

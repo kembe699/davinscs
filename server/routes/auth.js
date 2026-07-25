@@ -56,6 +56,11 @@ router.post("/login", async (req, res) => {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      if (user.is_active === false) {
+        await logAudit({ userId: user.id, userEmail: user.email, action: 'LOGIN_FAILED', entityType: 'user', entityId: user.id, details: { reason: 'Account suspended' }, ip: req.ip });
+        return res.status(403).json({ error: "ACCOUNT_SUSPENDED", message: "Your account has been suspended. Contact your admin." });
+      }
+
       // 4. Auto-heal: if this user wasn't in public.tenant_users, insert them now
       if (!tenantUser && schemaName !== 'public') {
         try {
@@ -135,6 +140,7 @@ router.post("/pin-login", async (req, res) => {
       const { rows } = await pool.query("SELECT * FROM users WHERE pin = $1", [pin]);
       const user = rows[0];
       if (!user) return res.status(401).json({ error: "Invalid PIN" });
+      if (user.is_active === false) return res.status(403).json({ error: "ACCOUNT_SUSPENDED", message: "This account has been suspended." });
 
       let permissions = [];
       let roleName = null;

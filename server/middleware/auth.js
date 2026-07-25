@@ -86,11 +86,11 @@ export async function requireAuth(req, res, next) {
       }
     }
 
-    // Verify the user still exists in this tenant's schema
+    // Verify the user still exists — and hasn't been suspended — in this tenant's schema
     let userValid = false;
     await tenantStorage.run(schemaName, async () => {
-      const { rows } = await pool.query("SELECT id FROM users WHERE id = $1", [payload.id]);
-      userValid = !!rows[0];
+      const { rows } = await pool.query("SELECT id, is_active FROM users WHERE id = $1", [payload.id]);
+      userValid = !!rows[0] && rows[0].is_active !== false;
     });
     if (!userValid) {
       return res.status(401).json({ error: "Session invalid — please log in again" });

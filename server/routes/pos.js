@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
+import { notifyAdmins } from "../utils/notifications.js";
 
 const router = express.Router();
 
@@ -121,6 +122,7 @@ router.post("/sales", requireAuth, async (req, res) => {
     let subtotal = 0;
     let tax_amount = 0;
     const processedItems = [];
+    const lowStockCrossings = [];
     
     for (const item of items) {
       const productResult = await client.query(
@@ -184,6 +186,14 @@ router.post("/sales", requireAuth, async (req, res) => {
             "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
             [item.quantity, product.id]
           );
+
+          // Track low-stock crossings (only the moment it crosses, not every
+          // sale after it's already low) to notify admins once, not per-item.
+          const reorderLevel = product.reorder_level ?? 0;
+          const newQty = product.quantity_on_hand - item.quantity;
+          if (reorderLevel > 0 && product.quantity_on_hand > reorderLevel && newQty <= reorderLevel) {
+            lowStockCrossings.push({ id: product.id, name: product.name, newQty });
+          }
 
           // Record stock movement
           await client.query(
@@ -365,6 +375,34 @@ router.post("/sales", requireAuth, async (req, res) => {
     );
     
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_CREATED', entityType: 'sale', entityId: sale.id, details: { sale_number, total_amount, payment_type_id, sale_type: sale_type || 'regular', items_count: items.length }, ip: req.ip });
+
+    if ((status || 'completed') === 'completed') {
+      pool.query("SELECT large_sale_threshold FROM company_settings ORDER BY updated_at DESC LIMIT 1")
+        .then(({ rows }) => {
+          const threshold = rows[0]?.large_sale_threshold;
+          if (threshold && total_amount >= threshold) {
+            notifyAdmins({
+              type: 'large_sale',
+              title: 'Large sale',
+              body: `${sale_number} — ${total_amount.toLocaleString()}`,
+              referenceType: 'pos_sale',
+              referenceId: sale.id,
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+
+      for (const p of lowStockCrossings) {
+        notifyAdmins({
+          type: 'low_stock',
+          title: p.newQty <= 0 ? 'Out of stock' : 'Low stock',
+          body: `${p.name} — ${p.newQty} left`,
+          referenceType: 'product',
+          referenceId: p.id,
+        }).catch(() => {});
+      }
+    }
+
     res.json(completeSale.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -430,7 +468,7 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     const sale = saleResult.rows[0];
 
     const itemsResult = await client.query(
-      `SELECT si.*, p.product_type, p.cost_price
+      `SELECT si.*, p.product_type, p.cost_price, p.quantity_on_hand, p.reorder_level
        FROM pos_sale_items si
        JOIN products p ON si.product_id = p.id
        WHERE si.sale_id = $1`,
@@ -451,6 +489,7 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
       session_id = openSessionResult.rows[0].id;
     }
 
+    const lowStockCrossings = [];
     for (const item of itemsResult.rows) {
       if (item.product_type !== 'service') {
         // Release the hold and consume the stock
@@ -463,6 +502,12 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
            VALUES ($1, 'sale', $2, 'pos_sale', $3, $4, 'Held sale completed')`,
           [item.product_id, -item.quantity, id, user_id]
         );
+
+        const reorderLevel = item.reorder_level ?? 0;
+        const newQty = item.quantity_on_hand - item.quantity;
+        if (reorderLevel > 0 && item.quantity_on_hand > reorderLevel && newQty <= reorderLevel) {
+          lowStockCrossings.push({ id: item.product_id, name: item.product_name, newQty });
+        }
       }
     }
 
@@ -532,6 +577,32 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     );
 
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'HELD_SALE_COMPLETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+
+    pool.query("SELECT large_sale_threshold FROM company_settings ORDER BY updated_at DESC LIMIT 1")
+      .then(({ rows }) => {
+        const threshold = rows[0]?.large_sale_threshold;
+        if (threshold && sale.total_amount >= threshold) {
+          notifyAdmins({
+            type: 'large_sale',
+            title: 'Large sale',
+            body: `${sale.sale_number} — ${Number(sale.total_amount).toLocaleString()}`,
+            referenceType: 'pos_sale',
+            referenceId: sale.id,
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    for (const p of lowStockCrossings) {
+      notifyAdmins({
+        type: 'low_stock',
+        title: p.newQty <= 0 ? 'Out of stock' : 'Low stock',
+        body: `${p.name} — ${p.newQty} left`,
+        referenceType: 'product',
+        referenceId: p.id,
+      }).catch(() => {});
+    }
+
     res.json(completeSale.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -777,6 +848,13 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
     
     await client.query("COMMIT");
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_VOIDED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+    notifyAdmins({
+      type: 'sale_voided',
+      title: 'Sale voided',
+      body: `${req.user.name || req.user.email} voided ${sale.sale_number} (${Number(sale.total_amount).toLocaleString()})`,
+      referenceType: 'pos_sale',
+      referenceId: sale.id,
+    }).catch(() => {});
     res.json({ message: "Sale voided successfully" });
   } catch (err) {
     await client.query("ROLLBACK");
