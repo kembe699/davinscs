@@ -804,7 +804,7 @@ export default function POSMain() {
       {/* Top Navigation Bar */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-14 md:h-16 flex items-center justify-between px-2 md:px-4 sm:px-6 shrink-0 z-10 relative">
         {/* Left Side */}
-        <div className="flex items-center gap-2 md:gap-4 shrink-0 lg:w-[280px]">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0 lg:w-[380px]">
           <div className="font-bold text-base md:text-xl tracking-tight text-[#1A1A2E] dark:text-gray-100 truncate max-w-[120px] md:max-w-none">
             {companyData?.name || "FlippedPOS"}
           </div>
@@ -812,7 +812,7 @@ export default function POSMain() {
           <select
             value={selectedSchemeId ?? ""}
             onChange={e => setSelectedSchemeId(e.target.value === "" ? null : Number(e.target.value))}
-            className="hidden lg:block ml-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-[#10B981] w-[140px]"
+            className="hidden lg:block ml-6 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-[#10B981] w-[140px]"
           >
             <option value="">Standard Pricing</option>
             {schemes.map(s => (
