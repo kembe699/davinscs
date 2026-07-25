@@ -823,9 +823,9 @@ export default function POSMain() {
           {isFoodBusiness && (
             <button
               onClick={() => setShowTablePicker(true)}
-              className="hidden lg:flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md hover:border-[#10B981] transition-colors"
+              className="hidden lg:flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md hover:border-[#10B981] transition-colors whitespace-nowrap shrink-0"
             >
-              <UtensilsCrossed size={14} />
+              <UtensilsCrossed size={14} className="shrink-0" />
               {activeTable ? activeTable.label : "Tables"}
             </button>
           )}
@@ -1121,16 +1121,16 @@ export default function POSMain() {
             </div>
 
             {activeTable && (
-              <div className="flex items-center justify-between px-3 py-2 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-[#10B981]">
-                  <UtensilsCrossed size={14} />
+              <div className="flex items-center justify-between gap-2 flex-wrap px-3 py-2 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-[#10B981] whitespace-nowrap">
+                  <UtensilsCrossed size={14} className="shrink-0" />
                   {activeTable.label} · {activeTable.location}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={leaveTable} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={leaveTable} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors whitespace-nowrap">
                     Leave
                   </button>
-                  <button onClick={clearTable} className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors">
+                  <button onClick={clearTable} className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors whitespace-nowrap">
                     Clear Table
                   </button>
                 </div>
@@ -1665,7 +1665,7 @@ export default function POSMain() {
                           }`}
                         >
                           <button onClick={() => selectTable(t)} className="w-full text-left">
-                            <p className="font-bold text-[#1A1A2E] dark:text-gray-100 text-sm">{t.label}</p>
+                            <p className="font-bold text-[#1A1A2E] dark:text-gray-100 text-sm whitespace-nowrap">{t.label}</p>
                             {occupied ? (
                               <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 whitespace-nowrap">
                                 {itemCount} item(s) · {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
