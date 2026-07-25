@@ -9,13 +9,13 @@ import {
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
   ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
   ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X, ExternalLink,
-  CalendarClock, AlertTriangle,
+  CalendarClock, AlertTriangle, UtensilsCrossed,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 import IdleWarningModal from "@/components/IdleWarningModal";
 
-type NavItem = { label: string; path: string; icon: any; permission: string };
+type NavItem = { label: string; path: string; icon: any; permission: string; foodOnly?: boolean };
 type NavGroup = { label: string; icon: any; items: NavItem[] };
 
 const TOP_ITEMS: NavItem[] = [
@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Quotations",  path: "/admin/quotations",  icon: ClipboardList,permission: "invoices.view" },
       { label: "Invoices",    path: "/admin/invoices",    icon: Receipt,      permission: "invoices.view" },
       { label: "Receipts",    path: "/admin/receipts",    icon: Receipt,      permission: "reports.view" },
+      { label: "Tables",      path: "/admin/tables",      icon: UtensilsCrossed, permission: "products.view", foodOnly: true },
     ],
   },
   {
@@ -77,7 +78,8 @@ const NAV_GROUPS: NavGroup[] = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, logout, hasPermission } = useAuth();
-  const { logo, companyName } = useLayout();
+  const { logo, companyName, company } = useLayout();
+  const businessType = company?.business_type || "";
   const location = useLocation();
   const navigate = useNavigate();
   const { tenantSlug, status: tenantStatus, trialEndsAt, subscriptionEnd } = useTenant();
@@ -233,7 +235,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="my-2 border-t border-admin-border/50" />
 
         {NAV_GROUPS.map(group => {
-          const visibleItems = group.items.filter(i => hasPermission(i.permission));
+          const visibleItems = group.items.filter(i => hasPermission(i.permission) && (!i.foodOnly || businessType === "food"));
           if (visibleItems.length === 0) return null;
           const isOpen = !!openGroups[group.label];
           const hasActive = groupHasActive(group);

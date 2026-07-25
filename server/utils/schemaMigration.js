@@ -468,6 +468,13 @@ export async function migrateTenant(schemaName = "public") {
       EXCEPTION
         WHEN duplicate_column THEN NULL;
       END;
+
+      -- Add business_type column if it doesn't exist (e.g. 'food' enables the Tables feature)
+      BEGIN
+        ALTER TABLE company_settings ADD COLUMN business_type VARCHAR(50) DEFAULT '';
+      EXCEPTION
+        WHEN duplicate_column THEN NULL;
+      END;
     END $$;
 
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -552,6 +559,17 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     
+    -- Restaurant tables (only used by Food & Beverage tenants, but harmless
+    -- to always have — a table's "current order" is just the held, non-voided
+    -- pos_sales row whose table_id points here, so no status column to track.
+    CREATE TABLE IF NOT EXISTS restaurant_tables (
+      id SERIAL PRIMARY KEY,
+      location VARCHAR(100) NOT NULL,
+      label VARCHAR(100) NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS table_id INTEGER REFERENCES restaurant_tables(id) ON DELETE SET NULL;
+
     CREATE TABLE IF NOT EXISTS credit_sales (
       id SERIAL PRIMARY KEY,
       sale_id INTEGER REFERENCES pos_sales(id),

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List, UtensilsCrossed } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
-import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion } from "@/lib/api";
+import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion, RestaurantTable } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -66,6 +66,13 @@ export default function POSMain() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
 
+  // ── Restaurant tables (only meaningful when company.business_type === 'food') ──
+  const isFoodBusiness = companyData?.business_type === 'food';
+  const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [showTablePicker, setShowTablePicker] = useState(false);
+  const [activeTable, setActiveTable] = useState<RestaurantTable | null>(null);
+  const [resumingHeldSaleId, setResumingHeldSaleId] = useState<number | null>(null);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -103,6 +110,7 @@ export default function POSMain() {
     loadSchemes();
     loadPromotions();
     loadHeldSales();
+    loadTables();
 
     const intervalId = setInterval(() => {
       loadData();
@@ -110,6 +118,7 @@ export default function POSMain() {
       loadSchemes();
       loadPromotions();
       loadHeldSales();
+      loadTables();
     }, 10000);
 
     return () => clearInterval(intervalId);
@@ -287,6 +296,83 @@ export default function POSMain() {
     }
   };
 
+  const loadTables = async () => {
+    try {
+      setTables(await api.tables.list());
+    } catch (err) {
+      console.error("Failed to load tables:", err);
+    }
+  };
+
+  // A table's running order, if any — derived from the held sales list rather
+  // than any stored "occupied" flag, so it can never drift out of sync.
+  const heldSaleForTable = (tableId: number) =>
+    heldSales.find((s: any) => s.table_id === tableId);
+
+  const selectTable = (table: RestaurantTable) => {
+    const sale = heldSaleForTable(table.id);
+    setActiveTable(table);
+    if (sale) {
+      setResumingHeldSaleId(sale.id);
+      setCart((sale.items || []).map((item: any) => ({
+        product: products.find(p => p.id === item.product_id) ?? ({
+          id: item.product_id,
+          name: item.product_name,
+          price: item.unit_price,
+        } as ApiProduct),
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        discount: item.discount_amount || 0,
+      })));
+      setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+    } else {
+      setResumingHeldSaleId(null);
+      setCart([]);
+      setCartDiscount(0);
+      setCustomerName("");
+    }
+    setShowTablePicker(false);
+  };
+
+  const payTableNow = (sale: any) => {
+    // Paying directly from the table picker always supersedes whatever the
+    // working cart currently holds for that table.
+    if (activeTable && sale.table_id === activeTable.id) {
+      setCart([]);
+      setCartDiscount(0);
+      setCustomerName("");
+      setActiveTable(null);
+      setResumingHeldSaleId(null);
+    }
+    setShowTablePicker(false);
+    setShowHeldSales(true);
+    setConfirmingHeldSaleId(sale.id);
+    setConfirmPaymentTypeId(paymentTypes[0]?.id ?? null);
+  };
+
+  const leaveTable = () => {
+    setActiveTable(null);
+    setResumingHeldSaleId(null);
+    setCart([]);
+    setCartDiscount(0);
+    setCustomerName("");
+  };
+
+  const clearTable = async () => {
+    if (!activeTable) return;
+    const sale = resumingHeldSaleId ? { id: resumingHeldSaleId } : heldSaleForTable(activeTable.id);
+    if (sale && !confirm(`Clear ${activeTable.label}? Any reserved stock for its order will be released.`)) return;
+    try {
+      if (sale) await api.pos.cancelHeldSale(sale.id);
+      await loadHeldSales();
+      toast(`${activeTable.label} cleared`, "success", "Table Cleared");
+    } catch (err: any) {
+      toast(err.message || "Failed to clear table", "error", "Error");
+    } finally {
+      leaveTable();
+    }
+  };
+
   const checkCashDrawer = async () => {
     try {
       const session = await api.cashDrawer.getCurrent();
@@ -392,6 +478,12 @@ export default function POSMain() {
 
     setHoldingCart(true);
     try {
+      // Resuming a table that already had a held order — replace it with the
+      // merged item list rather than creating a second hold for the same table.
+      if (resumingHeldSaleId) {
+        await api.pos.cancelHeldSale(resumingHeldSaleId);
+      }
+
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
         price_list_id: selectedSchemeId || undefined,
@@ -405,6 +497,7 @@ export default function POSMain() {
         discount_amount: cartDiscount,
         sale_type: "regular",
         status: "held",
+        table_id: activeTable?.id || undefined,
       };
 
       const sale = await api.pos.createSale(saleData);
@@ -416,6 +509,8 @@ export default function POSMain() {
       setCart([]);
       setCartDiscount(0);
       setCustomerName("");
+      setActiveTable(null);
+      setResumingHeldSaleId(null);
 
       toast(`Sale ${sale.sale_number} held successfully`, "success", "Sale Held");
     } catch (err: any) {
@@ -556,6 +651,13 @@ export default function POSMain() {
     try {
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
 
+      // Paying out a table that had items added on top of an existing held
+      // order — release that old hold now that it's being superseded by this
+      // completed sale (which carries the merged item list).
+      if (resumingHeldSaleId) {
+        await api.pos.cancelHeldSale(resumingHeldSaleId);
+      }
+
       const saleData = {
         customer_name: customerName || 'Walk-in Customer',
         price_list_id: selectedSchemeId || undefined,
@@ -570,6 +672,7 @@ export default function POSMain() {
         discount_amount: discountAmount,
         sale_type: "regular",
         status: "completed",
+        table_id: activeTable?.id || undefined,
       };
 
       const sale = await api.pos.createSale(saleData);
@@ -634,6 +737,8 @@ export default function POSMain() {
       setDiscountValue(0);
       setCustomerName('');
       setShowPaymentModal(false);
+      setActiveTable(null);
+      setResumingHeldSaleId(null);
 
       toast(`Sale ${completedSaleData.sale_number} completed`, "success", "Payment Successful");
     } catch (err: any) {
@@ -712,6 +817,16 @@ export default function POSMain() {
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
+
+          {isFoodBusiness && (
+            <button
+              onClick={() => setShowTablePicker(true)}
+              className="hidden lg:flex items-center gap-1.5 ml-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-md hover:border-[#10B981] transition-colors"
+            >
+              <UtensilsCrossed size={14} />
+              {activeTable ? activeTable.label : "Tables"}
+            </button>
+          )}
         </div>
 
         {/* Center: Search (Desktop) */}
@@ -996,6 +1111,23 @@ export default function POSMain() {
                 Clear All
               </button>
             </div>
+
+            {activeTable && (
+              <div className="flex items-center justify-between px-3 py-2 bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-[#10B981]">
+                  <UtensilsCrossed size={14} />
+                  {activeTable.label} · {activeTable.location}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={leaveTable} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                    Leave
+                  </button>
+                  <button onClick={clearTable} className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors">
+                    Clear Table
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={() => setShowCustomerModal(true)}
@@ -1490,6 +1622,65 @@ export default function POSMain() {
                 Apply Discount
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table Picker Modal */}
+      {showTablePicker && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700/50">
+              <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">Tables</h2>
+              <button onClick={() => setShowTablePicker(false)} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-100 rounded-full"><X size={20} /></button>
+            </div>
+
+            {tables.length === 0 ? (
+              <div className="py-12 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                <UtensilsCrossed size={48} className="mb-4 opacity-20" />
+                <p>No tables set up yet — add some from Admin → Tables.</p>
+              </div>
+            ) : (
+              Array.from(new Set(tables.map(t => t.location))).map(loc => (
+                <div key={loc} className="mb-5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{loc}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {tables.filter(t => t.location === loc).map(t => {
+                      const sale = heldSaleForTable(t.id);
+                      const occupied = !!sale;
+                      const itemCount = sale ? (sale.items || []).reduce((n: number, it: any) => n + it.quantity, 0) : 0;
+                      return (
+                        <div
+                          key={t.id}
+                          className={`border-2 rounded-xl p-3 text-left transition-colors ${
+                            occupied ? "border-amber-400/60 bg-amber-50 dark:bg-amber-500/10" : "border-gray-100 dark:border-gray-700/50 hover:border-[#10B981]"
+                          }`}
+                        >
+                          <button onClick={() => selectTable(t)} className="w-full text-left">
+                            <p className="font-bold text-[#1A1A2E] dark:text-gray-100 text-sm">{t.label}</p>
+                            {occupied ? (
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                                {itemCount} item(s) · {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Available</p>
+                            )}
+                          </button>
+                          {occupied && (
+                            <button
+                              onClick={() => payTableNow(sale)}
+                              className="mt-2 w-full text-[11px] font-bold text-[#10B981] hover:text-[#0ea472] transition-colors"
+                            >
+                              Pay Now →
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

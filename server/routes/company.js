@@ -36,7 +36,8 @@ router.get("/", optionalTenantContext, async (req, res) => {
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        currency: rows[0].currency || "UGX"
+        currency: rows[0].currency || "UGX",
+        business_type: rows[0].business_type || ""
       };
 
       res.json(response);
@@ -51,7 +52,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
 
 // Create or update company settings
 router.post("/", requireAuth, async (req, res) => {
-  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, description, brand_color_start, brand_color_mid, brand_color_end, currency } = req.body;
+  const { name, logo, address, city, country, postal_code, phone, email, tax_id, website, whatsapp, description, brand_color_start, brand_color_mid, brand_color_end, currency, business_type } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: "Company name is required" });
@@ -69,10 +70,10 @@ router.post("/", requireAuth, async (req, res) => {
              postal_code = $9, website = $10, receipt_footer = $11,
              whatsapp = $12,
              brand_color_start = $13, brand_color_mid = $14, brand_color_end = $15,
-             currency = $16,
+             currency = $16, business_type = $17,
              updated_at = NOW()
-         WHERE id = $17 RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', currency || 'UGX', existing.rows[0].id]
+         WHERE id = $18 RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', currency || 'UGX', business_type || '', existing.rows[0].id]
       );
       const response = {
         name: rows[0].company_name,
@@ -90,14 +91,15 @@ router.post("/", requireAuth, async (req, res) => {
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        currency: rows[0].currency || "UGX"
+        currency: rows[0].currency || "UGX",
+        business_type: rows[0].business_type || ""
       };
       res.json(response);
     } else {
       const { rows } = await pool.query(
-        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, currency, brand_color_start, brand_color_mid, brand_color_end)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, currency || 'UGX', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32']
+        `INSERT INTO company_settings (company_name, address, phone, email, tax_id, logo_url, city, country, postal_code, website, receipt_footer, whatsapp, currency, business_type, brand_color_start, brand_color_mid, brand_color_end)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, currency || 'UGX', business_type || '', brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32']
       );
       const response = {
         name: rows[0].company_name,
@@ -115,7 +117,8 @@ router.post("/", requireAuth, async (req, res) => {
         brand_color_start: rows[0].brand_color_start || "#004A99",
         brand_color_mid: rows[0].brand_color_mid || "#008B8B",
         brand_color_end: rows[0].brand_color_end || "#32CD32",
-        currency: rows[0].currency || "UGX"
+        currency: rows[0].currency || "UGX",
+        business_type: rows[0].business_type || ""
       };
       res.json(response);
     }

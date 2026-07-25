@@ -168,9 +168,9 @@ router.post("/complete", async (req, res) => {
         await client.query(
           `INSERT INTO company_settings
              (company_name, address, city, country, phone, email, website, tax_id,
-              whatsapp, logo_url, currency,
+              whatsapp, logo_url, currency, business_type,
               brand_color_start, brand_color_mid, brand_color_end, receipt_footer)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
           [
             company_name,
             address || "",
@@ -183,6 +183,7 @@ router.post("/complete", async (req, res) => {
             whatsapp || "",
             logo || "",
             baseCurrency,
+            business_type || "",
             brand_color_start || "#004A99",
             brand_color_mid || "#008B8B",
             brand_color_end || "#32CD32",

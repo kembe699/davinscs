@@ -544,6 +544,14 @@ export type CompanySettings = {
   brand_color_start: string;
   brand_color_mid: string;
   brand_color_end: string;
+  business_type: string;
+};
+
+export type RestaurantTable = {
+  id: number;
+  location: string;
+  label: string;
+  created_at: string;
 };
 
 export type POSSale = {
@@ -567,6 +575,7 @@ export type POSSale = {
   items?: POSSaleItem[];
   customer_name?: string;
   payment_type_name?: string;
+  table_id?: number | null;
 };
 
 export type POSSaleItem = {
@@ -837,6 +846,13 @@ export const api = {
     save: (data: Partial<CompanySettings>) =>
       request<CompanySettings>("/api/company", { method: "POST", body: JSON.stringify(data) }),
   },
+  tables: {
+    list: () => request<RestaurantTable[]>("/api/tables"),
+    create: (data: { location: string; count: number }) =>
+      request<RestaurantTable[]>("/api/tables", { method: "POST", body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<{ success: boolean }>(`/api/tables/${id}`, { method: "DELETE" }),
+  },
   pos: {
     createSale: (data: {
       customer_id?: number;
@@ -849,6 +865,7 @@ export const api = {
       price_list_id?: number;
       promotion_id?: number;
       status?: string;
+      table_id?: number;
     }) => request<POSSale>("/api/pos/sales", { method: "POST", body: JSON.stringify(data) }),
     getSales: (params?: {
       start_date?: string;

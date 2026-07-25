@@ -71,22 +71,35 @@ function generateSaleNumber() {
 
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
-  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id } = req.body;
+  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id, table_id } = req.body;
   const user_id = req.user.id;
-  
+
   if (!items || items.length === 0) {
     return res.status(400).json({ error: "Items are required" });
   }
-  
+
   if (!payment_type_id) {
     return res.status(400).json({ error: "Payment type is required" });
   }
-  
+
   const client = await getSchemaClient();
-  
+
   try {
     await client.query("BEGIN");
-    
+
+    // A table can only have one running order at a time — guard against two
+    // cashiers holding a sale against the same table concurrently.
+    if (table_id && status === 'held') {
+      const clash = await client.query(
+        "SELECT id FROM pos_sales WHERE table_id = $1 AND status = 'held' AND voided = false",
+        [table_id]
+      );
+      if (clash.rows.length > 0) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "This table already has a running order. Refresh and try again." });
+      }
+    }
+
     // Get current cash drawer session
     const sessionResult = await client.query(
       "SELECT id FROM cash_drawer_sessions WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC LIMIT 1",
@@ -231,13 +244,13 @@ router.post("/sales", requireAuth, async (req, res) => {
     
     // Create sale
     const saleResult = await client.query(
-      `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, price_list_id, subtotal, tax_amount, 
+      `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, price_list_id, subtotal, tax_amount,
                               discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes,
-                              promotion_id, promotion_name, sale_currency_id, exchange_rate_used)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
-      [sale_number, customer_id, customer_name, user_id, session_id, price_list_id || null, subtotal, tax_amount, total_discount, 
+                              promotion_id, promotion_name, sale_currency_id, exchange_rate_used, table_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
+      [sale_number, customer_id, customer_name, user_id, session_id, price_list_id || null, subtotal, tax_amount, total_discount,
        total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes,
-       resolved_promotion_id, promo_name, resolved_currency_id, resolved_exchange_rate]
+       resolved_promotion_id, promo_name, resolved_currency_id, resolved_exchange_rate, table_id || null]
     );
     
     const sale = saleResult.rows[0];
