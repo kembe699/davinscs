@@ -15,7 +15,29 @@ router.get("/status", async (req, res) => {
       const { rows } = await pool.query("SELECT COUNT(*) FROM company_settings");
       needsSetup = parseInt(rows[0].count) === 0;
     });
-    res.json({ needs_setup: needsSetup });
+
+    // Only hand back the registrant's business name / email while setup is still
+    // pending, so this stays scoped to prefilling the onboarding wizard rather
+    // than becoming a general way to look up a tenant's admin email.
+    let businessName = null;
+    let email = null;
+    if (needsSetup && schemaName !== "public") {
+      const { rows } = await pool.query(
+        `SELECT t.business_name, tu.email
+         FROM public.tenants t
+         LEFT JOIN public.tenant_users tu ON tu.tenant_id = t.id
+         WHERE t.schema_name = $1
+         ORDER BY tu.id ASC
+         LIMIT 1`,
+        [schemaName]
+      );
+      if (rows[0]) {
+        businessName = rows[0].business_name;
+        email = rows[0].email;
+      }
+    }
+
+    res.json({ needs_setup: needsSetup, business_name: businessName, email });
   } catch (err) {
     console.error("Setup status error:", err);
     res.status(500).json({ error: "Server error" });

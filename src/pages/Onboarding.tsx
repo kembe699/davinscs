@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useTenant } from "../contexts/TenantContext.tsx";
 import {
@@ -98,7 +98,7 @@ export default function Onboarding() {
 
   const [form, setForm] = useState<FormData>({
     business_type: "",
-    company_name: "",
+    company_name: tenant.businessName || "",
     address: "",
     city: "",
     country: "",
@@ -120,6 +120,22 @@ export default function Onboarding() {
 
   const set = (key: keyof FormData, val: string) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  // Prefill the business name / admin email the user already gave us at
+  // registration, so setup only asks for what's genuinely new.
+  useEffect(() => {
+    fetch(`/api/setup/status?schema=${encodeURIComponent(schemaName)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setForm((f) => ({
+          ...f,
+          company_name: f.company_name || data.business_name || "",
+          admin_email: f.admin_email || data.email || "",
+        }));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaName]);
 
   const readLogo = (file: File) => {
     const reader = new FileReader();
