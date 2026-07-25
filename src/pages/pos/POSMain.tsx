@@ -270,6 +270,8 @@ export default function POSMain() {
       today.setHours(0, 0, 0, 0);
       const alerts: StockAlert[] = [];
       for (const p of productsData) {
+        // Services don't carry quantity/stock at all, so none of these checks apply.
+        if ((p as any).product_type === 'service') continue;
         if ((p as any).expiry_date && new Date((p as any).expiry_date) < today) {
           alerts.push({ product: p, kind: "expired" });
         } else if (!p.in_stock || (p.quantity_on_hand ?? 0) <= 0) {
@@ -992,10 +994,12 @@ export default function POSMain() {
             return (
               <div className={viewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6 pb-24 lg:pb-0" : "flex flex-col gap-2 md:gap-3 pb-24 lg:pb-0"}>
                 {visibleProducts.map(product => {
+                  const isService = (product as any).product_type === 'service';
                   const availableStock = product.quantity_on_hand - (product.quantity_reserved ?? 0);
                   const qtyInCart = cart.find(item => item.product.id === product.id)?.quantity || 0;
                   const remainingStock = availableStock - qtyInCart;
-                  const outOfStock = !product.in_stock || availableStock <= 0;
+                  // Services aren't tracked by quantity, so they're always sellable.
+                  const outOfStock = !isService && (!product.in_stock || availableStock <= 0);
 
                   if (viewMode === 'list') {
                     return (
@@ -1015,7 +1019,9 @@ export default function POSMain() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">
-                          {outOfStock ? (
+                          {isService ? (
+                            <span className="text-[10px] md:text-xs font-medium text-gray-400">Service</span>
+                          ) : outOfStock ? (
                             <span className="text-[10px] md:text-xs font-bold text-red-500">Out</span>
                           ) : (
                             <span className={`text-[10px] md:text-xs font-medium ${remainingStock <= 5 ? 'text-amber-500' : 'text-gray-400'}`}>
@@ -1070,7 +1076,9 @@ export default function POSMain() {
                         <div className="pos-price-gradient text-xs md:text-base truncate mr-1">
                           {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
                         </div>
-                        {outOfStock ? (
+                        {isService ? (
+                          <span className="text-[9px] md:text-xs font-medium shrink-0 text-gray-400 dark:text-gray-500">Service</span>
+                        ) : outOfStock ? (
                           <span className="text-[9px] md:text-xs font-bold text-red-500 shrink-0">Out</span>
                         ) : (
                           <span className={`text-[9px] md:text-xs font-medium shrink-0 ${remainingStock <= 5 ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -1629,7 +1637,7 @@ export default function POSMain() {
       {/* Table Picker Modal */}
       {showTablePicker && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-5xl max-h-[80vh] overflow-y-auto flex flex-col">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700/50">
               <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">Tables</h2>
               <button onClick={() => setShowTablePicker(false)} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-100 rounded-full"><X size={20} /></button>
@@ -1644,7 +1652,7 @@ export default function POSMain() {
               Array.from(new Set(tables.map(t => t.location))).map(loc => (
                 <div key={loc} className="mb-5">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{loc}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {tables.filter(t => t.location === loc).map(t => {
                       const sale = heldSaleForTable(t.id);
                       const occupied = !!sale;
@@ -1659,7 +1667,7 @@ export default function POSMain() {
                           <button onClick={() => selectTable(t)} className="w-full text-left">
                             <p className="font-bold text-[#1A1A2E] dark:text-gray-100 text-sm">{t.label}</p>
                             {occupied ? (
-                              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 whitespace-nowrap">
                                 {itemCount} item(s) · {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
                               </p>
                             ) : (
