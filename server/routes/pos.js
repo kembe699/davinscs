@@ -927,6 +927,13 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
 
     await client.query("COMMIT");
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_DELETED', entityType: 'sale', entityId: parseInt(id), details: { sale_number: sale.sale_number, total_amount: sale.total_amount }, ip: req.ip });
+    notifyAdmins({
+      type: 'sale_deleted',
+      title: 'Sale permanently deleted',
+      body: `${req.user.name || req.user.email} deleted ${sale.sale_number} (${Number(sale.total_amount).toLocaleString()})`,
+      referenceType: 'pos_sale',
+      referenceId: parseInt(id),
+    }).catch(() => {});
     res.json({ message: "Sale permanently deleted" });
   } catch (err) {
     await client.query("ROLLBACK");
