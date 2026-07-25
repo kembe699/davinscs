@@ -27,9 +27,19 @@ router.post("/", requireAuth, async (req, res) => {
   if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
   try {
     const hash = await bcrypt.hash(password, 10);
+    // The legacy `role` text column ('admin'/'cashier') still gates a few things
+    // directly (void/delete sale, seeing all sales vs just your own — see pos.js)
+    // and whether the FlippedPOS admin mobile app lets this account sign in at
+    // all, so it has to actually reflect the chosen role rather than being
+    // hardcoded — only an Admin-named role should grant it.
+    let role = 'cashier';
+    if (role_id) {
+      const { rows: roleRows } = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
+      if (roleRows[0]?.name?.toLowerCase() === 'admin') role = 'admin';
+    }
     const { rows } = await pool.query(
-      "INSERT INTO users (email, password_hash, role, role_id, name, pin) VALUES ($1, $2, 'admin', $3, $4, $5) RETURNING id, email, name, pin, role, role_id, created_at",
-      [email.toLowerCase(), hash, role_id || null, name || null, pin || null]
+      "INSERT INTO users (email, password_hash, role, role_id, name, pin) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, name, pin, role, role_id, created_at",
+      [email.toLowerCase(), hash, role, role_id || null, name || null, pin || null]
     );
     // Sync login mapping so the new user can log in via /portal
     const schemaName = req.user.schema_name || null;
@@ -100,10 +110,15 @@ router.put("/:id/role", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const { role_id } = req.body;
   try {
+    let role = 'cashier';
+    if (role_id) {
+      const { rows: roleRows } = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
+      if (roleRows[0]?.name?.toLowerCase() === 'admin') role = 'admin';
+    }
     const { rows } = await pool.query(
-      `UPDATE users SET role_id = $1 WHERE id = $2
+      `UPDATE users SET role_id = $1, role = $2 WHERE id = $3
        RETURNING id, email, role, role_id, created_at`,
-      [role_id || null, id]
+      [role_id || null, role, id]
     );
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_ROLE_CHANGED', entityType: 'user', entityId: id, details: { role_id: role_id || null }, ip: req.ip });
