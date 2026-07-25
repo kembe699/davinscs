@@ -36,14 +36,17 @@ export default function EndOfDay() {
 
   useEffect(() => {
     loadAll();
+    // Background refresh only — must NOT flip `loading` back to true, or the
+    // whole report blanks out to the "Loading report…" placeholder every 10
+    // seconds even though nothing actually changed most of the time.
     const intervalId = setInterval(() => {
-      loadAll();
+      loadAll({ background: true });
     }, 10000);
     return () => clearInterval(intervalId);
   }, [selectedDate]);
 
-  const loadAll = async () => {
-    setLoading(true);
+  const loadAll = async ({ background = false }: { background?: boolean } = {}) => {
+    if (!background) setLoading(true);
     setError("");
     try {
       const [eod, hrs, company] = await Promise.all([

@@ -1054,6 +1054,15 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     await client.query("COMMIT");
 
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'SALE_REFUNDED', entityType: 'sale', entityId: parseInt(id), details: { refund_number, refund_total, reason }, ip: req.ip });
+
+    notifyAdmins({
+      type: 'refund_processed',
+      title: 'Refund processed',
+      body: `${refund_number} — ${refund_total.toLocaleString()}${reason ? ` (${reason})` : ''}`,
+      referenceType: 'pos_sale',
+      referenceId: parseInt(id),
+    }).catch(() => {});
+
     res.json({
       message: "Refund processed successfully",
       refund_amount: refund_total,

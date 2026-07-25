@@ -51,6 +51,15 @@ router.post("/open", requireAuth, async (req, res) => {
     );
     
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_SESSION_OPENED', entityType: 'cash_drawer', entityId: rows[0].id, details: { opening_cash }, ip: req.ip });
+
+    notifyAdmins({
+      type: 'shift_opened',
+      title: `Shift opened — ${req.user.name || req.user.email}`,
+      body: `Opening cash: ${Number(opening_cash).toLocaleString()}`,
+      referenceType: 'cash_drawer_session',
+      referenceId: rows[0].id,
+    }).catch(() => {});
+
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
