@@ -541,6 +541,12 @@ export async function migrateTenant(schemaName = "public") {
       status VARCHAR(20) DEFAULT 'open',
       notes TEXT
     );
+    -- Tracks a shift's cash-difference being made good afterwards (cash found,
+    -- or the shortfall paid in) — separate from cash_difference itself, which
+    -- stays the original recorded discrepancy for the record.
+    ALTER TABLE cash_drawer_sessions ADD COLUMN IF NOT EXISTS difference_resolved_amount INTEGER DEFAULT 0;
+    ALTER TABLE cash_drawer_sessions ADD COLUMN IF NOT EXISTS difference_resolved_notes TEXT;
+    ALTER TABLE cash_drawer_sessions ADD COLUMN IF NOT EXISTS difference_resolved_at TIMESTAMPTZ;
     
     CREATE TABLE IF NOT EXISTS cash_movements (
       id SERIAL PRIMARY KEY,

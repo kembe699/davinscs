@@ -268,6 +268,44 @@ router.post("/cash-out", requireAuth, async (req, res) => {
   }
 });
 
+// Record that a closed shift's cash difference has been made good — the
+// cashier found the missing cash, or paid in the shortfall (or an admin
+// decided to write it off with a note). Accumulates across calls in case
+// it's settled in more than one go; cash_difference itself is left alone
+// as the original recorded discrepancy.
+router.post("/sessions/:id/resolve-difference", requireAuth, async (req, res) => {
+  const { amount, notes } = req.body;
+  const resolved = Number(amount);
+  if (!resolved || resolved <= 0) return res.status(400).json({ error: "A positive amount is required" });
+
+  try {
+    const { rows: sessionRows } = await pool.query("SELECT * FROM cash_drawer_sessions WHERE id = $1", [req.params.id]);
+    const session = sessionRows[0];
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (session.status !== "closed") return res.status(400).json({ error: "Only a closed shift can have its difference resolved" });
+
+    const { rows } = await pool.query(
+      `UPDATE cash_drawer_sessions
+       SET difference_resolved_amount = COALESCE(difference_resolved_amount, 0) + $1,
+           difference_resolved_notes = $2,
+           difference_resolved_at = NOW()
+       WHERE id = $3 RETURNING *`,
+      [resolved, notes || null, req.params.id]
+    );
+
+    await logAudit({
+      userId: req.user.id, userEmail: req.user.email, action: "SHIFT_DIFFERENCE_RESOLVED",
+      entityType: "cash_drawer", entityId: Number(req.params.id),
+      details: { amount: resolved, notes }, ip: req.ip,
+    });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Get session history
 router.get("/sessions", requireAuth, async (req, res) => {
   const { start_date, end_date, user_id } = req.query;

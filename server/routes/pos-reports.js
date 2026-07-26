@@ -329,6 +329,22 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
       params
     );
 
+    // When this report is scoped to one shift, include that shift's cash
+    // reconciliation (opening/closing/expected/difference) too — the sales
+    // totals above don't tell a cashier or admin whether the drawer actually
+    // balanced when it was closed.
+    let session = null;
+    if (session_id) {
+      const sessionRes = await pool.query(
+        `SELECT id, opening_cash, closing_cash, expected_cash, cash_difference, notes,
+                difference_resolved_amount, difference_resolved_notes, difference_resolved_at,
+                status, opened_at, closed_at
+         FROM cash_drawer_sessions WHERE id = $1`,
+        [session_id]
+      );
+      session = sessionRes.rows[0] || null;
+    }
+
     res.json({
       date: targetDate,
       sales_summary: salesSummary.rows[0],
@@ -337,7 +353,8 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
       top_products: topProducts.rows,
       voided_sales: voidedSales.rows[0],
       refund_summary: refundBreakdown.rows[0],
-      cashier_breakdown: cashierBreakdown.rows
+      cashier_breakdown: cashierBreakdown.rows,
+      session
     });
   } catch (err) {
     console.error(err);

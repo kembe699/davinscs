@@ -1,6 +1,7 @@
 import express from "express";
-import pool from "../db.js";
+import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { logAudit } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -53,7 +54,20 @@ router.get("/:id", requireAuth, async (req, res) => {
       [id]
     );
 
-    res.json({ customer: cRows[0], posOrders, invoices });
+    // Credit sales rung up in the POS (sale_type='credit', see POST /api/pos/sales)
+    // — what this customer actually owes, itemized per sale, oldest first so
+    // it reads like a running tab.
+    const { rows: creditSales } = await pool.query(
+      `SELECT cs.id, cs.sale_id, s.sale_number, cs.total_amount, cs.paid_amount, cs.balance,
+              cs.due_date, cs.status, cs.created_at
+       FROM credit_sales cs
+       JOIN pos_sales s ON s.id = cs.sale_id
+       WHERE cs.customer_id = $1
+       ORDER BY cs.created_at ASC`,
+      [id]
+    );
+
+    res.json({ customer: cRows[0], posOrders, invoices, creditSales });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -106,6 +120,81 @@ router.delete("/:id", requireAuth, async (req, res) => {
     if (err.code === "23503") return res.status(409).json({ error: "Cannot delete: customer has linked records" });
     console.error(err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Settle a customer's running credit balance — a payment (partial or full)
+// applied FIFO across their open credit sales (oldest first), same balance
+// customers.balance already tracks (incremented when a credit sale is rung
+// up in POST /api/pos/sales). No existing endpoint recorded a payment
+// against it before this.
+router.post("/:id/settle", requireAuth, async (req, res) => {
+  const { amount, payment_type_id, notes } = req.body;
+  const customerId = req.params.id;
+  const paid = Number(amount);
+  if (!paid || paid <= 0) return res.status(400).json({ error: "A positive amount is required" });
+
+  const client = await getSchemaClient();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: cRows } = await client.query("SELECT * FROM customers WHERE id = $1 FOR UPDATE", [customerId]);
+    if (!cRows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    const { rows: openSales } = await client.query(
+      `SELECT * FROM credit_sales WHERE customer_id = $1 AND balance > 0 ORDER BY created_at ASC FOR UPDATE`,
+      [customerId]
+    );
+
+    let remaining = paid;
+    const applied = [];
+    for (const sale of openSales) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, Number(sale.balance));
+      const newPaidAmount = Number(sale.paid_amount) + take;
+      const newBalance = Number(sale.balance) - take;
+      const status = newBalance <= 0 ? "paid" : "pending";
+
+      await client.query(
+        `UPDATE credit_sales SET paid_amount = $1, balance = $2, status = $3 WHERE id = $4`,
+        [newPaidAmount, newBalance, status, sale.id]
+      );
+      const { rows: paymentRows } = await client.query(
+        `INSERT INTO customer_payments (credit_sale_id, customer_id, amount, payment_type_id, notes)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [sale.id, customerId, take, payment_type_id || null, notes || null]
+      );
+      applied.push(paymentRows[0]);
+      remaining -= take;
+    }
+
+    const totalApplied = paid - remaining;
+    if (totalApplied > 0) {
+      await client.query(
+        `UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2`,
+        [totalApplied, customerId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    await logAudit({
+      userId: req.user.id, userEmail: req.user.email, action: "CUSTOMER_PAYMENT",
+      entityType: "customer", entityId: Number(customerId),
+      details: { amount_requested: paid, amount_applied: totalApplied, sales_touched: applied.length }, ip: req.ip,
+    });
+
+    const { rows: updatedCustomer } = await pool.query("SELECT * FROM customers WHERE id = $1", [customerId]);
+    res.json({ customer: updatedCustomer[0], applied, amountApplied: totalApplied, unapplied: remaining });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
   }
 });
 
