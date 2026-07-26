@@ -8,11 +8,11 @@ import { sendPasswordResetEmail } from "../utils/email.js";
 
 
 import { tenantStorage } from "../tenantStorage.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireAuthAllowSuspended } from "../middleware/auth.js";
 const router = express.Router();
 
 router.post("/login", async (req, res) => {
-  const { email, password, schema_name: clientSchema } = req.body;
+  const { email, password, schema_name: clientSchema, allow_suspended } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
@@ -31,7 +31,7 @@ router.post("/login", async (req, res) => {
       const tenantRes = await pool.query("SELECT * FROM public.tenants WHERE id = $1", [tenantUser.tenant_id]);
       const tenant = tenantRes.rows[0];
 
-      if (tenant) {
+      if (tenant && !allow_suspended) {
         if (tenant.status === 'suspended') {
           return res.status(403).json({ error: "ACCOUNT_SUSPENDED", message: "Account has been suspended." });
         }
@@ -120,19 +120,19 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/pin-login", async (req, res) => {
-  const { pin, schema_name } = req.body;
+  const { pin, schema_name, allow_suspended } = req.body;
   if (!pin || !schema_name) {
     return res.status(400).json({ error: "PIN and schema are required" });
   }
   try {
     const tenantRes = await pool.query("SELECT * FROM public.tenants WHERE schema_name = $1", [schema_name]);
     const tenant = tenantRes.rows[0];
-    if (tenant) {
+    if (tenant && !allow_suspended) {
       if (tenant.status === 'suspended') return res.status(403).json({ error: "ACCOUNT_SUSPENDED" });
       if (tenant.status === 'trial' && new Date(tenant.trial_ends_at) < new Date()) {
         return res.status(403).json({ error: "TRIAL_EXPIRED" });
       }
-    } else if (schema_name !== 'public') {
+    } else if (!tenant && schema_name !== 'public') {
       return res.status(404).json({ error: "Tenant not found" });
     }
 
@@ -242,7 +242,7 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/me", requireAuthAllowSuspended, async (req, res) => {
   try {
     const schemaName = req.user.schema_name || 'public';
     let tenantInfo = null;

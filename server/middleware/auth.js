@@ -51,7 +51,12 @@ export function optionalTenantContext(req, res, next) {
   return runWith("public");
 }
 
-export async function requireAuth(req, res, next) {
+// Shared by requireAuth and requireAuthAllowSuspended below. Always performs
+// the lazy-suspend DB write when a trial/subscription has lapsed (so tenant
+// status is accurate everywhere, e.g. the mobile app's license gate reading
+// it back via GET /api/auth/me), but only *blocks* the request when
+// `allowSuspended` is false.
+async function authenticate(req, res, next, { allowSuspended = false } = {}) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -69,19 +74,17 @@ export async function requireAuth(req, res, next) {
       if (tenant) {
         const now = new Date();
         if (tenant.status === 'suspended') {
-          return res.status(403).json({ error: 'TENANT_SUSPENDED' });
-        }
-        if (tenant.status === 'trial' && new Date(tenant.trial_ends_at) < now) {
+          if (!allowSuspended) return res.status(403).json({ error: 'TENANT_SUSPENDED' });
+        } else if (tenant.status === 'trial' && new Date(tenant.trial_ends_at) < now) {
           // Lazy suspend
           await pool.query(`UPDATE public.tenants SET status='suspended' WHERE schema_name=$1`, [schemaName]);
           tenantStatusCache.delete(schemaName);
-          return res.status(403).json({ error: 'TRIAL_EXPIRED' });
-        }
-        if (tenant.status === 'active' && tenant.subscription_end && new Date(tenant.subscription_end) < now) {
+          if (!allowSuspended) return res.status(403).json({ error: 'TRIAL_EXPIRED' });
+        } else if (tenant.status === 'active' && tenant.subscription_end && new Date(tenant.subscription_end) < now) {
           // Lazy suspend on subscription expiry
           await pool.query(`UPDATE public.tenants SET status='suspended' WHERE schema_name=$1`, [schemaName]);
           tenantStatusCache.delete(schemaName);
-          return res.status(403).json({ error: 'TENANT_SUSPENDED' });
+          if (!allowSuspended) return res.status(403).json({ error: 'TENANT_SUSPENDED' });
         }
       }
     }
@@ -102,4 +105,16 @@ export async function requireAuth(req, res, next) {
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+export async function requireAuth(req, res, next) {
+  return authenticate(req, res, next, { allowSuspended: false });
+}
+
+// Same auth/user checks as requireAuth, but never blocks on tenant status —
+// for the handful of routes a suspended tenant must still be able to reach
+// (checking their own status, paying the license fee) so the mobile app's
+// license gate has something to poll instead of 403-ing itself.
+export async function requireAuthAllowSuspended(req, res, next) {
+  return authenticate(req, res, next, { allowSuspended: true });
 }

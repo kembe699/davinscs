@@ -5,7 +5,7 @@ import pool from '../db.js';
 
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
-import { clearTenantCache, requireAuth } from '../middleware/auth.js';
+import { clearTenantCache, requireAuthAllowSuspended } from '../middleware/auth.js';
 import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
@@ -1025,13 +1025,15 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
 });
 
 // Mobile app — subscribe and pay immediately, authenticated with the same
-// tenant-staff JWT the app already uses for everything else (requireAuth),
-// not the separate customer-portal token the web billing dashboard uses.
-// Same PesaPal submission + saas_billing bookkeeping as /customer/pay-subscribe
+// tenant-staff JWT the app already uses for everything else, not the
+// separate customer-portal token the web billing dashboard uses. Same
+// PesaPal submission + saas_billing bookkeeping as /customer/pay-subscribe
 // above, just resolving the tenant from req.user.schema_name instead of a
 // customer_token, so an already-signed-in admin can pay without a second
-// login.
-router.post('/staff/pay-subscribe', requireAuth, async (req, res) => {
+// login. Uses the allow-suspended auth variant deliberately — paying to
+// lift a suspension is the one thing a suspended tenant must still be able
+// to do.
+router.post('/staff/pay-subscribe', requireAuthAllowSuspended, async (req, res) => {
   const { plan_id, billing_period } = req.body;
   if (!plan_id) return res.status(400).json({ error: 'plan_id is required' });
   const schemaName = req.user.schema_name;
