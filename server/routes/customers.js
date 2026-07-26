@@ -162,6 +162,13 @@ router.post("/:id/settle", requireAuth, async (req, res) => {
         `UPDATE credit_sales SET paid_amount = $1, balance = $2, status = $3 WHERE id = $4`,
         [newPaidAmount, newBalance, status, sale.id]
       );
+      // The original pos_sales row was written with payment_status='pending'
+      // at sale time (see POST /api/pos/sales) — without this, the sale
+      // itself (and anywhere it's shown, e.g. Sales History) would look
+      // unpaid forever even once the customer had actually settled up.
+      if (status === "paid") {
+        await client.query(`UPDATE pos_sales SET payment_status = 'paid' WHERE id = $1`, [sale.sale_id]);
+      }
       const { rows: paymentRows } = await client.query(
         `INSERT INTO customer_payments (credit_sale_id, customer_id, amount, payment_type_id, notes)
          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
@@ -177,6 +184,27 @@ router.post("/:id/settle", requireAuth, async (req, res) => {
         `UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2`,
         [totalApplied, customerId]
       );
+
+      // If this was actually collected as cash, it needs to land in the
+      // current cash-drawer session's movements — otherwise real cash taken
+      // in for a settlement never counts toward "expected cash", and the
+      // drawer looks like it has an unexplained overage at close.
+      if (payment_type_id) {
+        const { rows: ptRows } = await client.query("SELECT code FROM payment_types WHERE id = $1", [payment_type_id]);
+        if (ptRows[0]?.code === "cash") {
+          const { rows: sessionRows } = await client.query(
+            "SELECT id FROM cash_drawer_sessions WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC LIMIT 1",
+            [req.user.id]
+          );
+          if (sessionRows[0]) {
+            await client.query(
+              `INSERT INTO cash_movements (session_id, user_id, type, amount, reason)
+               VALUES ($1, $2, 'in', $3, $4)`,
+              [sessionRows[0].id, req.user.id, totalApplied, `Credit settlement — ${cRows[0].name}`]
+            );
+          }
+        }
+      }
     }
 
     await client.query("COMMIT");
