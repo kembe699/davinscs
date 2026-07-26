@@ -24,6 +24,44 @@ router.get("/current", requireAuth, async (req, res) => {
   }
 });
 
+// Read-only preview of expected cash for the current open session — same
+// calculation POST /close uses, so a cashier can see what they should be
+// counting to *before* they commit to a closing amount, not just after.
+router.get("/expected", requireAuth, async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const sessionResult = await pool.query(
+      "SELECT * FROM cash_drawer_sessions WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC LIMIT 1",
+      [user_id]
+    );
+    const session = sessionResult.rows[0];
+    if (!session) return res.status(400).json({ error: "No open cash drawer session found" });
+
+    const salesResult = await pool.query(
+      `SELECT COALESCE(SUM(total_amount), 0) as total_sales
+       FROM pos_sales
+       WHERE session_id = $1 AND voided = false AND payment_type_id IN (
+         SELECT id FROM payment_types WHERE code = 'cash'
+       )`,
+      [session.id]
+    );
+    const movementsResult = await pool.query(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'in' THEN amount ELSE -amount END), 0) as net_movements
+       FROM cash_movements WHERE session_id = $1 AND reason NOT LIKE 'POS Sale %'`,
+      [session.id]
+    );
+
+    const expected_cash = session.opening_cash +
+                         parseInt(salesResult.rows[0].total_sales) +
+                         parseInt(movementsResult.rows[0].net_movements);
+
+    res.json({ opening_cash: session.opening_cash, expected_cash });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Open drawer
 router.post("/open", requireAuth, async (req, res) => {
   const { opening_cash } = req.body;
@@ -103,9 +141,15 @@ router.post("/close", requireAuth, async (req, res) => {
       [session.id]
     );
     
+    // Cash sales auto-record a matching 'in' cash_movements row (see
+    // POST /api/pos/sales) so cash-in/cash-out history shows the full
+    // picture — but that means those rows must NOT be added again here,
+    // on top of salesResult above, or every cash sale's total gets counted
+    // twice toward expected cash. Only genuine manual cash-in/cash-out
+    // adjustments belong in this sum.
     const movementsResult = await client.query(
       `SELECT COALESCE(SUM(CASE WHEN type = 'in' THEN amount ELSE -amount END), 0) as net_movements
-       FROM cash_movements WHERE session_id = $1`,
+       FROM cash_movements WHERE session_id = $1 AND reason NOT LIKE 'POS Sale %'`,
       [session.id]
     );
     
