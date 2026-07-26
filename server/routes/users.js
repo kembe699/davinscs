@@ -1,5 +1,6 @@
 import express from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
@@ -23,10 +24,15 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.post("/", requireAuth, async (req, res) => {
   const { email, password, name, pin, role_id } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
-  if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  if (!email) return res.status(400).json({ error: "Email is required" });
+  if (!password && !pin) return res.status(400).json({ error: "A password or a PIN is required" });
+  if (password && password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
   try {
-    const hash = await bcrypt.hash(password, 10);
+    // Cashiers sign in with their PIN, not a password — when only a PIN is
+    // given, generate a random password server-side so the NOT NULL
+    // password_hash column is still satisfied without asking the admin to
+    // invent a password nobody will ever type.
+    const hash = await bcrypt.hash(password || crypto.randomBytes(24).toString("hex"), 10);
     // The legacy `role` text column ('admin'/'cashier') still gates a few things
     // directly (void/delete sale, seeing all sales vs just your own — see pos.js)
     // and whether the FlippedPOS admin mobile app lets this account sign in at
