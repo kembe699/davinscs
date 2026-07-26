@@ -88,11 +88,19 @@ app.use(cors({
   credentials: true
 }));
 
+// 500 requests / 15 min per IP was tripping under completely normal use:
+// the POS terminal alone polls 6 endpoints every 10s while open (see
+// POSMain.tsx's useEffect interval) — ~540 requests in 15 minutes from one
+// idle tab, before counting any actual checkouts, plus every device behind
+// the same office/NAT IP shares this bucket. Raised well above what the
+// app's own background polling generates, so it's back to guarding against
+// actual abuse instead of penalizing normal usage.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs
+  max: 3000, // ~200/min per IP — several POS terminals' worth of headroom
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: "Too many requests — please wait a moment and try again." },
 });
 app.use("/api/", limiter);
 
