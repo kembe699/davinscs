@@ -5,7 +5,7 @@ import pool from '../db.js';
 
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
-import { clearTenantCache } from '../middleware/auth.js';
+import { clearTenantCache, requireAuth } from '../middleware/auth.js';
 import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
@@ -1024,6 +1024,91 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
   }
 });
 
+// Mobile app — subscribe and pay immediately, authenticated with the same
+// tenant-staff JWT the app already uses for everything else (requireAuth),
+// not the separate customer-portal token the web billing dashboard uses.
+// Same PesaPal submission + saas_billing bookkeeping as /customer/pay-subscribe
+// above, just resolving the tenant from req.user.schema_name instead of a
+// customer_token, so an already-signed-in admin can pay without a second
+// login.
+router.post('/staff/pay-subscribe', requireAuth, async (req, res) => {
+  const { plan_id, billing_period } = req.body;
+  if (!plan_id) return res.status(400).json({ error: 'plan_id is required' });
+  const schemaName = req.user.schema_name;
+  if (!schemaName) return res.status(400).json({ error: 'No tenant context on this account' });
+
+  try {
+    const tenantRes = await pool.query('SELECT id, business_name FROM public.tenants WHERE schema_name = $1', [schemaName]);
+    if (!tenantRes.rows.length) return res.status(404).json({ error: 'Tenant not found' });
+    const tenantId = tenantRes.rows[0].id;
+    const businessName = tenantRes.rows[0].business_name || 'Customer';
+
+    const planRes = await pool.query(`SELECT * FROM public.pricing_plans WHERE id = $1`, [plan_id]);
+    if (!planRes.rows.length) return res.status(404).json({ error: 'Plan not found' });
+    const plan = planRes.rows[0];
+    const period = billing_period || plan.billing_period || 'monthly';
+
+    const dupCheck = await pool.query(
+      `SELECT id FROM public.saas_billing
+       WHERE tenant_id=$1 AND plan_name=$2 AND billing_period=$3 AND status='pending'`,
+      [tenantId, plan.name, period]
+    );
+    if (dupCheck.rows.length) {
+      return res.status(409).json({ error: 'You already have a pending payment for this plan — check Billing to complete it.' });
+    }
+
+    let invoiceNumber;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = 'INV-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const exists = await pool.query('SELECT 1 FROM public.saas_billing WHERE invoice_number = $1', [candidate]);
+      if (!exists.rows.length) { invoiceNumber = candidate; break; }
+    }
+    if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
+
+    let priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
+    if (period === 'quarterly') {
+      priceNum = priceNum * 3;
+    } else if (period === 'annual') {
+      priceNum = priceNum * 12 * 0.95;
+    }
+
+    const inv = await pool.query(
+      `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [invoiceNumber, tenantId, plan.name, priceNum, 'USD', `Subscription request via mobile app`, period]
+    );
+
+    const ugxRate = parseFloat(process.env.UGX_RATE || '3700');
+    const amountUgx = priceNum * ugxRate;
+
+    const orderData = await submitOrder({
+      id: invoiceNumber,
+      amount: amountUgx,
+      currency: 'UGX',
+      description: `Subscription for ${plan.name} (${period})`,
+      callback_url: `${process.env.FRONTEND_URL}/account/payment-result`,
+      billing_address: {
+        email_address: req.user.email,
+        phone_number: '',
+        first_name: businessName,
+        last_name: ''
+      }
+    });
+
+    await pool.query(
+      `UPDATE public.saas_billing SET pesapal_tracking_id=$1, pesapal_merchant_ref=$2 WHERE id=$3`,
+      [orderData.order_tracking_id, orderData.merchant_reference || invoiceNumber, inv.rows[0].id]
+    );
+
+    sendInvoiceCreatedEmail(req.user.email, invoiceNumber, plan.name, priceNum).catch(console.error);
+
+    res.json({ redirect_url: orderData.redirect_url, order_tracking_id: orderData.order_tracking_id });
+  } catch (err) {
+    console.error('Staff pay-subscribe error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
 // PesaPal Callback Route
 router.get('/pesapal/callback', async (req, res) => {
   // Can be called by frontend directly or by PesaPal
@@ -1038,7 +1123,14 @@ router.get('/pesapal/callback', async (req, res) => {
     if (!invRes.rows.length) return res.status(404).json({ error: 'Invoice not found' });
     
     const invoice = invRes.rows[0];
-    
+
+    // The IPN webhook can race ahead of this call and already mark the
+    // invoice paid before the client polls — treat that as completed too,
+    // rather than falling through to "pending" and leaving a caller stuck.
+    if (invoice.status === 'paid') {
+      return res.json({ status: 'completed' });
+    }
+
     if (statusData.status_code === 1 && invoice.status === 'pending') {
       // Completed
       await activateSubscription(invoice.id);
