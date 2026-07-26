@@ -249,7 +249,7 @@ router.get("/me", requireAuth, async (req, res) => {
     
     if (schemaName !== 'public') {
       const { rows } = await pool.query(
-        "SELECT status, trial_ends_at, subscription_end FROM public.tenants WHERE schema_name = $1",
+        "SELECT status, trial_ends_at, subscription_end, tenant_slug FROM public.tenants WHERE schema_name = $1",
         [schemaName]
       );
       tenantInfo = rows[0] || null;
