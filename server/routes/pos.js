@@ -354,9 +354,16 @@ router.post("/sales", requireAuth, async (req, res) => {
     
     await client.query("COMMIT");
     
-    // Fetch complete sale with items
+    // Fetch complete sale with items — joins users/customers/payment_types so
+    // the response carries the cashier's actual name (GET /sales/:id and
+    // GET /sales already do this; this insert-time response was missing it,
+    // which is why a just-printed receipt fell back to "ADMIN" for
+    // "Served By" instead of showing who actually rang it up).
     const completeSale = await pool.query(
-      `SELECT s.*, 
+      `SELECT s.*,
+              COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email,
+              u.email as user_email, u.name as user_name,
+              pt.name as payment_type_name,
               json_agg(json_build_object(
                 'id', si.id,
                 'product_id', si.product_id,
@@ -368,9 +375,12 @@ router.post("/sales", requireAuth, async (req, res) => {
                 'subtotal', si.subtotal
               )) as items
        FROM pos_sales s
+       LEFT JOIN customers c ON s.customer_id = c.id
+       LEFT JOIN users u ON s.user_id = u.id
+       LEFT JOIN payment_types pt ON s.payment_type_id = pt.id
        LEFT JOIN pos_sale_items si ON s.id = si.sale_id
        WHERE s.id = $1
-       GROUP BY s.id`,
+       GROUP BY s.id, c.id, u.id, pt.id`,
       [sale.id]
     );
     
@@ -564,15 +574,22 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     await client.query("COMMIT");
 
     const completeSale = await pool.query(
-      `SELECT s.*, json_agg(json_build_object(
+      `SELECT s.*,
+              COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email,
+              u.email as user_email, u.name as user_name,
+              pt.name as payment_type_name,
+              json_agg(json_build_object(
           'id', si.id, 'product_id', si.product_id, 'product_name', si.product_name,
           'quantity', si.quantity, 'unit_price', si.unit_price,
           'discount_amount', si.discount_amount, 'tax_amount', si.tax_amount, 'subtotal', si.subtotal
         ) ORDER BY si.id) as items
        FROM pos_sales s
+       LEFT JOIN customers c ON s.customer_id = c.id
+       LEFT JOIN users u ON s.user_id = u.id
+       LEFT JOIN payment_types pt ON s.payment_type_id = pt.id
        LEFT JOIN pos_sale_items si ON s.id = si.sale_id
        WHERE s.id = $1
-       GROUP BY s.id`,
+       GROUP BY s.id, c.id, u.id, pt.id`,
       [id]
     );
 
@@ -669,7 +686,7 @@ router.put("/sales/:id/cancel-hold", requireAuth, async (req, res) => {
 
 // Get all sales
 router.get("/sales", requireAuth, async (req, res) => {
-  const { start_date, end_date, customer_id, payment_status, sale_type, include_voided } = req.query;
+  const { start_date, end_date, customer_id, payment_status, sale_type, include_voided, session_id } = req.query;
   const isAdmin = req.user.role === 'admin';
   // Only admins may opt in to seeing voided sales (e.g. to permanently delete them) —
   // everyone else, and the default view, still only sees active sales.
@@ -723,7 +740,15 @@ router.get("/sales", requireAuth, async (req, res) => {
       params.push(sale_type);
       paramCount++;
     }
-    
+
+    // Scopes the list to one cash-drawer shift — a fresh shift should start
+    // from zero receipts, not show whatever the previous shift rang up.
+    if (session_id) {
+      query += ` AND s.session_id = $${paramCount}`;
+      params.push(session_id);
+      paramCount++;
+    }
+
     query += " ORDER BY s.created_at DESC";
     
     const { rows } = await pool.query(query, params);

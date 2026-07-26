@@ -33,6 +33,13 @@ export default function SalesHistory() {
   const today = toLocalDateStr(new Date());
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  // A fresh shift should start from zero receipts, not show whatever the
+  // previous shift (or a previous cashier on the same login) rang up —
+  // default to just the currently-open cash-drawer session rather than a
+  // calendar-day range, which doesn't reset when a shift closes and a new
+  // one opens later the same day.
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [scopeToShift, setScopeToShift] = useState(true);
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [companyData, setCompanyData] = useState<any>(null);
@@ -59,7 +66,7 @@ export default function SalesHistory() {
     }, 10000);
 
     return () => clearInterval(intervalId);
-  }, [showVoided]);
+  }, [showVoided, scopeToShift]);
 
   // Re-sync refund item state whenever saleItems reloads (e.g. after a refund)
   useEffect(() => {
@@ -113,8 +120,23 @@ export default function SalesHistory() {
 
   const loadData = async () => {
     try {
+      let sessionId = currentSessionId;
+      if (scopeToShift && sessionId == null) {
+        try {
+          const session = await api.cashDrawer.getCurrent();
+          sessionId = session?.id ?? null;
+          setCurrentSessionId(sessionId);
+        } catch {
+          // No open session (or couldn't check) — fall back to showing
+          // nothing scoped rather than guessing at a date range.
+        }
+      }
+
       const [salesData, paymentTypesData] = await Promise.all([
-        api.pos.getSales(isAdmin && showVoided ? { include_voided: true } : undefined),
+        api.pos.getSales({
+          ...(isAdmin && showVoided ? { include_voided: true } : {}),
+          ...(scopeToShift && sessionId != null ? { session_id: sessionId } : {}),
+        }),
         api.paymentTypes.active(),
       ]);
       setSales(salesData);
@@ -249,9 +271,11 @@ export default function SalesHistory() {
   };
 
   const filteredSales = sales.filter(sale => {
-    const saleDate = toLocalDateStr(new Date(sale.created_at));
-    if (startDate && saleDate < startDate) return false;
-    if (endDate && saleDate > endDate) return false;
+    if (!scopeToShift) {
+      const saleDate = toLocalDateStr(new Date(sale.created_at));
+      if (startDate && saleDate < startDate) return false;
+      if (endDate && saleDate > endDate) return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchesNum = sale.sale_number?.toLowerCase().includes(q);
@@ -281,16 +305,30 @@ export default function SalesHistory() {
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setScopeToShift(true)}
+            className={`px-3 py-2 border text-sm ${scopeToShift ? "bg-[#1565C0] border-[#1565C0] text-white" : "bg-[#F8F9FA] dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"}`}
+          >
+            This shift
+          </button>
+          <button
+            onClick={() => setScopeToShift(false)}
+            className={`px-3 py-2 border text-sm ${!scopeToShift ? "bg-[#1565C0] border-[#1565C0] text-white" : "bg-[#F8F9FA] dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"}`}
+          >
+            By date
+          </button>
           <span className="text-gray-500 dark:text-gray-400 text-sm">From</span>
           <input
             type="date"
+            disabled={scopeToShift}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm"
+            className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm disabled:opacity-50"
           />
           <span className="text-gray-500 dark:text-gray-400 text-sm">To</span>
           <input
             type="date"
+            disabled={scopeToShift}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100 text-sm"

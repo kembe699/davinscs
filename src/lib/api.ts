@@ -874,6 +874,7 @@ export const api = {
       payment_status?: string;
       sale_type?: string;
       include_voided?: boolean;
+      session_id?: number;
     }) => {
       const qs = new URLSearchParams(params as any).toString();
       return request<POSSale[]>(`/api/pos/sales${qs ? `?${qs}` : ""}`);
