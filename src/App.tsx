@@ -26,6 +26,7 @@ import SalesHistory from "./pages/pos/SalesHistory.tsx";
 import CashManagement from "./pages/pos/CashManagement.tsx";
 import EndOfDay from "./pages/pos/EndOfDay.tsx";
 import ReceiptVerify from "./pages/pos/ReceiptVerify.tsx";
+import PublicMenu from "./pages/menu/PublicMenu.tsx";
 import PaymentTypes from "./pages/admin/PaymentTypes.tsx";
 import TaxRates from "./pages/admin/TaxRates.tsx";
 import CurrenciesEnhanced from "./pages/admin/CurrenciesEnhanced.tsx";
@@ -119,6 +120,7 @@ const App = () => (
                 <Route path="pos/cash-management" element={<ProtectedRoute><CashManagement /></ProtectedRoute>} />
                 <Route path="pos/end-of-day" element={<ProtectedRoute><EndOfDay /></ProtectedRoute>} />
                 <Route path="verify/:saleNumber" element={<ReceiptVerify />} />
+                <Route path="menu" element={<PublicMenu />} />
               </Route>
 
               {/* Admin CMS (Not wrapped in ThemeWrapper so it doesn't get .dark) */}

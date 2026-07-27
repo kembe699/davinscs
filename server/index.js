@@ -42,6 +42,7 @@ import auditLogsRoutes from "./routes/audit-logs.js";
 import customersRoutes from "./routes/customers.js";
 import quotationsRoutes from "./routes/quotations.js";
 import setupRoutes from "./routes/setup.js";
+import menuRoutes from "./routes/menu.js";
 import saasRoutes, { initSaasSchedulers } from "./routes/saas.js";
 import { startDailyDigestJob } from "./jobs/dailyDigest.js";
 
@@ -152,6 +153,7 @@ app.use("/api/audit-logs", auditLogsRoutes);
 app.use("/api/customers", customersRoutes);
 app.use("/api/quotations", quotationsRoutes);
 app.use("/api/setup", setupRoutes);
+app.use("/api/menu", menuRoutes);
 app.use("/api/saas", saasRoutes);
 
 // Serve React build in production
