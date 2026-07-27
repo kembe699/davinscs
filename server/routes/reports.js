@@ -14,13 +14,13 @@ router.get("/sales/daily", requireAuth, async (req, res) => {
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         DATE(created_at) as date,
-        COUNT(*) as total_sales,
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as total_sales,
         COALESCE(SUM(total_amount), 0) as total_revenue,
         COALESCE(SUM(tax_amount), 0) as total_tax,
         COALESCE(SUM(discount_amount), 0) as total_discounts,
-        COALESCE(AVG(total_amount), 0) as average_sale
+        COALESCE(AVG(total_amount) FILTER (WHERE sale_type != 'refund'), 0) as average_sale
        FROM pos_sales
        WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false AND status != 'held'
        GROUP BY DATE(created_at)
@@ -43,18 +43,18 @@ router.get("/sales/by-user", requireAuth, async (req, res) => {
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         u.id as user_id,
         u.email as user_email,
-        COUNT(s.id) as total_sales,
+        COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') as total_sales,
         COALESCE(SUM(s.total_amount), 0) as total_revenue,
         COALESCE(SUM(s.tax_amount), 0) as total_tax,
-        COALESCE(AVG(s.total_amount), 0) as average_sale
+        COALESCE(AVG(s.total_amount) FILTER (WHERE s.sale_type != 'refund'), 0) as average_sale
        FROM users u
        LEFT JOIN pos_sales s ON u.id = s.user_id AND s.voided = false AND s.status != 'held'
          AND DATE(s.created_at) BETWEEN $1 AND $2
        GROUP BY u.id, u.email
-       HAVING COUNT(s.id) > 0
+       HAVING COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') > 0
        ORDER BY total_revenue DESC`,
       [startDate, endDate]
     );
@@ -74,12 +74,12 @@ router.get("/sales/by-customer", requireAuth, async (req, res) => {
     const endDate = end_date || new Date().toISOString().split('T')[0];
 
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         COALESCE(customer_name, 'Walk-in Customer') as customer_name,
         customer_id,
-        COUNT(*) as total_purchases,
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as total_purchases,
         COALESCE(SUM(total_amount), 0) as total_spent,
-        COALESCE(AVG(total_amount), 0) as average_purchase,
+        COALESCE(AVG(total_amount) FILTER (WHERE sale_type != 'refund'), 0) as average_purchase,
         MAX(created_at) as last_purchase
        FROM pos_sales
        WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false AND status != 'held'
@@ -109,8 +109,8 @@ router.get("/sales/by-product", requireAuth, async (req, res) => {
         SUM(si.quantity) as total_quantity,
         COALESCE(SUM(si.subtotal), 0) as total_revenue,
         COALESCE(SUM(si.tax_amount), 0) as total_tax,
-        COUNT(DISTINCT si.sale_id) as times_sold,
-        COALESCE(AVG(si.unit_price), 0) as average_price
+        COUNT(DISTINCT si.sale_id) FILTER (WHERE s.sale_type != 'refund') as times_sold,
+        COALESCE(AVG(si.unit_price) FILTER (WHERE s.sale_type != 'refund'), 0) as average_price
        FROM pos_sale_items si
        JOIN pos_sales s ON si.sale_id = s.id
        WHERE DATE(s.created_at) BETWEEN $1 AND $2 AND s.voided = false AND s.status != 'held'
@@ -150,11 +150,11 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
         COALESCE(pl.name, 'Cash (Standard)') as scheme_name,
         COALESCE(c.code, '') as currency_code,
         COALESCE(c.symbol, '') as currency_symbol,
-        COUNT(s.id) as total_sales,
+        COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') as total_sales,
         COALESCE(SUM(s.total_amount), 0) as total_revenue,
         COALESCE(SUM(s.tax_amount), 0) as total_tax,
         COALESCE(SUM(s.discount_amount), 0) as total_discounts,
-        COALESCE(AVG(s.total_amount), 0) as average_sale
+        COALESCE(AVG(s.total_amount) FILTER (WHERE s.sale_type != 'refund'), 0) as average_sale
        FROM pos_sales s
        LEFT JOIN price_lists pl ON s.price_list_id = pl.id
        LEFT JOIN currencies c ON pl.currency_id = c.id
@@ -553,7 +553,9 @@ router.get("/invoices/overview", requireAuth, async (req, res) => {
          COUNT(*)::int                              AS total_invoices,
          COALESCE(SUM(total_amount), 0)::bigint     AS total_billed,
          COALESCE(SUM(paid_amount), 0)::bigint      AS total_collected,
-         COALESCE(SUM(total_amount - paid_amount), 0)::bigint AS total_outstanding,
+         -- A voided invoice was written off, not just uncollected — it
+         -- shouldn't still count as money the business expects to collect.
+         COALESCE(SUM(total_amount - paid_amount) FILTER (WHERE status != 'voided'), 0)::bigint AS total_outstanding,
          COUNT(*) FILTER (WHERE status = 'paid')::int    AS paid_count,
          COUNT(*) FILTER (WHERE status = 'unpaid')::int  AS unpaid_count,
          COUNT(*) FILTER (WHERE status = 'partial')::int AS partial_count,

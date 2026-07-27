@@ -10,10 +10,10 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
     const year = req.query.year || new Date().getFullYear();
     
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         TO_CHAR(created_at, 'Mon') as month,
         EXTRACT(MONTH FROM created_at) as month_num,
-        COUNT(*) as count,
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as count,
         COALESCE(SUM(total_amount), 0) as sales
        FROM pos_sales
        WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'
@@ -49,7 +49,7 @@ router.get("/top-products", requireAuth, async (req, res) => {
       `SELECT 
         p.name,
         p.category,
-        COUNT(psi.id) as quantity,
+        COALESCE(SUM(psi.quantity), 0) as quantity,
         COALESCE(SUM(psi.subtotal), 0) as total
        FROM pos_sale_items psi
        JOIN products p ON psi.product_id = p.id

@@ -10,20 +10,25 @@ router.get("/daily-sales", requireAuth, async (req, res) => {
   const targetDate = date || new Date().toISOString().split('T')[0];
   
   try {
+    // COUNT/AVG are FILTERed to exclude refund rows (sale_type='refund') —
+    // a refund is money going back OUT, not another transaction, so it
+    // shouldn't inflate "number of sales" or drag down the average sale
+    // value. SUMs deliberately stay unfiltered: a refund's negative
+    // total_amount is what nets it back out of revenue correctly.
     const { rows } = await pool.query(
-      `SELECT 
-        COUNT(*) as total_sales,
+      `SELECT
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as total_sales,
         COALESCE(SUM(total_amount), 0) as total_revenue,
         COALESCE(SUM(tax_amount), 0) as total_tax,
         COALESCE(SUM(discount_amount), 0) as total_discounts,
-        COALESCE(AVG(total_amount), 0) as average_sale
+        COALESCE(AVG(total_amount) FILTER (WHERE sale_type != 'refund'), 0) as average_sale
        FROM pos_sales
        WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'`,
       [targetDate]
     );
 
     const paymentBreakdown = await pool.query(
-      `SELECT pt.name, COUNT(*) as count, COALESCE(SUM(s.total_amount), 0) as total
+      `SELECT pt.name, COUNT(*) FILTER (WHERE s.sale_type != 'refund') as count, COALESCE(SUM(s.total_amount), 0) as total
        FROM pos_sales s
        JOIN payment_types pt ON s.payment_type_id = pt.id
        WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'
@@ -49,9 +54,9 @@ router.get("/hourly-sales", requireAuth, async (req, res) => {
   
   try {
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         EXTRACT(HOUR FROM created_at) as hour,
-        COUNT(*) as sales_count,
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as sales_count,
         COALESCE(SUM(total_amount), 0) as total_amount
        FROM pos_sales
        WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'
@@ -79,7 +84,7 @@ router.get("/top-products", requireAuth, async (req, res) => {
         si.product_name,
         SUM(si.quantity) as total_quantity,
         COALESCE(SUM(si.subtotal), 0) as total_revenue,
-        COUNT(DISTINCT si.sale_id) as times_sold
+        COUNT(DISTINCT si.sale_id) FILTER (WHERE s.sale_type != 'refund') as times_sold
       FROM pos_sale_items si
       JOIN pos_sales s ON si.sale_id = s.id
       WHERE s.voided = false AND s.status != 'held'
@@ -123,9 +128,9 @@ router.get("/top-customers", requireAuth, async (req, res) => {
         c.id,
         c.name,
         c.email,
-        COUNT(s.id) as total_purchases,
+        COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') as total_purchases,
         COALESCE(SUM(s.total_amount), 0) as total_spent,
-        COALESCE(AVG(s.total_amount), 0) as average_purchase
+        COALESCE(AVG(s.total_amount) FILTER (WHERE s.sale_type != 'refund'), 0) as average_purchase
       FROM customers c
       JOIN pos_sales s ON c.id = s.customer_id
       WHERE s.voided = false AND s.status != 'held'
@@ -167,7 +172,7 @@ router.get("/payment-methods", requireAuth, async (req, res) => {
       SELECT 
         pt.name,
         pt.code,
-        COUNT(s.id) as transaction_count,
+        COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') as transaction_count,
         COALESCE(SUM(s.total_amount), 0) as total_amount
       FROM payment_types pt
       LEFT JOIN pos_sales s ON pt.id = s.payment_type_id AND s.voided = false AND s.status != 'held'
@@ -206,9 +211,9 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
   
   try {
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
         EXTRACT(MONTH FROM created_at) as month,
-        COUNT(*) as sales_count,
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as sales_count,
         COALESCE(SUM(total_amount), 0) as total_amount
        FROM pos_sales
        WHERE EXTRACT(YEAR FROM created_at) = $1 AND voided = false AND status != 'held'
@@ -238,10 +243,12 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
       params.push(session_id);
     }
     
-    // Sales summary
+    // Sales summary — COUNT excludes refund rows (a refund isn't another
+    // transaction, it's money going back out); SUMs stay unfiltered since a
+    // refund's negative total_amount is what nets it back out of revenue.
     const salesSummary = await pool.query(
-      `SELECT 
-        COUNT(*) as total_transactions,
+      `SELECT
+        COUNT(*) FILTER (WHERE sale_type != 'refund') as total_transactions,
         COALESCE(SUM(total_amount), 0) as total_sales,
         COALESCE(SUM(tax_amount), 0) as total_tax,
         COALESCE(SUM(discount_amount), 0) as total_discounts,
@@ -250,10 +257,10 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
        WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'${sessionFilter}`,
       params
     );
-    
+
     // Payment breakdown
     const paymentBreakdown = await pool.query(
-      `SELECT pt.name, COUNT(*) as count, COALESCE(SUM(s.total_amount), 0) as total
+      `SELECT pt.name, COUNT(*) FILTER (WHERE s.sale_type != 'refund') as count, COALESCE(SUM(s.total_amount), 0) as total
        FROM pos_sales s
        JOIN payment_types pt ON s.payment_type_id = pt.id
        WHERE DATE(s.created_at) = $1 AND s.voided = false AND s.status != 'held'${sessionFilter}
@@ -296,7 +303,7 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
       `SELECT u.id as user_id,
               u.email as cashier_name,
               u.email,
-              COUNT(s.id) as total_transactions,
+              COUNT(s.id) FILTER (WHERE s.sale_type != 'refund') as total_transactions,
               COALESCE(SUM(s.total_amount), 0) as total_sales,
               COALESCE(SUM(s.discount_amount), 0) as total_discounts
        FROM pos_sales s

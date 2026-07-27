@@ -852,13 +852,21 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
       }
     }
     
-    // If credit sale, update customer balance
+    // If credit sale, reverse the customer's balance — but only by what's
+    // still actually outstanding on it. Subtracting the full total_amount
+    // here (as this used to) double-counts against any amount the customer
+    // had already paid down via POST /api/customers/:id/settle, since that
+    // payment already decremented customers.balance of its own accord.
     if (sale.sale_type === 'credit' && sale.customer_id) {
-      await client.query(
-        "UPDATE customers SET balance = balance - $1 WHERE id = $2",
-        [sale.total_amount, sale.customer_id]
-      );
-      
+      const { rows: csRows } = await client.query("SELECT balance FROM credit_sales WHERE sale_id = $1", [id]);
+      const stillOwed = csRows[0] ? Number(csRows[0].balance) : Number(sale.total_amount);
+      if (stillOwed > 0) {
+        await client.query(
+          "UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2",
+          [stillOwed, sale.customer_id]
+        );
+      }
+
       await client.query(
         "UPDATE credit_sales SET status = 'voided' WHERE sale_id = $1",
         [id]
@@ -940,7 +948,14 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
         }
       }
       if (sale.sale_type === 'credit' && sale.customer_id) {
-        await client.query("UPDATE customers SET balance = balance - $1 WHERE id = $2", [sale.total_amount, sale.customer_id]);
+        // Same fix as /void — only reverse what's still actually owed, not
+        // the full original total (which would double-count anything
+        // already paid down via POST /api/customers/:id/settle).
+        const { rows: csRows } = await client.query("SELECT balance FROM credit_sales WHERE sale_id = $1", [id]);
+        const stillOwed = csRows[0] ? Number(csRows[0].balance) : Number(sale.total_amount);
+        if (stillOwed > 0) {
+          await client.query("UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2", [stillOwed, sale.customer_id]);
+        }
       }
     }
 
@@ -1069,6 +1084,51 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     const refund_total = refund_subtotal + refund_tax;
     const refund_number = `REF-${Date.now().toString().slice(-6)}-${sale.sale_number}`;
 
+    // If the original sale was on credit, returning goods should reduce what
+    // the customer still owes for it — previously nothing here touched
+    // credit_sales/customers.balance at all, so a customer could return an
+    // item bought on credit and still be charged for it later. Only reduce
+    // what's still *outstanding*: any portion already paid off via
+    // POST /api/customers/:id/settle stays paid (this doesn't refund cash
+    // back to the customer for that portion — that's a separate, unhandled
+    // case, flagged rather than guessed at here).
+    if (sale.sale_type === 'credit' && sale.customer_id) {
+      const { rows: csRows } = await client.query("SELECT * FROM credit_sales WHERE sale_id = $1 FOR UPDATE", [id]);
+      const cs = csRows[0];
+      if (cs) {
+        const oldBalance = Number(cs.balance);
+        const balanceReduction = Math.min(refund_total, oldBalance);
+        const newTotal = Number(cs.total_amount) - refund_total;
+        const newBalance = oldBalance - balanceReduction;
+        const newStatus = newBalance <= 0 ? 'paid' : 'pending';
+        await client.query(
+          `UPDATE credit_sales SET total_amount = $1, balance = $2, status = $3 WHERE id = $4`,
+          [newTotal, newBalance, newStatus, cs.id]
+        );
+        if (balanceReduction > 0) {
+          await client.query("UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2", [balanceReduction, sale.customer_id]);
+        }
+        if (newStatus === 'paid') {
+          await client.query(`UPDATE pos_sales SET payment_status = 'paid' WHERE id = $1`, [id]);
+        }
+      }
+    }
+
+    // Which shift this refund counts against, for cash-drawer/report
+    // purposes: the CURRENT open session of whoever's processing it, not
+    // necessarily the shift the original sale happened in. Cash going back
+    // out today affects today's till, not a shift that's already closed —
+    // and this is also what the session-scoped sales-history/end-of-day
+    // reports use to decide which shift a row belongs to. Falls back to the
+    // original sale's session if the refunding user has no open shift right
+    // now (e.g. an admin processing it from the back office).
+    let refundSessionId = sale.session_id;
+    const { rows: openSessionRows } = await client.query(
+      "SELECT id FROM cash_drawer_sessions WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC LIMIT 1",
+      [user_id]
+    );
+    if (openSessionRows[0]) refundSessionId = openSessionRows[0].id;
+
     // Create refund sale record (negative amounts)
     // Carry over the original sale's currency and rate snapshot — never recalculate
     const refundSaleResult = await client.query(
@@ -1081,7 +1141,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'refunded','refund',$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
-        refund_number, sale.customer_id, sale.customer_name, user_id, sale.session_id,
+        refund_number, sale.customer_id, sale.customer_name, user_id, refundSessionId,
         -refund_subtotal, -refund_tax, 0, -refund_total,
         sale.payment_type_id,
         reason.trim(),

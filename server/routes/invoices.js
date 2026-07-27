@@ -159,23 +159,35 @@ router.post("/:id/payments", requireAuth, async (req, res) => {
     await client.query("BEGIN");
     const { amount, payment_method, notes } = req.body;
     const invoiceId = req.params.id;
+    const paidNow = parseFloat(amount);
+    if (!paidNow || paidNow <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "A positive amount is required" });
+    }
 
     const { rows: inv } = await client.query(
       "SELECT * FROM invoices WHERE id = $1 FOR UPDATE",
       [invoiceId]
     );
-    if (inv.length === 0) return res.status(404).json({ error: "Not found" });
+    if (inv.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Not found" });
+    }
 
     const invoice = inv[0];
+    if (invoice.status === 'voided') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "This invoice has been voided — reactivate it first before recording a payment" });
+    }
     const totalAmount = Number(invoice.total_amount);
-    const newPaid = Number(invoice.paid_amount) + parseFloat(amount);
+    const newPaid = Number(invoice.paid_amount) + paidNow;
     const balance = totalAmount - newPaid;
     const status = balance <= 0 ? "paid" : newPaid > 0 ? "partial" : "unpaid";
 
     await client.query(
       `INSERT INTO invoice_payments (invoice_id, amount, payment_method, notes, recorded_by)
        VALUES ($1,$2,$3,$4,$5)`,
-      [invoiceId, amount, payment_method || "Cash", notes || null, req.user.id]
+      [invoiceId, paidNow, payment_method || "Cash", notes || null, req.user.id]
     );
 
     const clampedPaid = Math.min(newPaid, totalAmount);
