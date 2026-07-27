@@ -123,14 +123,6 @@ export default function PublicMenu() {
   }
 
   async function sendOrder() {
-    if (!tableId) {
-      setSendError("Please choose your table.");
-      return;
-    }
-    if (cartLines.length === 0) {
-      setSendError("Your cart is empty.");
-      return;
-    }
     setSending(true);
     setSendError("");
     try {
@@ -233,9 +225,18 @@ export default function PublicMenu() {
             return (
               <div
                 key={product.id}
-                className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex flex-col"
+                onClick={() => !soldOut && addToCart(product)}
+                className={`relative rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex flex-col ${soldOut ? "" : "cursor-pointer active:scale-[0.98] transition-transform"}`}
                 style={inCart > 0 ? { borderColor: "#0EA894", borderWidth: 1.5 } : undefined}
               >
+                {inCart > 0 && (
+                  <span
+                    className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-extrabold shadow"
+                    style={{ background: BRAND_GRADIENT }}
+                  >
+                    {inCart}
+                  </span>
+                )}
                 <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
                   {product.image_url ? (
                     <img src={product.image_url} alt="" className="w-full h-full object-cover" />
@@ -250,33 +251,17 @@ export default function PublicMenu() {
                     <span className="font-bold text-sm text-gray-900">{formatCurrencySync(product.price, sym, false)}</span>
                     {soldOut ? (
                       <span className="text-[10px] font-bold text-red-500">Sold out</span>
-                    ) : inCart === 0 ? (
+                    ) : (
                       <button
-                        onClick={() => addToCart(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(product);
+                        }}
                         className="h-8 px-3 text-white text-xs font-bold"
                         style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
                       >
                         Add
                       </button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setQty(product, inCart - 1)}
-                          className="w-7 h-7 text-white font-bold"
-                          style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
-                        >
-                          −
-                        </button>
-                        <span className="text-sm font-bold text-gray-900 w-4 text-center">{inCart}</span>
-                        <button
-                          onClick={() => setQty(product, inCart + 1)}
-                          disabled={product.product_type !== "service" && inCart >= product.available_stock}
-                          className="w-7 h-7 text-white font-bold disabled:opacity-30"
-                          style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
-                        >
-                          +
-                        </button>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -373,11 +358,15 @@ export default function PublicMenu() {
 
             <button
               onClick={sendOrder}
-              disabled={sending}
-              className="w-full h-12 font-bold text-white disabled:opacity-50"
+              disabled={sending || !tableId || cartLines.length === 0}
+              className="w-full h-12 font-bold text-white disabled:opacity-40"
               style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
             >
-              {sending ? "Sending…" : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
+              {sending
+                ? "Sending…"
+                : !tableId
+                  ? "Choose a table to continue"
+                  : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
             </button>
           </div>
         </div>
