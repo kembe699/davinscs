@@ -70,6 +70,72 @@ function generateSaleNumber() {
   return `POS-${year}${month}${day}-${time}`;
 }
 
+// Posts a reversing journal entry for a sale that's being voided, deleted,
+// or (partially) refunded — without this, a cancelled sale stayed on the
+// books as real revenue/COGS forever, since the original posting (see
+// POST /sales and PUT /sales/:id/complete) never had a counterpart.
+//
+// With no `amounts` override, reverses the *exact* revenue/COGS amounts
+// originally posted for this sale (pulled from the transactions/
+// transaction_lines rows themselves, not recomputed from current cost
+// prices, which may have drifted since the sale) — used for a full
+// void/delete. Pass `amounts` for a partial reversal (a refund of some of
+// the sale's items).
+//
+// Same convention as the original posting code: never fails the caller's
+// own operation over an accounting-journal problem (missing chart of
+// accounts, etc.) — logs and returns instead.
+async function reverseSaleAccounting(client, sale, userId, amounts = null) {
+  try {
+    const acctRows = await client.query(
+      `SELECT id, code FROM accounts WHERE code IN ('1000','1100','1200','4000','5000') AND is_active = true`
+    );
+    const acct = {};
+    acctRows.rows.forEach(r => { acct[r.code] = r.id; });
+    const drAcct = sale.sale_type === 'credit' ? (acct['1100'] || acct['1000']) : (acct['1000'] || acct['1100']);
+    const today = new Date().toISOString().split('T')[0];
+
+    let revenueAmount, cogsAmount;
+    if (amounts) {
+      ({ revenueAmount = 0, cogsAmount = 0 } = amounts);
+    } else {
+      const { rows } = await client.query(
+        `SELECT tl.account_id, tl.debit, tl.credit
+         FROM transactions t
+         JOIN transaction_lines tl ON tl.transaction_id = t.id
+         WHERE t.reference = $1`,
+        [sale.sale_number]
+      );
+      revenueAmount = rows.filter(r => acct['4000'] && r.account_id === acct['4000']).reduce((s, r) => s + Number(r.credit), 0);
+      cogsAmount = rows.filter(r => acct['5000'] && r.account_id === acct['5000']).reduce((s, r) => s + Number(r.debit), 0);
+    }
+
+    if (revenueAmount > 0 && drAcct && acct['4000']) {
+      const { rows: tx1 } = await client.query(
+        `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+        [today, sale.sale_number, `Revenue reversal – ${sale.sale_number}`, userId]
+      );
+      const tid1 = tx1[0].id;
+      // Mirror image of the original entry: DR Revenue(4000), CR Cash/AR — undoes it exactly.
+      await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid1, acct['4000'], revenueAmount]);
+      await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid1, drAcct, revenueAmount]);
+    }
+
+    if (cogsAmount > 0 && acct['5000'] && acct['1200']) {
+      const { rows: tx2 } = await client.query(
+        `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
+        [today, sale.sale_number, `COGS reversal – ${sale.sale_number}`, userId]
+      );
+      const tid2 = tx2[0].id;
+      // Mirror image: DR Inventory(1200), CR COGS(5000) — goods coming back onto the books.
+      await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,$3,0)`, [tid2, acct['1200'], cogsAmount]);
+      await client.query(`INSERT INTO transaction_lines (transaction_id, account_id, debit, credit) VALUES ($1,$2,0,$3)`, [tid2, acct['5000'], cogsAmount]);
+    }
+  } catch (err) {
+    console.error('Accounting reversal error (operation still applied):', err.message);
+  }
+}
+
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
   const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id, table_id } = req.body;
@@ -872,7 +938,11 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
         [id]
       );
     }
-    
+
+    // Reverse the revenue/COGS this sale posted when it was rung up — a
+    // voided sale should never stay on the books as real income.
+    await reverseSaleAccounting(client, sale, user_id);
+
     // Mark sale as voided
     await client.query(
       "UPDATE pos_sales SET voided = true, voided_at = NOW(), voided_by = $1 WHERE id = $2",
@@ -957,6 +1027,11 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
           await client.query("UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2", [stillOwed, sale.customer_id]);
         }
       }
+      // Same as /void — this sale is being cancelled, so reverse the
+      // revenue/COGS it posted. transactions/transaction_lines aren't tied
+      // to pos_sales by foreign key, so this history survives the delete
+      // below intact.
+      await reverseSaleAccounting(client, sale, user_id);
     }
 
     // Remove any refund sales recorded against this one first
@@ -1029,11 +1104,12 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
 
     let refund_subtotal = 0;
     let refund_tax = 0;
+    let refund_cogs = 0;
     const refundLineItems = [];
 
     for (const refundItem of items) {
       const itemResult = await client.query(
-        `SELECT si.*, p.product_type 
+        `SELECT si.*, p.product_type, p.cost_price
          FROM pos_sale_items si
          JOIN products p ON si.product_id = p.id
          WHERE si.sale_id = $1 AND si.product_id = $2`,
@@ -1048,6 +1124,11 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
       const line_tax     = Math.round((item.tax_amount || 0) * ratio);
       refund_subtotal += line_subtotal;
       refund_tax      += line_tax;
+      // Cost basis of the returned units, so the refund can reverse
+      // exactly this much COGS back onto the books (goods really are
+      // coming back into inventory) — computed the same way the original
+      // sale computed it (current cost_price × quantity).
+      refund_cogs += Math.round((item.cost_price || 0) * refundItem.quantity);
 
       refundLineItems.push({
         product_id:   item.product_id,
@@ -1087,32 +1168,43 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     // If the original sale was on credit, returning goods should reduce what
     // the customer still owes for it — previously nothing here touched
     // credit_sales/customers.balance at all, so a customer could return an
-    // item bought on credit and still be charged for it later. Only reduce
-    // what's still *outstanding*: any portion already paid off via
-    // POST /api/customers/:id/settle stays paid (this doesn't refund cash
-    // back to the customer for that portion — that's a separate, unhandled
-    // case, flagged rather than guessed at here).
+    // item bought on credit and still be charged for it later.
     if (sale.sale_type === 'credit' && sale.customer_id) {
       const { rows: csRows } = await client.query("SELECT * FROM credit_sales WHERE sale_id = $1 FOR UPDATE", [id]);
       const cs = csRows[0];
       if (cs) {
         const oldBalance = Number(cs.balance);
-        const balanceReduction = Math.min(refund_total, oldBalance);
+        // Only the *unpaid* portion of what's being refunded can reduce this
+        // sale's own balance (a single sale's balance can't go negative). If
+        // the refund is bigger than what was still owed, the excess means
+        // some of the refunded goods had already been paid off — that
+        // portion becomes real store credit on the customer's account
+        // instead of silently vanishing (see the overall balance update
+        // below), which is what used to happen here.
+        const unpaidPortionRefunded = Math.min(refund_total, oldBalance);
+        const paidPortionRefunded = refund_total - unpaidPortionRefunded;
         const newTotal = Number(cs.total_amount) - refund_total;
-        const newBalance = oldBalance - balanceReduction;
+        const newBalance = oldBalance - unpaidPortionRefunded;
+        const newPaidAmount = Number(cs.paid_amount) - paidPortionRefunded;
         const newStatus = newBalance <= 0 ? 'paid' : 'pending';
         await client.query(
-          `UPDATE credit_sales SET total_amount = $1, balance = $2, status = $3 WHERE id = $4`,
-          [newTotal, newBalance, newStatus, cs.id]
+          `UPDATE credit_sales SET total_amount = $1, paid_amount = $2, balance = $3, status = $4 WHERE id = $5`,
+          [newTotal, newPaidAmount, newBalance, newStatus, cs.id]
         );
-        if (balanceReduction > 0) {
-          await client.query("UPDATE customers SET balance = GREATEST(balance - $1, 0) WHERE id = $2", [balanceReduction, sale.customer_id]);
-        }
+        // Reduce the customer's overall balance by the *full* refund amount,
+        // not just the unpaid portion — this can legitimately take it
+        // negative, which means the business now owes the customer store
+        // credit for goods they'd already paid for and are now returning.
+        await client.query("UPDATE customers SET balance = balance - $1 WHERE id = $2", [refund_total, sale.customer_id]);
         if (newStatus === 'paid') {
           await client.query(`UPDATE pos_sales SET payment_status = 'paid' WHERE id = $1`, [id]);
         }
       }
     }
+
+    // Reverse the portion of this sale's revenue/COGS being refunded —
+    // partial, unlike /void and DELETE (which reverse the whole sale).
+    await reverseSaleAccounting(client, sale, user_id, { revenueAmount: refund_total, cogsAmount: refund_cogs });
 
     // Which shift this refund counts against, for cash-drawer/report
     // purposes: the CURRENT open session of whoever's processing it, not
