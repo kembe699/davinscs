@@ -31,12 +31,14 @@ interface CartLine {
   quantity: number;
 }
 
-// Same brand colors as the Flutter app's Brand.gradient (lib/core/theme.dart)
+// Same brand gradient and corner radius as the Flutter app's
+// BrandGradientButton (lib/widgets/brand_gradient_button.dart, Corners.md)
 // — this page is the one customer-facing surface that isn't the admin CMS,
-// so it deliberately looks like the POS app a diner's order lands in, not
-// the dark/mono "CMS" admin theme the rest of this web app uses.
-const BRAND_MID = "#0EA894";
-const BRAND_START = "#1565C0";
+// so every primary button here matches the actual POS app the order lands
+// in, not the dark/mono "CMS" admin theme the rest of this web app uses.
+const BRAND_GRADIENT = "linear-gradient(135deg, #1565C0 0%, #0EA894 50%, #56C02B 100%)";
+const BRAND_RADIUS = 14;
+const ALL_CATEGORY = "All";
 
 /**
  * The page a diner lands on after scanning the QR code on their table —
@@ -50,7 +52,8 @@ export default function PublicMenu() {
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
+  const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<number, CartLine>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [tableId, setTableId] = useState<number | "">("");
@@ -86,10 +89,6 @@ export default function PublicMenu() {
     return Array.from(new Set(data.products.map((p) => p.category).filter(Boolean)));
   }, [data]);
 
-  useEffect(() => {
-    if (categoryNames.length && !activeCategory) setActiveCategory(categoryNames[0]);
-  }, [categoryNames, activeCategory]);
-
   const sym = data?.company.currency || "UGX";
   const cartLines = Object.values(cart);
   const cartCount = cartLines.reduce((s, l) => s + l.quantity, 0);
@@ -97,9 +96,12 @@ export default function PublicMenu() {
 
   const visibleProducts = useMemo(() => {
     if (!data) return [];
-    if (!activeCategory) return data.products;
-    return data.products.filter((p) => p.category === activeCategory);
-  }, [data, activeCategory]);
+    let list = data.products;
+    if (activeCategory !== ALL_CATEGORY) list = list.filter((p) => p.category === activeCategory);
+    const query = search.trim().toLowerCase();
+    if (query) list = list.filter((p) => p.name.toLowerCase().includes(query));
+    return list;
+  }, [data, activeCategory, search]);
 
   function addToCart(product: MenuProduct) {
     setCart((prev) => {
@@ -166,7 +168,7 @@ export default function PublicMenu() {
         <div className="max-w-sm w-full text-center">
           <div
             className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold"
-            style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
+            style={{ background: BRAND_GRADIENT }}
           >
             ✓
           </div>
@@ -192,28 +194,37 @@ export default function PublicMenu() {
         <h1 className="font-extrabold text-gray-900 text-xl">{data.company.name || "Menu"}</h1>
       </div>
 
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 overflow-x-auto whitespace-nowrap px-4 py-3">
-        {categoryNames.map((name) => {
-          const selected = activeCategory === name;
-          return (
-            <button
-              key={name}
-              onClick={() => setActiveCategory(name)}
-              className="inline-block mr-2 px-4 py-2 text-xs font-bold rounded-full transition-colors"
-              style={
-                selected
-                  ? { background: BRAND_MID, color: "white" }
-                  : { border: "1px solid #E5E7EB", color: "#6B7280", background: "white" }
-              }
-            >
-              {name}
-            </button>
-          );
-        })}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3">
+        <div className="overflow-x-auto whitespace-nowrap mb-3">
+          {[ALL_CATEGORY, ...categoryNames].map((name) => {
+            const selected = activeCategory === name;
+            return (
+              <button
+                key={name}
+                onClick={() => setActiveCategory(name)}
+                className="inline-block mr-2 px-4 py-2 text-xs font-bold transition-colors"
+                style={
+                  selected
+                    ? { background: BRAND_GRADIENT, color: "white", borderRadius: BRAND_RADIUS }
+                    : { border: "1px solid #E5E7EB", color: "#6B7280", background: "white", borderRadius: BRAND_RADIUS }
+                }
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search the menu…"
+          className="w-full h-11 px-4 border border-gray-200 bg-gray-50 text-gray-900 text-sm placeholder:text-gray-400"
+          style={{ borderRadius: BRAND_RADIUS }}
+        />
       </div>
 
       {visibleProducts.length === 0 ? (
-        <p className="text-center text-gray-400 text-sm py-16">No items in this category yet.</p>
+        <p className="text-center text-gray-400 text-sm py-16">{search.trim() ? "No items match your search." : "No items in this category yet."}</p>
       ) : (
         <div className="p-4 grid grid-cols-2 gap-3">
           {visibleProducts.map((product) => {
@@ -223,7 +234,7 @@ export default function PublicMenu() {
               <div
                 key={product.id}
                 className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex flex-col"
-                style={inCart > 0 ? { borderColor: BRAND_MID, borderWidth: 1.5 } : undefined}
+                style={inCart > 0 ? { borderColor: "#0EA894", borderWidth: 1.5 } : undefined}
               >
                 <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
                   {product.image_url ? (
@@ -242,8 +253,8 @@ export default function PublicMenu() {
                     ) : inCart === 0 ? (
                       <button
                         onClick={() => addToCart(product)}
-                        className="h-8 px-3 rounded-lg text-white text-xs font-bold"
-                        style={{ background: BRAND_MID }}
+                        className="h-8 px-3 text-white text-xs font-bold"
+                        style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
                       >
                         Add
                       </button>
@@ -251,7 +262,8 @@ export default function PublicMenu() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setQty(product, inCart - 1)}
-                          className="w-7 h-7 rounded-lg border border-gray-200 text-gray-700 font-bold"
+                          className="w-7 h-7 text-white font-bold"
+                          style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
                         >
                           −
                         </button>
@@ -259,7 +271,8 @@ export default function PublicMenu() {
                         <button
                           onClick={() => setQty(product, inCart + 1)}
                           disabled={product.product_type !== "service" && inCart >= product.available_stock}
-                          className="w-7 h-7 rounded-lg border border-gray-200 text-gray-700 font-bold disabled:opacity-30"
+                          className="w-7 h-7 text-white font-bold disabled:opacity-30"
+                          style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
                         >
                           +
                         </button>
@@ -276,8 +289,8 @@ export default function PublicMenu() {
       {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-4 left-4 right-4 h-14 rounded-2xl flex items-center justify-between px-5 font-bold text-white shadow-lg"
-          style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
+          className="fixed bottom-4 left-4 right-4 h-14 flex items-center justify-between px-5 font-bold text-white shadow-lg"
+          style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
         >
           <span>{cartCount} item(s)</span>
           <span>{formatCurrencySync(cartTotal, sym, false)}</span>
@@ -304,14 +317,19 @@ export default function PublicMenu() {
                   <p className="text-xs text-gray-400">{formatCurrencySync(line.product.price, sym, false)} each</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setQty(line.product, line.quantity - 1)} className="w-7 h-7 rounded-lg border border-gray-200 font-bold text-gray-700">
+                  <button
+                    onClick={() => setQty(line.product, line.quantity - 1)}
+                    className="w-7 h-7 font-bold text-white"
+                    style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
+                  >
                     −
                   </button>
                   <span className="w-4 text-center text-sm font-bold text-gray-900">{line.quantity}</span>
                   <button
                     onClick={() => setQty(line.product, line.quantity + 1)}
                     disabled={line.product.product_type !== "service" && line.quantity >= line.product.available_stock}
-                    className="w-7 h-7 rounded-lg border border-gray-200 font-bold text-gray-700 disabled:opacity-30"
+                    className="w-7 h-7 font-bold text-white disabled:opacity-30"
+                    style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
                   >
                     +
                   </button>
@@ -356,8 +374,8 @@ export default function PublicMenu() {
             <button
               onClick={sendOrder}
               disabled={sending}
-              className="w-full h-12 rounded-xl font-bold text-white disabled:opacity-50"
-              style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
+              className="w-full h-12 font-bold text-white disabled:opacity-50"
+              style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
             >
               {sending ? "Sending…" : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
             </button>
