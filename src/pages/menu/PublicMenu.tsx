@@ -14,12 +14,6 @@ interface MenuProduct {
   available_stock: number;
 }
 
-interface MenuCategory {
-  id: number;
-  slug: string;
-  name: string;
-}
-
 interface MenuTable {
   id: number;
   location: string;
@@ -28,7 +22,6 @@ interface MenuTable {
 
 interface MenuData {
   company: { name: string; logo: string; currency: string };
-  categories: MenuCategory[];
   products: MenuProduct[];
   tables: MenuTable[];
 }
@@ -37,6 +30,13 @@ interface CartLine {
   product: MenuProduct;
   quantity: number;
 }
+
+// Same brand colors as the Flutter app's Brand.gradient (lib/core/theme.dart)
+// — this page is the one customer-facing surface that isn't the admin CMS,
+// so it deliberately looks like the POS app a diner's order lands in, not
+// the dark/mono "CMS" admin theme the rest of this web app uses.
+const BRAND_MID = "#0EA894";
+const BRAND_START = "#1565C0";
 
 /**
  * The page a diner lands on after scanning the QR code on their table —
@@ -67,7 +67,6 @@ export default function PublicMenu() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Could not load the menu");
         setData(json);
-        if (json.categories.length) setActiveCategory(json.categories[0].name);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load the menu");
       } finally {
@@ -76,6 +75,20 @@ export default function PublicMenu() {
     }
     load();
   }, [tenantSlug]);
+
+  // Categories come from the products actually on the menu, not the separate
+  // categories table — a product's `category` is free text (no foreign key),
+  // so matching against categories.name could silently mismatch on
+  // casing/spacing and show an empty list for every tab. Deriving the tabs
+  // from the same field used to filter guarantees they always agree.
+  const categoryNames = useMemo(() => {
+    if (!data) return [];
+    return Array.from(new Set(data.products.map((p) => p.category).filter(Boolean)));
+  }, [data]);
+
+  useEffect(() => {
+    if (categoryNames.length && !activeCategory) setActiveCategory(categoryNames[0]);
+  }, [categoryNames, activeCategory]);
 
   const sym = data?.company.currency || "UGX";
   const cartLines = Object.values(cart);
@@ -141,24 +154,29 @@ export default function PublicMenu() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground text-sm">Loading menu…</div>;
+    return <div className="min-h-screen bg-white flex items-center justify-center text-gray-400 text-sm">Loading menu…</div>;
   }
   if (error || !data) {
-    return <div className="min-h-screen flex items-center justify-center text-red-400 text-sm px-6 text-center">{error || "Menu not found"}</div>;
+    return <div className="min-h-screen bg-white flex items-center justify-center text-red-500 text-sm px-6 text-center">{error || "Menu not found"}</div>;
   }
 
   if (orderPlaced) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="max-w-sm w-full text-center border border-border-subtle bg-chassis p-8">
-          <h1 className="text-xl font-bold text-foreground mb-2">Order sent!</h1>
-          <p className="text-sm text-muted-foreground mb-4">
-            {orderPlaced.saleNumber} — {formatCurrencySync(orderPlaced.total, sym, false)}
-          </p>
-          <p className="text-sm text-muted-foreground">A member of staff will be with you shortly.</p>
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center">
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold"
+            style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
+          >
+            ✓
+          </div>
+          <h1 className="text-xl font-extrabold text-gray-900 mb-1">Order sent!</h1>
+          <p className="text-sm text-gray-500 mb-1">{orderPlaced.saleNumber}</p>
+          <p className="text-base font-bold text-gray-900 mb-4">{formatCurrencySync(orderPlaced.total, sym, false)}</p>
+          <p className="text-sm text-gray-500">A member of staff will be with you shortly.</p>
           <button
             onClick={() => setOrderPlaced(null)}
-            className="mt-6 h-10 px-5 border border-border-subtle text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="mt-6 h-11 px-6 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Order more
           </button>
@@ -168,75 +186,98 @@ export default function PublicMenu() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28">
-      <div className="border-b border-border-subtle bg-chassis px-4 py-5 text-center">
-        {data.company.logo && <img src={data.company.logo} alt="" className="h-12 mx-auto mb-2 object-contain" />}
-        <h1 className="font-bold text-foreground text-lg">{data.company.name || "Menu"}</h1>
+    <div className="min-h-screen bg-white pb-28">
+      <div className="px-4 pt-6 pb-4 text-center">
+        {data.company.logo && <img src={data.company.logo} alt="" className="h-14 mx-auto mb-2 object-contain" />}
+        <h1 className="font-extrabold text-gray-900 text-xl">{data.company.name || "Menu"}</h1>
       </div>
 
-      <div className="sticky top-0 z-10 bg-background border-b border-border-subtle overflow-x-auto whitespace-nowrap px-4 py-3">
-        {data.categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.name)}
-            className={`inline-block mr-2 px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-full transition-colors ${
-              activeCategory === cat.name ? "bg-primary text-background" : "border border-border-subtle text-muted-foreground"
-            }`}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {visibleProducts.map((product) => {
-          const inCart = cart[product.id]?.quantity || 0;
-          const soldOut = product.product_type !== "service" && product.available_stock <= 0;
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 overflow-x-auto whitespace-nowrap px-4 py-3">
+        {categoryNames.map((name) => {
+          const selected = activeCategory === name;
           return (
-            <div key={product.id} className="border border-border-subtle bg-chassis p-3 flex gap-3">
-              {product.image_url && (
-                <img src={product.image_url} alt="" className="w-16 h-16 object-cover rounded shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm truncate">{product.name}</p>
-                {product.description && <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>}
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-mono text-sm text-foreground">{formatCurrencySync(product.price, sym, false)}</span>
-                  {soldOut ? (
-                    <span className="text-[10px] uppercase tracking-widest text-red-400">Sold out</span>
-                  ) : inCart === 0 ? (
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="h-8 px-3 bg-primary text-background text-xs font-bold rounded"
-                    >
-                      Add
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setQty(product, inCart - 1)} className="w-7 h-7 border border-border-subtle rounded text-foreground">
-                        −
-                      </button>
-                      <span className="text-sm font-bold text-foreground w-4 text-center">{inCart}</span>
-                      <button
-                        onClick={() => setQty(product, inCart + 1)}
-                        disabled={product.product_type !== "service" && inCart >= product.available_stock}
-                        className="w-7 h-7 border border-border-subtle rounded text-foreground disabled:opacity-30"
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <button
+              key={name}
+              onClick={() => setActiveCategory(name)}
+              className="inline-block mr-2 px-4 py-2 text-xs font-bold rounded-full transition-colors"
+              style={
+                selected
+                  ? { background: BRAND_MID, color: "white" }
+                  : { border: "1px solid #E5E7EB", color: "#6B7280", background: "white" }
+              }
+            >
+              {name}
+            </button>
           );
         })}
       </div>
 
+      {visibleProducts.length === 0 ? (
+        <p className="text-center text-gray-400 text-sm py-16">No items in this category yet.</p>
+      ) : (
+        <div className="p-4 grid grid-cols-2 gap-3">
+          {visibleProducts.map((product) => {
+            const inCart = cart[product.id]?.quantity || 0;
+            const soldOut = product.product_type !== "service" && product.available_stock <= 0;
+            return (
+              <div
+                key={product.id}
+                className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex flex-col"
+                style={inCart > 0 ? { borderColor: BRAND_MID, borderWidth: 1.5 } : undefined}
+              >
+                <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-gray-300 text-3xl">🍽️</span>
+                  )}
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <p className="font-bold text-gray-900 text-sm truncate">{product.name}</p>
+                  {product.description && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{product.description}</p>}
+                  <div className="flex items-center justify-between mt-auto pt-2">
+                    <span className="font-bold text-sm text-gray-900">{formatCurrencySync(product.price, sym, false)}</span>
+                    {soldOut ? (
+                      <span className="text-[10px] font-bold text-red-500">Sold out</span>
+                    ) : inCart === 0 ? (
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="h-8 px-3 rounded-lg text-white text-xs font-bold"
+                        style={{ background: BRAND_MID }}
+                      >
+                        Add
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setQty(product, inCart - 1)}
+                          className="w-7 h-7 rounded-lg border border-gray-200 text-gray-700 font-bold"
+                        >
+                          −
+                        </button>
+                        <span className="text-sm font-bold text-gray-900 w-4 text-center">{inCart}</span>
+                        <button
+                          onClick={() => setQty(product, inCart + 1)}
+                          disabled={product.product_type !== "service" && inCart >= product.available_stock}
+                          className="w-7 h-7 rounded-lg border border-gray-200 text-gray-700 font-bold disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-4 left-4 right-4 h-14 bg-primary text-background rounded-lg flex items-center justify-between px-5 font-bold shadow-lg"
+          className="fixed bottom-4 left-4 right-4 h-14 rounded-2xl flex items-center justify-between px-5 font-bold text-white shadow-lg"
+          style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
         >
           <span>{cartCount} item(s)</span>
           <span>{formatCurrencySync(cartTotal, sym, false)}</span>
@@ -244,30 +285,33 @@ export default function PublicMenu() {
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-20" onClick={() => setCartOpen(false)}>
-          <div className="bg-background w-full max-h-[85vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-end z-20" onClick={() => setCartOpen(false)}>
+          <div
+            className="bg-white w-full max-h-[85vh] overflow-y-auto p-5 rounded-t-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-foreground">Your order</h2>
-              <button onClick={() => setCartOpen(false)} className="text-muted-foreground">
+              <h2 className="font-extrabold text-gray-900 text-lg">Your order</h2>
+              <button onClick={() => setCartOpen(false)} className="text-gray-400 text-sm font-semibold">
                 Close
               </button>
             </div>
 
             {cartLines.map((line) => (
-              <div key={line.product.id} className="flex items-center justify-between py-2 border-b border-border-subtle">
+              <div key={line.product.id} className="flex items-center justify-between py-2.5 border-b border-gray-100">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{line.product.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrencySync(line.product.price, sym, false)} each</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{line.product.name}</p>
+                  <p className="text-xs text-gray-400">{formatCurrencySync(line.product.price, sym, false)} each</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setQty(line.product, line.quantity - 1)} className="w-7 h-7 border border-border-subtle rounded">
+                  <button onClick={() => setQty(line.product, line.quantity - 1)} className="w-7 h-7 rounded-lg border border-gray-200 font-bold text-gray-700">
                     −
                   </button>
-                  <span className="w-4 text-center text-sm font-bold">{line.quantity}</span>
+                  <span className="w-4 text-center text-sm font-bold text-gray-900">{line.quantity}</span>
                   <button
                     onClick={() => setQty(line.product, line.quantity + 1)}
                     disabled={line.product.product_type !== "service" && line.quantity >= line.product.available_stock}
-                    className="w-7 h-7 border border-border-subtle rounded disabled:opacity-30"
+                    className="w-7 h-7 rounded-lg border border-gray-200 font-bold text-gray-700 disabled:opacity-30"
                   >
                     +
                   </button>
@@ -275,16 +319,16 @@ export default function PublicMenu() {
               </div>
             ))}
 
-            <div className="flex items-center justify-between py-3 font-bold text-foreground">
+            <div className="flex items-center justify-between py-3 font-extrabold text-gray-900">
               <span>Total</span>
               <span>{formatCurrencySync(cartTotal, sym, false)}</span>
             </div>
 
-            <label className="block text-xs text-muted-foreground uppercase tracking-widest mb-1 mt-3">Your table</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">Your table</label>
             <select
               value={tableId}
               onChange={(e) => setTableId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full h-11 px-3 border border-border-subtle bg-background text-foreground text-sm mb-3"
+              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm mb-3"
             >
               <option value="">Choose a table…</option>
               {data.tables.map((t) => (
@@ -298,21 +342,22 @@ export default function PublicMenu() {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Your name (optional)"
-              className="w-full h-11 px-3 border border-border-subtle bg-background text-foreground text-sm mb-3"
+              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm mb-3"
             />
             <input
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Phone number (optional)"
-              className="w-full h-11 px-3 border border-border-subtle bg-background text-foreground text-sm mb-3"
+              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm mb-3"
             />
 
-            {sendError && <p className="text-red-400 text-sm mb-3">{sendError}</p>}
+            {sendError && <p className="text-red-500 text-sm mb-3">{sendError}</p>}
 
             <button
               onClick={sendOrder}
               disabled={sending}
-              className="w-full h-12 bg-primary text-background font-bold rounded disabled:opacity-50"
+              className="w-full h-12 rounded-xl font-bold text-white disabled:opacity-50"
+              style={{ background: `linear-gradient(135deg, ${BRAND_START}, ${BRAND_MID})` }}
             >
               {sending ? "Sending…" : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
             </button>
