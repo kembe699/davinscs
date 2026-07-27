@@ -249,20 +249,7 @@ export default function PublicMenu() {
                   {product.description && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{product.description}</p>}
                   <div className="flex items-center justify-between mt-auto pt-2">
                     <span className="font-bold text-sm text-gray-900">{formatCurrencySync(product.price, sym, false)}</span>
-                    {soldOut ? (
-                      <span className="text-[10px] font-bold text-red-500">Sold out</span>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product);
-                        }}
-                        className="h-8 px-3 text-white text-xs font-bold"
-                        style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
-                      >
-                        Add
-                      </button>
-                    )}
+                    {soldOut && <span className="text-[10px] font-bold text-red-500">Sold out</span>}
                   </div>
                 </div>
               </div>
