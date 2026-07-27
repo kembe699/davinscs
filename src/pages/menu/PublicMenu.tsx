@@ -56,6 +56,7 @@ export default function PublicMenu() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<number, CartLine>>({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [tableId, setTableId] = useState<number | "">("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -87,6 +88,12 @@ export default function PublicMenu() {
   const categoryNames = useMemo(() => {
     if (!data) return [];
     return Array.from(new Set(data.products.map((p) => p.category).filter(Boolean)));
+  }, [data]);
+
+  const selectedTable = data?.tables.find((t) => t.id === tableId) || null;
+  const tableLocations = useMemo(() => {
+    if (!data) return [];
+    return Array.from(new Set(data.tables.map((t) => t.location)));
   }, [data]);
 
   const sym = data?.company.currency || "UGX";
@@ -315,18 +322,16 @@ export default function PublicMenu() {
             </div>
 
             <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">Your table</label>
-            <select
-              value={tableId}
-              onChange={(e) => setTableId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm mb-3"
+            <button
+              type="button"
+              onClick={() => setTablePickerOpen(true)}
+              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-sm mb-3 flex items-center justify-between"
             >
-              <option value="">Choose a table…</option>
-              {data.tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.location} · {t.label}
-                </option>
-              ))}
-            </select>
+              <span className={selectedTable ? "text-gray-900 font-semibold" : "text-gray-400"}>
+                {selectedTable ? `${selectedTable.location} · ${selectedTable.label}` : "Choose a table…"}
+              </span>
+              <span className="text-gray-400">▾</span>
+            </button>
 
             <input
               value={customerName}
@@ -355,6 +360,52 @@ export default function PublicMenu() {
                   ? "Choose a table to continue"
                   : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
             </button>
+          </div>
+        </div>
+      )}
+
+      {tablePickerOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-30" onClick={() => setTablePickerOpen(false)}>
+          <div
+            className="bg-white w-full max-h-[75vh] overflow-y-auto p-5 rounded-t-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-extrabold text-gray-900 text-lg">Choose your table</h2>
+              <button onClick={() => setTablePickerOpen(false)} className="text-gray-400 text-sm font-semibold">
+                Close
+              </button>
+            </div>
+
+            {tableLocations.map((location) => (
+              <div key={location} className="mb-4">
+                {location && <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{location}</p>}
+                <div className="grid grid-cols-3 gap-2">
+                  {data.tables
+                    .filter((t) => t.location === location)
+                    .map((t) => {
+                      const selected = tableId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTableId(t.id);
+                            setTablePickerOpen(false);
+                          }}
+                          className="h-11 text-sm font-bold transition-colors"
+                          style={
+                            selected
+                              ? { background: BRAND_GRADIENT, color: "white", borderRadius: BRAND_RADIUS }
+                              : { border: "1px solid #E5E7EB", color: "#374151", background: "white", borderRadius: BRAND_RADIUS }
+                          }
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
