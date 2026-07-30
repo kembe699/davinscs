@@ -895,6 +895,35 @@ router.get('/customer/me', requireCustomer, async (req, res) => {
   }
 });
 
+// Cancels a pending invoice — the customer changed their mind or picked the
+// wrong plan, and nothing's been paid yet so there's nothing to reverse
+// (contrast with voiding an already-paid invoice, which this doesn't do).
+// Scoped by tenant_id so a customer/staff member can only ever cancel their
+// own tenant's invoices, and only touches 'pending' rows.
+async function cancelInvoice(invoiceId, tenantId) {
+  const { rows } = await pool.query(
+    `UPDATE public.saas_billing SET status = 'cancelled', cancelled_at = NOW()
+     WHERE id = $1 AND tenant_id = $2 AND status = 'pending'
+     RETURNING *`,
+    [invoiceId, tenantId]
+  );
+  return rows[0] || null;
+}
+
+// Customer — cancel a pending invoice
+router.post('/customer/cancel-invoice', requireCustomer, async (req, res) => {
+  const { invoice_id } = req.body;
+  if (!invoice_id) return res.status(400).json({ error: 'invoice_id is required' });
+  try {
+    const cancelled = await cancelInvoice(invoice_id, req.customer.tenant_id);
+    if (!cancelled) return res.status(404).json({ error: 'Invoice not found, already paid, or already cancelled' });
+    res.json(cancelled);
+  } catch (err) {
+    console.error('Cancel invoice error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Customer — pay existing invoice
 router.post('/customer/pay-invoice', requireCustomer, async (req, res) => {
   const { invoice_id } = req.body;
@@ -1111,6 +1140,89 @@ router.post('/staff/pay-subscribe', requireAuthAllowSuspended, async (req, res) 
   }
 });
 
+// Mobile app — this tenant's own invoice history (mirrors /customer/me's
+// invoice list), so Billing can show every invoice — paid, pending, and
+// cancelled — not just the plan picker.
+router.get('/staff/invoices', requireAuthAllowSuspended, async (req, res) => {
+  const schemaName = req.user.schema_name;
+  if (!schemaName) return res.status(400).json({ error: 'No tenant context on this account' });
+  try {
+    const tenantRes = await pool.query('SELECT id FROM public.tenants WHERE schema_name = $1', [schemaName]);
+    if (!tenantRes.rows.length) return res.status(404).json({ error: 'Tenant not found' });
+    const { rows } = await pool.query(
+      `SELECT id, invoice_number, plan_name, amount, currency, billing_period, status, issued_at, paid_at, cancelled_at
+       FROM public.saas_billing WHERE tenant_id = $1 ORDER BY issued_at DESC`,
+      [tenantRes.rows[0].id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Staff invoices error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Mobile app — pay an already-issued pending invoice (mirrors
+// /customer/pay-invoice) — used for a renewal invoice raised automatically
+// ahead of expiry, or any invoice a SaaS admin raised manually.
+router.post('/staff/pay-invoice', requireAuthAllowSuspended, async (req, res) => {
+  const { invoice_id } = req.body;
+  if (!invoice_id) return res.status(400).json({ error: 'invoice_id is required' });
+  const schemaName = req.user.schema_name;
+  if (!schemaName) return res.status(400).json({ error: 'No tenant context on this account' });
+
+  try {
+    const tenantRes = await pool.query('SELECT id, business_name FROM public.tenants WHERE schema_name = $1', [schemaName]);
+    if (!tenantRes.rows.length) return res.status(404).json({ error: 'Tenant not found' });
+    const tenantId = tenantRes.rows[0].id;
+    const businessName = tenantRes.rows[0].business_name || 'Customer';
+
+    const invRes = await pool.query('SELECT * FROM public.saas_billing WHERE id=$1 AND tenant_id=$2', [invoice_id, tenantId]);
+    if (!invRes.rows.length) return res.status(404).json({ error: 'Invoice not found' });
+    const inv = invRes.rows[0];
+    if (inv.status !== 'pending') return res.status(400).json({ error: `This invoice is already ${inv.status}` });
+
+    const ugxRate = parseFloat(process.env.UGX_RATE || '3700');
+    const amountUgx = inv.amount * ugxRate;
+
+    const orderData = await submitOrder({
+      id: inv.invoice_number,
+      amount: amountUgx,
+      currency: 'UGX',
+      description: `Payment for FlippedPOS Invoice ${inv.invoice_number}`,
+      callback_url: `${process.env.FRONTEND_URL}/account/payment-result`,
+      billing_address: { email_address: req.user.email, phone_number: '', first_name: businessName, last_name: '' }
+    });
+
+    await pool.query(
+      `UPDATE public.saas_billing SET pesapal_tracking_id=$1, pesapal_merchant_ref=$2 WHERE id=$3`,
+      [orderData.order_tracking_id, orderData.merchant_reference || inv.invoice_number, inv.id]
+    );
+
+    res.json({ redirect_url: orderData.redirect_url, order_tracking_id: orderData.order_tracking_id });
+  } catch (err) {
+    console.error('Staff pay-invoice error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+// Mobile app — cancel a pending invoice
+router.post('/staff/cancel-invoice', requireAuthAllowSuspended, async (req, res) => {
+  const { invoice_id } = req.body;
+  if (!invoice_id) return res.status(400).json({ error: 'invoice_id is required' });
+  const schemaName = req.user.schema_name;
+  if (!schemaName) return res.status(400).json({ error: 'No tenant context on this account' });
+  try {
+    const tenantRes = await pool.query('SELECT id FROM public.tenants WHERE schema_name = $1', [schemaName]);
+    if (!tenantRes.rows.length) return res.status(404).json({ error: 'Tenant not found' });
+    const cancelled = await cancelInvoice(invoice_id, tenantRes.rows[0].id);
+    if (!cancelled) return res.status(404).json({ error: 'Invoice not found, already paid, or already cancelled' });
+    res.json(cancelled);
+  } catch (err) {
+    console.error('Staff cancel invoice error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // PesaPal Callback Route
 router.get('/pesapal/callback', async (req, res) => {
   // Can be called by frontend directly or by PesaPal
@@ -1202,6 +1314,44 @@ export default router;
 
 // ── Background subscription scheduler ────────────────────────────────────────
 // Runs every 15 minutes. Suspends expired trials and lapsed subscriptions.
+// Raises the next invoice for an already-paying tenant ahead of their
+// renewal, for the same plan/amount/billing_period as their last paid
+// invoice — so it's just sitting there ready to pay by the time their
+// current period actually runs out, instead of making them go through
+// "change plan" just to pay for what they already have. Never touches a
+// trial tenant (nothing to renew — the first real plan is always an
+// explicit choice) or a tenant that already has a pending invoice.
+async function autoGenerateRenewalInvoice(tenantId) {
+  const pendingRes = await pool.query(
+    `SELECT id FROM public.saas_billing WHERE tenant_id = $1 AND status = 'pending'`,
+    [tenantId]
+  );
+  if (pendingRes.rows.length) return;
+
+  const lastPaidRes = await pool.query(
+    `SELECT plan_name, amount, currency, billing_period FROM public.saas_billing
+     WHERE tenant_id = $1 AND status = 'paid' ORDER BY paid_at DESC LIMIT 1`,
+    [tenantId]
+  );
+  const lastPaid = lastPaidRes.rows[0];
+  if (!lastPaid) return;
+
+  let invoiceNumber;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = 'INV-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const exists = await pool.query('SELECT 1 FROM public.saas_billing WHERE invoice_number = $1', [candidate]);
+    if (!exists.rows.length) { invoiceNumber = candidate; break; }
+  }
+  if (!invoiceNumber) return;
+
+  await pool.query(
+    `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [invoiceNumber, tenantId, lastPaid.plan_name, lastPaid.amount, lastPaid.currency, 'Auto-generated renewal invoice', lastPaid.billing_period]
+  );
+  console.log(`[Subscription Sweep] Auto-generated renewal invoice ${invoiceNumber} for tenant ${tenantId}`);
+}
+
 async function runSubscriptionSweep() {
   try {
     // Send expiry reminders (7 days before expiry)
@@ -1221,6 +1371,12 @@ async function runSubscriptionSweep() {
       await sendExpiryReminderEmail(row.email, row.business_name, expiryDate);
       await pool.query('UPDATE public.tenants SET expiry_reminder_sent_at = NOW() WHERE id = $1', [row.id]);
       console.log(`[Subscription Sweep] Sent expiry reminder to ${row.email} (${row.business_name})`);
+
+      if (row.status === 'active') {
+        await autoGenerateRenewalInvoice(row.id).catch(err =>
+          console.error(`[Subscription Sweep] Renewal invoice error for tenant ${row.id}:`, err.message)
+        );
+      }
     }
 
     // Find trials and subscriptions that have just lapsed (before suspending, so we still know who to email)

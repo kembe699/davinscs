@@ -75,7 +75,14 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20) DEFAULT 'monthly';
     ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS pesapal_tracking_id TEXT;
     ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS pesapal_merchant_ref TEXT;
+    ALTER TABLE public.saas_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
     ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+    -- One-time rename: the free tier was originally seeded/named as a
+    -- self-hosted download option, then briefly "Trial Plan" — it's
+    -- actually a hosted free trial, so the name should say that. Only
+    -- touches the name (not description/cta, in case those were since
+    -- customized via the SaaS admin's pricing manager).
+    UPDATE public.pricing_plans SET name = 'Free Trial' WHERE name IN ('Self-Hosted', 'Trial Plan');
 
     CREATE TABLE IF NOT EXISTS public.saas_settings (
       key VARCHAR(100) PRIMARY KEY,

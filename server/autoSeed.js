@@ -135,15 +135,15 @@ export async function autoSeed() {
   if (currentSchema === 'public') {
     const defaultPlans = [
       {
-        name: 'Self-Hosted', price: 'Free', sub_label: 'Forever', highlight: false, sort_order: 0,
-        description: 'Download the source, run it on your own server or locally with Docker.',
-        features: JSON.stringify(['Full POS terminal','Inventory management','Basic reports','Unlimited products','Receipt printing','Docker deployment','Community support']),
-        cta_label: 'Download Free', cta_href: 'https://github.com/kembe699/davinscs',
+        name: 'Free Trial', price: 'Free', sub_label: '7 days', highlight: false, sort_order: 0,
+        description: 'Try the full POS free for 7 days — no credit card required.',
+        features: JSON.stringify(['Full POS terminal','Inventory management','Basic reports','Unlimited products','Receipt printing','Community support']),
+        cta_label: 'Start Free Trial', cta_href: '/register',
       },
       {
         name: 'Professional', price: '$29', sub_label: 'per month', highlight: true, sort_order: 1,
         description: 'Fully hosted and managed by us. We handle updates, backups, and uptime.',
-        features: JSON.stringify(['Everything in Self-Hosted','Cloud hosting included','Automatic backups','Custom domain','Priority support','Email notifications','Multi-user access','Advanced analytics']),
+        features: JSON.stringify(['Everything in the Free Trial','Cloud hosting included','Automatic backups','Custom domain','Priority support','Email notifications','Multi-user access','Advanced analytics']),
         cta_label: 'Get Started', cta_href: '/register',
       },
       {
