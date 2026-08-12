@@ -1,12 +1,13 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import pool from '../db.js';
 
 import { migrateTenant } from '../utils/schemaMigration.js';
 import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache, requireAuthAllowSuspended } from '../middleware/auth.js';
-import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail } from '../utils/email.js';
+import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail, sendPasswordResetEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
@@ -831,6 +832,64 @@ router.post('/customer/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Customer login error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Customer — request a password reset link. Always responds the same way
+// regardless of whether the email is registered, so this can't be used to
+// probe which businesses have an account (same pattern as auth.js's
+// tenant-staff /forgot-password).
+router.post('/customer/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const { rows } = await pool.query(
+      'SELECT id FROM public.tenant_users WHERE LOWER(email) = LOWER($1)',
+      [email.trim()]
+    );
+
+    if (rows[0]) {
+      const token = uuidv4();
+      const expires = new Date(Date.now() + 60 * 60 * 1000);
+      await pool.query('DELETE FROM public.customer_password_resets WHERE email = $1', [email.toLowerCase()]);
+      await pool.query(
+        'INSERT INTO public.customer_password_resets (email, token, expires_at) VALUES ($1, $2, $3)',
+        [email.toLowerCase(), token, expires]
+      );
+
+      const portalUrl = process.env.FRONTEND_URL || 'https://flippedpos.com';
+      const resetLink = `${portalUrl}/account/reset-password?token=${token}`;
+      sendPasswordResetEmail(email, resetLink).catch(err => console.error('[customer forgot-password] email send error:', err));
+    }
+
+    res.json({ message: 'If that email exists, a reset link has been sent.' });
+  } catch (err) {
+    console.error('Customer forgot-password error:', err);
+    res.status(500).json({ error: 'Failed to send reset email' });
+  }
+});
+
+// Customer — complete a password reset with the token from the emailed link.
+router.post('/customer/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM public.customer_password_resets WHERE token = $1 AND expires_at > NOW()',
+      [token]
+    );
+    if (!rows[0]) return res.status(400).json({ error: 'Invalid or expired reset token' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('UPDATE public.tenant_users SET password_hash = $1 WHERE email = $2', [hash, rows[0].email]);
+    await pool.query('DELETE FROM public.customer_password_resets WHERE token = $1', [token]);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Customer reset-password error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

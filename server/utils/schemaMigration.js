@@ -43,6 +43,18 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    -- Customer portal ("/account" on the marketing site) password reset tokens.
+    -- Separate from the tenant-schema-scoped password_resets table further down
+    -- (used by the per-tenant staff admin login) since customer-portal users
+    -- live in public.tenant_users, not in any one tenant schema's users table.
+    CREATE TABLE IF NOT EXISTS public.customer_password_resets (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      token VARCHAR(255) UNIQUE NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS public.saas_billing (
       id SERIAL PRIMARY KEY,
       invoice_number VARCHAR(30) UNIQUE NOT NULL,
