@@ -850,6 +850,20 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_id INTEGER REFERENCES currencies(id);
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_code VARCHAR(10) DEFAULT 'UGX';
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS currency_symbol VARCHAR(10) DEFAULT 'UGX';
+    -- Snapshot of currencies.exchange_rate at PO creation time — POs created in a
+    -- secondary currency need a stable rate to convert against later, even if the
+    -- currency's rate changes afterward. 1 for base-currency POs.
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15,6) DEFAULT 1;
+    -- The rate actually used to convert a supplier payment to base currency, plus the
+    -- resulting base-currency equivalent — payments themselves stay in the bill's
+    -- native currency (so "how much is left on this bill" keeps comparing like with
+    -- like), but expense reports sum base_amount so foreign-currency POs don't
+    -- silently mix currencies into one total.
+    ALTER TABLE supplier_payments ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(15,6) DEFAULT 1;
+    ALTER TABLE supplier_payments ADD COLUMN IF NOT EXISTS base_amount INTEGER;
+    -- Existing rows predate rate tracking entirely — treating them as already
+    -- base-currency preserves exactly what reports showed before this change.
+    UPDATE supplier_payments SET base_amount = amount WHERE base_amount IS NULL;
 
     DO $$
     DECLARE col_type TEXT;

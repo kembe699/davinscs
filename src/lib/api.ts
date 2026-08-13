@@ -226,6 +226,9 @@ export type ApiSupplierBill = {
   grn_number?: string;
   po_id?: number;
   po_number?: string;
+  currency_code?: string;
+  currency_symbol?: string;
+  exchange_rate?: number;
   bill_date: string;
   due_date?: string;
   total_amount: number;
@@ -246,6 +249,8 @@ export type ApiSupplierPayment = {
   bill_number?: string;
   payment_date: string;
   amount: number;
+  exchange_rate?: number;
+  base_amount?: number;
   payment_method: string;
   reference?: string;
   notes?: string;

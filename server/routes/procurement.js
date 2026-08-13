@@ -147,11 +147,25 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     const poNumber = `PO-${Date.now()}`;
     const totalAmount = parsedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
+    // Snapshot the currency's rate now — payments against this PO's bill convert
+    // using this locked-in rate, not whatever the currency's rate happens to be
+    // by the time payment is actually made.
+    let exchangeRate = 1;
+    if (currency_id) {
+      const currencyResult = await client.query(
+        "SELECT exchange_rate FROM currencies WHERE id = $1",
+        [currency_id]
+      );
+      if (currencyResult.rows[0]) {
+        exchangeRate = Number(currencyResult.rows[0].exchange_rate) || 1;
+      }
+    }
+
     const poResult = await client.query(
       `INSERT INTO purchase_orders
-       (po_number, supplier_id, order_date, total_amount, notes, created_by, currency_id, currency_code, currency_symbol)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [poNumber, supplier_id, order_date, totalAmount, notes, req.user.id, currency_id, currency_code, currency_symbol]
+       (po_number, supplier_id, order_date, total_amount, notes, created_by, currency_id, currency_code, currency_symbol, exchange_rate)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [poNumber, supplier_id, order_date, totalAmount, notes, req.user.id, currency_id, currency_code, currency_symbol, exchangeRate]
     );
 
     const poId = poResult.rows[0].id;

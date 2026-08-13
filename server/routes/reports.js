@@ -212,10 +212,12 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
       cashDrawerTotal = parseInt(cashDrawerExpenses.rows[0].total) || 0;
     } catch (err) { /* table not available */ }
 
-    // Procurement supplier payments
+    // Procurement supplier payments — base_amount is the base-currency equivalent
+    // (payments against a foreign-currency PO are converted using the PO's rate at
+    // the time of payment; base_amount already equals amount for base-currency POs)
     try {
       const procurementExpenses = await pool.query(
-        `SELECT COALESCE(SUM(amount), 0) as total
+        `SELECT COALESCE(SUM(COALESCE(base_amount, amount)), 0) as total
          FROM supplier_payments
          WHERE DATE(payment_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
@@ -264,14 +266,14 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
       rows.push(...accRows);
     } catch (err) { /* table not available */ }
 
-    // Procurement supplier payments grouped by supplier
+    // Procurement supplier payments grouped by supplier — base-currency equivalent
     try {
       const { rows: procRows } = await pool.query(
         `SELECT
           'PROC' as code,
           COALESCE(s.name, 'Unknown Supplier') as category_name,
           COUNT(sp.id)::int as transaction_count,
-          COALESCE(SUM(sp.amount), 0)::bigint as total_amount
+          COALESCE(SUM(COALESCE(sp.base_amount, sp.amount)), 0)::bigint as total_amount
          FROM supplier_payments sp
          LEFT JOIN suppliers s ON sp.supplier_id = s.id
          WHERE DATE(sp.payment_date) BETWEEN $1 AND $2
@@ -738,8 +740,11 @@ router.get("/income-statement", requireAuth, async (req, res) => {
     let procurementExpenses = 0, cashDrawerExpenses = 0, otherAccountingExpenses = 0;
 
     try {
+      // base_amount is the base-currency equivalent of the payment (converted using
+      // the originating PO's exchange rate) — falls back to amount for base-currency
+      // POs and for payments made before this conversion existed.
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM supplier_payments
+        `SELECT COALESCE(SUM(COALESCE(base_amount, amount)),0)::bigint as total FROM supplier_payments
          WHERE DATE(payment_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );

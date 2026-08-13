@@ -24,11 +24,14 @@ router.get("/", requireAuth, async (req, res) => {
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     
     const { rows } = await pool.query(`
-      SELECT 
+      SELECT
         sb.*,
         s.name as supplier_name,
         grn.grn_number,
         po.po_number,
+        po.currency_code,
+        po.currency_symbol,
+        po.exchange_rate,
         (sb.total_amount - sb.paid_amount) as balance
       FROM supplier_bills sb
       LEFT JOIN suppliers s ON sb.supplier_id = s.id
@@ -49,7 +52,7 @@ router.get("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const billResult = await pool.query(`
-      SELECT 
+      SELECT
         sb.*,
         s.name as supplier_name,
         s.email as supplier_email,
@@ -57,6 +60,9 @@ router.get("/:id", requireAuth, async (req, res) => {
         s.address as supplier_address,
         grn.grn_number,
         po.po_number,
+        po.currency_code,
+        po.currency_symbol,
+        po.exchange_rate,
         (sb.total_amount - sb.paid_amount) as balance
       FROM supplier_bills sb
       LEFT JOIN suppliers s ON sb.supplier_id = s.id
@@ -184,7 +190,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
 router.get("/:id/print", requireAuth, async (req, res) => {
   try {
     const billResult = await pool.query(`
-      SELECT 
+      SELECT
         sb.*,
         s.name as supplier_name,
         s.email as supplier_email,
@@ -192,6 +198,9 @@ router.get("/:id/print", requireAuth, async (req, res) => {
         s.address as supplier_address,
         grn.grn_number,
         po.po_number,
+        po.currency_code,
+        po.currency_symbol,
+        po.exchange_rate,
         (sb.total_amount - sb.paid_amount) as balance
       FROM supplier_bills sb
       LEFT JOIN suppliers s ON sb.supplier_id = s.id

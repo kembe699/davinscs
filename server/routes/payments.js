@@ -108,13 +108,33 @@ router.post("/", requireAuth, async (req, res) => {
 
     const paymentNumber = `PAY-${Date.now()}`;
 
+    // The payment itself is recorded in the bill's native currency (so it still
+    // reconciles against what the supplier actually invoiced), but every payment
+    // also gets posted to the books in base currency — converted using the rate
+    // locked in on the originating PO at creation time, not today's rate — so
+    // expense reports never mix currencies together in one SUM().
+    let exchangeRate = 1;
+    if (bill_id) {
+      const rateResult = await client.query(
+        `SELECT po.exchange_rate
+         FROM supplier_bills sb
+         LEFT JOIN purchase_orders po ON sb.po_id = po.id
+         WHERE sb.id = $1`,
+        [bill_id]
+      );
+      if (rateResult.rows[0]?.exchange_rate) {
+        exchangeRate = Number(rateResult.rows[0].exchange_rate) || 1;
+      }
+    }
+    const baseAmount = Math.round(amount / exchangeRate);
+
     // Create payment
     const paymentResult = await client.query(`
       INSERT INTO supplier_payments
-      (payment_number, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      (payment_number, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, created_by, exchange_rate, base_amount)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [paymentNumber, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, req.user.id]);
+    `, [paymentNumber, supplier_id, bill_id, payment_date, amount, payment_method, reference, notes, req.user.id, exchangeRate, baseAmount]);
 
     // If payment is against a bill, update bill
     if (bill_id) {

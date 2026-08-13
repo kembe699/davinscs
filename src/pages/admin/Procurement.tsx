@@ -1719,13 +1719,28 @@ export default function ProcurementEnhanced() {
                     onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
                     className="px-3 py-2 bg-background border border-border-subtle text-xs"
                   />
-                  <input
-                    type="number"
-                    placeholder="Amount *"
-                    value={paymentForm.amount}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
-                    className="px-3 py-2 bg-background border border-border-subtle text-xs"
-                  />
+                  <div>
+                    <input
+                      type="number"
+                      placeholder="Amount *"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 bg-background border border-border-subtle text-xs"
+                    />
+                    {(() => {
+                      const selectedBill = bills.find(b => b.id === paymentForm.bill_id);
+                      const rate = selectedBill?.exchange_rate;
+                      if (!rate || rate === 1) return null;
+                      const base = currencies.find(c => c.is_base);
+                      const baseAmount = Math.round(paymentForm.amount / rate);
+                      return (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Posts to the books as {base?.symbol ?? ""} {baseAmount.toLocaleString()}
+                          {" "}(converted from {selectedBill?.currency_symbol} at this PO's locked-in rate)
+                        </p>
+                      );
+                    })()}
+                  </div>
                   <select
                     value={paymentForm.payment_method}
                     onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
