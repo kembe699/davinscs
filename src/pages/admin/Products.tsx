@@ -175,6 +175,12 @@ export default function Products() {
         const quantity_on_hand = Number(row["quantity"] ?? row["quantity_on_hand"] ?? row["Quantity"] ?? 0);
         const reorder_level   = Number(row["reorder_level"] ?? row["Reorder Level"] ?? 0);
         const in_stock = quantity_on_hand > 0 || String(row["in_stock"] ?? row["In Stock"] ?? "true").toLowerCase() !== "false";
+        // Both optional — uom falls back to the same "pcs" default the DB column has,
+        // expiry_date stays null (no expiry) when the cell is left blank.
+        const uom = String(row["uom"] ?? row["UOM"] ?? row["Unit of Measure"] ?? "").trim().toLowerCase() || "pcs";
+        const rawExpiry = String(row["expiry_date"] ?? row["Expiry Date"] ?? "").trim();
+        const parsedExpiry = rawExpiry ? new Date(rawExpiry) : null;
+        const expiry_date = parsedExpiry && !isNaN(parsedExpiry.getTime()) ? parsedExpiry.toISOString().slice(0, 10) : null;
 
         try {
           await api.products.create({
@@ -184,6 +190,7 @@ export default function Products() {
             barcode, description,
             quantity_on_hand, reorder_level,
             in_stock,
+            uom, expiry_date,
             tag: "", specs: [], image_url: "", is_featured: false,
           } as any);
           existingProductKeys.add(dedupeKey);
@@ -206,8 +213,8 @@ export default function Products() {
 
   const handleExportTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ["name","brand","category","price","cost_price","barcode","description","quantity","reorder_level","in_stock"],
-      ["Example Product","Example Brand",categoryList[0]?.slug ?? "beverages","100000","80000","123456789","A great product","10","2","true"],
+      ["name","brand","category","price","cost_price","barcode","description","quantity","reorder_level","in_stock","uom","expiry_date"],
+      ["Example Product","Example Brand",categoryList[0]?.slug ?? "beverages","100000","80000","123456789","A great product","10","2","true","pcs",""],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Products");
