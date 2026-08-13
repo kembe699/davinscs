@@ -1626,13 +1626,33 @@ export default function ProcurementEnhanced() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
-                  {bills.map((bill) => (
+                  {bills.map((bill) => {
+                    const baseCurrency = currencies.find(c => c.is_base);
+                    const billSymbol = bill.currency_symbol || baseCurrency?.symbol || 'UGX';
+                    const rate = Number(bill.exchange_rate) || 1;
+                    const isForeign = rate !== 1 && !!bill.currency_code && bill.currency_code !== baseCurrency?.code;
+                    const toBase = (amount: number) => Math.round(amount / rate);
+                    return (
                     <tr key={bill.id} className="hover:bg-chassis/50 transition-colors">
                       <td className="px-4 py-3 font-mono-tech text-foreground">{bill.bill_number}</td>
                       <td className="px-4 py-3 text-foreground">{bill.supplier_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(bill.bill_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{Number(bill.total_amount).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">{currencies.find(c => c.is_base)?.symbol ?? 'UGX'}{Number(bill.paid_amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-foreground">
+                        <div>{billSymbol}{Number(bill.total_amount).toLocaleString()}</div>
+                        {isForeign && (
+                          <div className="text-[10px] text-muted-foreground font-normal">
+                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.total_amount)).toLocaleString()} posted
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-muted-foreground">
+                        <div>{billSymbol}{Number(bill.paid_amount).toLocaleString()}</div>
+                        {isForeign && Number(bill.paid_amount) > 0 && (
+                          <div className="text-[10px] text-muted-foreground font-normal">
+                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.paid_amount)).toLocaleString()}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`font-mono-tech text-[10px] uppercase tracking-widest px-2 py-1 border ${
                           bill.status === 'paid' ? 'border-green-500/30 text-green-500 bg-green-500/5' :
@@ -1672,7 +1692,8 @@ export default function ProcurementEnhanced() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
