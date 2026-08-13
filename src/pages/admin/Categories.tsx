@@ -285,7 +285,7 @@ export default function Categories() {
                   ref={nameRef}
                   type="text"
                   value={draft.name}
-                  placeholder="e.g. Cameras"
+                  placeholder="Insert category name"
                   onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value, slug: autoSlug(e.target.value) }))}
                   className="field-input w-full"
                 />
@@ -298,7 +298,7 @@ export default function Categories() {
                 <input
                   type="text"
                   value={draft.slug}
-                  placeholder="e.g. cameras"
+                  placeholder="Insert category slug"
                   onChange={(e) => setDraft((d) => ({ ...d, slug: e.target.value }))}
                   className="field-input w-full"
                 />

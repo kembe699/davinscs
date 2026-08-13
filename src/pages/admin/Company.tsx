@@ -188,7 +188,7 @@ export default function Company() {
                 </div>
                 <div>
                   <label className="block text-sm text-foreground mb-2">WhatsApp Number</label>
-                  <input type="tel" value={companyData.whatsapp} onChange={(e) => setCompanyData({ ...companyData, whatsapp: e.target.value })} placeholder="e.g. 256792149296" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
+                  <input type="tel" value={companyData.whatsapp} onChange={(e) => setCompanyData({ ...companyData, whatsapp: e.target.value })} placeholder="Insert WhatsApp number" className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
                   <p className="text-xs text-muted-foreground mt-1">Include country code, no + sign.</p>
                 </div>
                 <div>

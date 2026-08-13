@@ -71,14 +71,14 @@ describe("ProductForm — render", () => {
   it("renders the product name field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("e.g. iPhone 17 Pro Max")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Insert product name")).toBeInTheDocument();
     });
   });
 
   it("renders the selling price field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("e.g. 1500000")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Insert selling price")).toBeInTheDocument();
     });
   });
 
@@ -92,7 +92,7 @@ describe("ProductForm — render", () => {
   it("renders the margin % field", async () => {
     renderProductForm();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/30.*markup/)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/margin percentage/i)).toBeInTheDocument();
     });
   });
 
@@ -132,8 +132,8 @@ describe("ProductForm — margin auto-calculation", () => {
     });
 
     const costInput = screen.getByPlaceholderText("Cost (optional)") as HTMLInputElement;
-    const marginInput = screen.getByPlaceholderText(/30.*markup/) as HTMLInputElement;
-    const priceInput = screen.getByPlaceholderText("e.g. 1500000") as HTMLInputElement;
+    const marginInput = screen.getByPlaceholderText(/margin percentage/i) as HTMLInputElement;
+    const priceInput = screen.getByPlaceholderText("Insert selling price") as HTMLInputElement;
 
     fireEvent.change(costInput, { target: { value: "100000" } });
     fireEvent.change(marginInput, { target: { value: "20" } });
@@ -151,9 +151,9 @@ describe("ProductForm — margin auto-calculation", () => {
 describe("ProductForm — field updates", () => {
   it("accepts text input in the name field", async () => {
     renderProductForm();
-    await waitFor(() => screen.getByPlaceholderText("e.g. iPhone 17 Pro Max"));
+    await waitFor(() => screen.getByPlaceholderText("Insert product name"));
 
-    const nameInput = screen.getByPlaceholderText("e.g. iPhone 17 Pro Max") as HTMLInputElement;
+    const nameInput = screen.getByPlaceholderText("Insert product name") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "Test Camera" } });
     expect(nameInput.value).toBe("Test Camera");
   });

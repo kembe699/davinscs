@@ -346,7 +346,7 @@ export default function CurrenciesEnhanced() {
                 <div className="grid grid-cols-5 gap-3">
                   <input
                     type="text"
-                    placeholder="Code (e.g., USD) *"
+                    placeholder="Insert currency code *"
                     value={currencyForm.code}
                     onChange={(e) => setCurrencyForm({ ...currencyForm, code: e.target.value.toUpperCase() })}
                     maxLength={3}

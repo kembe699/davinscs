@@ -303,7 +303,7 @@ export default function Onboarding() {
                   </label>
                   <input
                     className="w-full bg-background border border-border-subtle rounded-none px-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
-                    placeholder="e.g. FlippedPos"
+                    placeholder="Insert business name"
                     value={form.company_name}
                     onChange={(e) => set("company_name", e.target.value)}
                   />
@@ -449,7 +449,7 @@ export default function Onboarding() {
                   <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                   <input
                     className="w-full bg-background border border-border-subtle rounded-none pl-9 pr-3 py-2.5 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:border-primary  focus:ring-primary/50"
-                    placeholder="e.g. James Deng"
+                    placeholder="Insert full name"
                     value={form.admin_name}
                     onChange={(e) => set("admin_name", e.target.value)}
                   />

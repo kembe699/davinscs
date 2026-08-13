@@ -329,7 +329,7 @@ export default function PriceLists() {
                     <input
                       value={addForm.name}
                       onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="e.g. Insurance A, Company B"
+                      placeholder="Insert price list name"
                       className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm"
                     />
                   </div>

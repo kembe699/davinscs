@@ -212,7 +212,7 @@ export default function Tables() {
                   ref={locationRef}
                   type="text"
                   value={location}
-                  placeholder="e.g. Ground Floor"
+                  placeholder="Insert location"
                   onChange={(e) => setLocation(e.target.value)}
                   className="field-input w-full"
                 />

@@ -401,7 +401,7 @@ export default function Promotions() {
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Summer Sale 20%"
+                  placeholder="Insert promotion name"
                   required
                   className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text text-sm focus:outline-none focus:border-admin-text placeholder:text-admin-text-secondary"
                 />

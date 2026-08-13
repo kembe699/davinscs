@@ -203,7 +203,7 @@ export default function ProductForm() {
                         set("name", e.target.value);
                         if (!isEdit) set("slug", autoSlug(e.target.value));
                       }}
-                      placeholder="e.g. iPhone 17 Pro Max"
+                      placeholder="Insert product name"
                       className="field-input"
                     />
                   </div>
@@ -212,7 +212,7 @@ export default function ProductForm() {
                     <input
                       required type="text" value={form.slug}
                       onChange={(e) => set("slug", e.target.value)}
-                      placeholder="e.g. iphone-17-pro-max"
+                      placeholder="Insert slug"
                       className="field-input"
                     />
                   </div>
@@ -272,7 +272,7 @@ export default function ProductForm() {
                           setMargin(Math.round((spNum - cpNum) / cpNum * 100));
                         }
                       }}
-                      placeholder="e.g. 1500000"
+                      placeholder="Insert selling price"
                       className="field-input"
                     />
                   </div>
@@ -306,7 +306,7 @@ export default function ProductForm() {
                           set("price", Math.round(cpNum * (1 + mNum / 100)));
                         }
                       }}
-                      placeholder="e.g. 30  →  30% markup"
+                      placeholder="Insert margin percentage"
                       className="field-input"
                     />
                   </div>
@@ -380,13 +380,13 @@ export default function ProductForm() {
                 {form.specs.map((spec, i) => (
                   <div key={i} className="flex gap-3 items-center">
                     <input
-                      type="text" placeholder="Label (e.g. Weight)"
+                      type="text" placeholder="Insert attribute label"
                       value={spec.label}
                       onChange={(e) => updateSpec(i, "label", e.target.value)}
                       className="field-input flex-1"
                     />
                     <input
-                      type="text" placeholder="Value (e.g. 500g)"
+                      type="text" placeholder="Insert attribute value"
                       value={spec.value}
                       onChange={(e) => updateSpec(i, "value", e.target.value)}
                       className="field-input flex-1"
@@ -432,7 +432,7 @@ export default function ProductForm() {
                         type="number" min={0}
                         value={(form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
                         onChange={(e) => set("quantity_on_hand", e.target.value === "" ? "" : Number(e.target.value))}
-                        placeholder="e.g. 10"
+                        placeholder="Insert quantity in stock"
                         className="field-input"
                       />
                     </div>

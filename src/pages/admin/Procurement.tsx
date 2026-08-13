@@ -1267,7 +1267,7 @@ export default function ProcurementEnhanced() {
                                 {!item.product_id ? (
                                   <input
                                     type="text"
-                                    placeholder="e.g. Samsung 65' TV"
+                                    placeholder="Insert item name"
                                     value={item.item_name || ""}
                                     onChange={(e) => {
                                       const newItems = [...poForm.items];
@@ -1297,7 +1297,7 @@ export default function ProcurementEnhanced() {
                               <td className="px-3 py-2">
                                 <input
                                   type="number"
-                                  placeholder="e.g. 50.00"
+                                  placeholder="Insert unit price"
                                   min={0}
                                   step="any"
                                   value={item.unit_price || ""}

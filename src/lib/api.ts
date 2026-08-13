@@ -96,6 +96,8 @@ export type ApiProduct = {
   reorder_level?: number;
   quick_sale?: boolean;
   tax_rate_id?: number | null;
+  uom?: string;
+  expiry_date?: string | null;
   created_at: string;
   updated_at: string;
 };
