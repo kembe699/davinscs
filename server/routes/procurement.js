@@ -148,16 +148,30 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     const totalAmount = parsedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
     // Snapshot the currency's rate now — payments against this PO's bill convert
-    // using this locked-in rate, not whatever the currency's rate happens to be
-    // by the time payment is actually made.
+    // using this locked-in rate, not whatever the rate happens to be by the
+    // time payment is actually made. Pulled from exchange_rates (base -> PO
+    // currency), the same table POS sales use — not the stale, unmanaged
+    // currencies.exchange_rate column, which sits at its 1.0 default forever.
     let exchangeRate = 1;
     if (currency_id) {
-      const currencyResult = await client.query(
-        "SELECT exchange_rate FROM currencies WHERE id = $1",
-        [currency_id]
+      const baseCurrResult = await client.query(
+        "SELECT id FROM currencies WHERE is_base = TRUE LIMIT 1"
       );
-      if (currencyResult.rows[0]) {
-        exchangeRate = Number(currencyResult.rows[0].exchange_rate) || 1;
+      const baseCurrId = baseCurrResult.rows[0]?.id || null;
+
+      if (baseCurrId && currency_id !== baseCurrId) {
+        const rateResult = await client.query(
+          `SELECT rate FROM exchange_rates
+           WHERE from_currency_id = $1 AND to_currency_id = $2
+             AND is_active = TRUE
+             AND effective_date <= $3
+             AND (expiry_date IS NULL OR expiry_date >= $3)
+           ORDER BY effective_date DESC LIMIT 1`,
+          [baseCurrId, currency_id, order_date]
+        );
+        if (rateResult.rows[0]?.rate) {
+          exchangeRate = Number(rateResult.rows[0].rate) || 1;
+        }
       }
     }
 
