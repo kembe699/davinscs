@@ -803,12 +803,9 @@ router.post('/customer/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid email or password' });
 
-    // Status enforcement
-    const now = new Date();
-    if (user.status === 'suspended') return res.status(403).json({ error: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Please contact support.' });
-    if (user.status === 'trial' && new Date(user.trial_ends_at) < now) return res.status(403).json({ error: 'TRIAL_EXPIRED', message: 'Your 7-day trial has expired. Please pay an invoice to continue.' });
-    if (user.status === 'active' && user.subscription_end && new Date(user.subscription_end) < now) return res.status(403).json({ error: 'SUBSCRIPTION_EXPIRED', message: 'Your subscription has expired. Please renew to continue.' });
-
+    // Suspended/trial-expired/subscription-expired accounts can still log in —
+    // they need to reach the dashboard to pay and reactivate. tenant.status is
+    // returned below so the dashboard shows the right banner and CTA.
     const token = jwt.sign(
       { tenant_user_id: user.id, tenant_id: user.tenant_id, schema_name: user.schema_name, email: user.email, is_customer: true },
       process.env.JWT_SECRET || 'fallback-secret-change-in-production',
