@@ -1062,12 +1062,10 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
     }
     if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
 
-    let priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
-    if (period === 'quarterly') {
-      priceNum = priceNum * 3;
-    } else if (period === 'annual') {
-      priceNum = priceNum * 12 * 0.95;
-    }
+    // plan.price is already the full total for plan.billing_period (that's
+    // exactly what's shown to the customer, e.g. "$180 per year") — not a
+    // monthly base rate to be re-annualized here.
+    const priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
 
     const inv = await pool.query(
       `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
@@ -1152,12 +1150,10 @@ router.post('/staff/pay-subscribe', requireAuthAllowSuspended, async (req, res) 
     }
     if (!invoiceNumber) return res.status(500).json({ error: 'Could not generate invoice number' });
 
-    let priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
-    if (period === 'quarterly') {
-      priceNum = priceNum * 3;
-    } else if (period === 'annual') {
-      priceNum = priceNum * 12 * 0.95;
-    }
+    // plan.price is already the full total for plan.billing_period (that's
+    // exactly what's shown to the customer, e.g. "$180 per year") — not a
+    // monthly base rate to be re-annualized here.
+    const priceNum = parseFloat((plan.price || '0').replace(/[^0-9.]/g, '')) || 0;
 
     const inv = await pool.query(
       `INSERT INTO public.saas_billing (invoice_number, tenant_id, plan_name, amount, currency, notes, billing_period)
