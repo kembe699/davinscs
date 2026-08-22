@@ -18,7 +18,7 @@ export default function POSMain() {
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme("pos");
   
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);

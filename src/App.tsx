@@ -80,7 +80,7 @@ import { useTheme } from "./contexts/ThemeContext.tsx";
 import { Outlet } from "react-router-dom";
 
 function ThemeWrapper() {
-  const { theme } = useTheme();
+  const { theme } = useTheme("pos");
   return (
     <div
       className={theme === "dark" ? "dark bg-background text-foreground min-h-screen" : "bg-background text-foreground min-h-screen"}

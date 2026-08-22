@@ -19,7 +19,7 @@ function compactNumber(n: number): string {
 export default function Dashboard() {
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
-  const { theme } = useTheme();
+  const { theme } = useTheme("admin");
   // The charts used to hardcode dark-only colors (near-black grid/tooltip, a raw
   // neon #00ff00 line/bar) — the grid/tooltip now follow the theme (a dark tooltip
   // box floating on a light page looked broken). The line/bar color is requested

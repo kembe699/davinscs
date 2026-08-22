@@ -9,7 +9,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 
 export default function Company() {
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme("admin");
   const { refreshLayout } = useLayout();
   const [companyData, setCompanyData] = useState({
     name: "",

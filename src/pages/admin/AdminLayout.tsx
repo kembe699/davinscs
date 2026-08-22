@@ -147,7 +147,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const closeSidebar = () => setSidebarOpen(false);
 
   function ThemeToggle() {
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme } = useTheme("admin");
     return (
       <button
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
