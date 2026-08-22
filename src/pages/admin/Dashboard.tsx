@@ -21,10 +21,10 @@ export default function Dashboard() {
   const { baseCurrency } = useCurrency();
   const { theme } = useTheme();
   // The charts used to hardcode dark-only colors (near-black grid/tooltip, a raw
-  // neon #00ff00 line/bar) — harsh and, in light mode, a dark tooltip box floating
-  // on a light page. These follow the theme instead, and the accent is the app's
-  // actual brand teal rather than pure neon green.
-  const chartAccent = "#00A896";
+  // neon #00ff00 line/bar) — the grid/tooltip now follow the theme (a dark tooltip
+  // box floating on a light page looked broken). The line/bar color is requested
+  // to stay the original neon green in dark mode; only light mode gets the teal.
+  const chartAccent = theme === "light" ? "#00A896" : "#00ff00";
   const chartGrid = theme === "light" ? "#e2e8f0" : "#333333";
   const chartAxis = theme === "light" ? "#64748b" : "#888888";
   const chartTooltipBg = theme === "light" ? "#ffffff" : "#1a1a1a";
