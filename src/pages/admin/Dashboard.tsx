@@ -6,6 +6,7 @@ import AdminLayout from "./AdminLayout";
 import { Package, TrendingUp, Plus, DollarSign, ArrowUp, ArrowDown, Activity } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { formatCurrencySync } from "@/utils/currency";
 
 // useTenantPath is called inside the component below
@@ -18,6 +19,17 @@ function compactNumber(n: number): string {
 export default function Dashboard() {
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
+  const { theme } = useTheme();
+  // The charts used to hardcode dark-only colors (near-black grid/tooltip, a raw
+  // neon #00ff00 line/bar) — harsh and, in light mode, a dark tooltip box floating
+  // on a light page. These follow the theme instead, and the accent is the app's
+  // actual brand teal rather than pure neon green.
+  const chartAccent = "#00A896";
+  const chartGrid = theme === "light" ? "#e2e8f0" : "#333333";
+  const chartAxis = theme === "light" ? "#64748b" : "#888888";
+  const chartTooltipBg = theme === "light" ? "#ffffff" : "#1a1a1a";
+  const chartTooltipBorder = theme === "light" ? "#e2e8f0" : "#333333";
+  const chartTooltipText = theme === "light" ? "#334155" : "#ededed";
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [salesData, setSalesData] = useState<any>(null);
@@ -191,14 +203,16 @@ export default function Dashboard() {
                 <div className="p-4 sm:p-6">
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={monthlySales}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                      <XAxis dataKey="month" stroke="#888" style={{ fontSize: '12px' }} />
-                      <YAxis stroke="#888" style={{ fontSize: '12px' }} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                      <XAxis dataKey="month" stroke={chartAxis} style={{ fontSize: '12px' }} />
+                      <YAxis stroke={chartAxis} style={{ fontSize: '12px' }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: chartTooltipBg, border: `1px solid ${chartTooltipBorder}` }}
+                        itemStyle={{ color: chartTooltipText }}
+                        labelStyle={{ color: chartTooltipText }}
                         formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
                       />
-                      <Line type="monotone" dataKey="sales" stroke="#00ff00" strokeWidth={2} dot={{ fill: '#00ff00' }} />
+                      <Line type="monotone" dataKey="sales" stroke={chartAccent} strokeWidth={2} dot={{ fill: chartAccent }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -240,14 +254,16 @@ export default function Dashboard() {
               <div className="p-4 sm:p-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={topProducts}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                    <XAxis dataKey="name" stroke="#888" style={{ fontSize: '11px' }} angle={-45} textAnchor="end" height={100} />
-                    <YAxis stroke="#888" style={{ fontSize: '12px' }} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                    <XAxis dataKey="name" stroke={chartAxis} style={{ fontSize: '11px' }} angle={-45} textAnchor="end" height={100} />
+                    <YAxis stroke={chartAxis} style={{ fontSize: '12px' }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: chartTooltipBg, border: `1px solid ${chartTooltipBorder}` }}
+                      itemStyle={{ color: chartTooltipText }}
+                      labelStyle={{ color: chartTooltipText }}
                       formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
                     />
-                    <Bar dataKey="total" fill="#00ff00" />
+                    <Bar dataKey="total" fill={chartAccent} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

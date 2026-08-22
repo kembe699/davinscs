@@ -175,9 +175,18 @@ a.hover\:bg-primary:hover {
   background: rgba(0, 74, 153, 0.2) !important;
 }
 
+/* Pure white was unconditional here, so every .text-primary label (dashboard
+   eyebrows, chart headings, big numbers) stayed white in light mode too — invisible
+   against a light background. Light mode gets the brand teal instead, readable on
+   both light and dark chassis backgrounds (same color pos-accent-text already uses
+   for this exact reason). */
 .text-primary {
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
+}
+[data-theme="light"] .text-primary {
+  color: #00A896;
+  -webkit-text-fill-color: #00A896;
 }
 
 /* Gradient border helpers */
