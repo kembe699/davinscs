@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List, UtensilsCrossed } from "lucide-react";
+import { Search, ShoppingCart, CreditCard, Trash2, Plus, Minus, DollarSign, User, Menu, X, Barcode, Lock, Bell, AlertTriangle, PackageX, Clock, Sun, Moon, Home, LayoutGrid, List, UtensilsCrossed, Pencil, Check } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import { api, ApiProduct, ApiCategory, PaymentType, TaxRate, CashDrawerSession, ApiCurrency, PriceList, PriceListItem, Promotion, RestaurantTable } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,8 @@ export default function POSMain() {
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<Array<{ product: ApiProduct; quantity: number; discount: number; unit_price: number }>>([]);
+  const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
+  const [priceDraft, setPriceDraft] = useState("");
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [defaultTax, setDefaultTax] = useState<TaxRate | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<number | null>(null);
@@ -431,6 +433,27 @@ export default function POSMain() {
 
   const removeFromCart = (productId: number) => {
     setCart(cart.filter(item => item.product.id !== productId));
+  };
+
+  const startEditingPrice = (productId: number, currentPrice: number) => {
+    setEditingPriceId(productId);
+    setPriceDraft(String(currentPrice));
+  };
+
+  const commitPriceEdit = (productId: number) => {
+    const parsed = parseFloat(priceDraft);
+    if (!isNaN(parsed) && parsed >= 0) {
+      setCart(prev => prev.map(item =>
+        item.product.id === productId ? { ...item, unit_price: parsed } : item
+      ));
+    }
+    setEditingPriceId(null);
+    setPriceDraft("");
+  };
+
+  const cancelPriceEdit = () => {
+    setEditingPriceId(null);
+    setPriceDraft("");
   };
 
   const calculateTotalsRaw = () => {
@@ -1015,7 +1038,7 @@ export default function POSMain() {
                           <h3 className="text-[#1A1A2E] dark:text-gray-100 font-medium text-xs md:text-sm truncate">{product.name}</h3>
                           <div className="text-[10px] md:text-xs text-gray-500 mt-0.5">{product.category}</div>
                           <div className="pos-price-gradient text-sm md:text-base font-bold mt-1">
-                            {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
+                            {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">
@@ -1074,7 +1097,7 @@ export default function POSMain() {
 
                       <div className="mt-auto flex justify-between items-end pt-1 md:pt-0">
                         <div className="pos-price-gradient text-xs md:text-base truncate mr-1">
-                          {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), false)}
+                          {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
                         </div>
                         {isService ? (
                           <span className="text-[9px] md:text-xs font-medium shrink-0 text-gray-400 dark:text-gray-500">Service</span>
@@ -1191,9 +1214,48 @@ export default function POSMain() {
 
                     <div className="text-right">
                       <div className="text-[#1A1A2E] dark:text-gray-100 font-bold text-xs md:text-base">
-                        {formatCurrencySync(item.unit_price * item.quantity - item.discount, schemeCurrencySymbol(), false)}
+                        {formatCurrencySync(item.unit_price * item.quantity - item.discount, schemeCurrencySymbol(), true)}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1 mt-1.5">
+                    {editingPriceId === item.product.id ? (
+                      <>
+                        <span className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">@</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          autoFocus
+                          value={priceDraft}
+                          onChange={(e) => setPriceDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitPriceEdit(item.product.id);
+                            if (e.key === 'Escape') cancelPriceEdit();
+                          }}
+                          onBlur={() => commitPriceEdit(item.product.id)}
+                          className="w-20 md:w-24 px-1.5 py-0.5 text-right text-[10px] md:text-xs border border-[#00A896] rounded bg-white dark:bg-gray-900 text-[#1A1A2E] dark:text-gray-100 focus:outline-none"
+                        />
+                        <button
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => commitPriceEdit(item.product.id)}
+                          className="text-[#10B981] hover:text-[#0d9668] p-0.5"
+                          title="Save price"
+                        >
+                          <Check size={12} className="md:w-[14px] md:h-[14px]" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => startEditingPrice(item.product.id, item.unit_price)}
+                        className="flex items-center gap-1 text-[10px] md:text-xs text-gray-400 dark:text-gray-500 hover:text-[#00A896] transition-colors"
+                        title="Edit unit price"
+                      >
+                        <span>@ {formatCurrencySync(item.unit_price, schemeCurrencySymbol(), true)}</span>
+                        <Pencil size={10} className="md:w-3 md:h-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -1209,7 +1271,7 @@ export default function POSMain() {
                   onClick={() => setShowDiscountModal(true)}
                   className="px-2 md:px-3 py-1.5 md:py-2 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-md md:rounded-lg text-[10px] md:text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors"
                 >
-                  Discount {cartDiscount > 0 && !appliedPromotion ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', false)})` : ''}
+                  Discount {cartDiscount > 0 && !appliedPromotion ? `(-${discountType === 'percentage' ? discountValue + '%' : formatCurrencySync(discountValue, baseCurrency?.symbol || 'UGX', true)})` : ''}
                 </button>
                 <button
                   onClick={() => setShowPromoModal(true)}
@@ -1227,17 +1289,17 @@ export default function POSMain() {
               <div className="space-y-1 md:space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
                 <div className="flex justify-between text-xs md:text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                   <span>Subtotal</span>
-                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(subtotal, schemeCurrencySymbol(), false)}</span>
+                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(subtotal, schemeCurrencySymbol(), true)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-xs md:text-sm">
                     <span className="pos-price-gradient">{appliedPromotion ? `Promo: ${appliedPromotion.name}` : 'Discount'}</span>
-                    <span className="pos-price-gradient">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
+                    <span className="pos-price-gradient">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), true)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs md:text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                   <span>Tax ({defaultTax?.rate}%)</span>
-                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), false)}</span>
+                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), true)}</span>
                 </div>
               </div>
 
@@ -1245,7 +1307,7 @@ export default function POSMain() {
                 <span className="text-base md:text-xl font-bold text-[#1A1A2E] dark:text-gray-100">Total</span>
                 <div className="text-right">
                   <span className="pos-price-gradient text-lg md:text-2xl">
-                    {formatCurrencySync(total, schemeCurrencySymbol(), false)}
+                    {formatCurrencySync(total, schemeCurrencySymbol(), true)}
                   </span>
                   {secondaryCurrency && exchangeRate && (
                     <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 mt-0.5 md:mt-1">
@@ -1371,21 +1433,21 @@ export default function POSMain() {
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 space-y-3">
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                   <span>Subtotal</span>
-                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(subtotal, schemeCurrencySymbol(), false)}</span>
+                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(subtotal, schemeCurrencySymbol(), true)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-[#10B981]">
                     <span>Discount</span>
-                    <span className="font-medium">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), false)}</span>
+                    <span className="font-medium">-{formatCurrencySync(discountAmount, schemeCurrencySymbol(), true)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                   <span>Tax</span>
-                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), false)}</span>
+                  <span className="font-medium text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(taxAmount, schemeCurrencySymbol(), true)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
                   <span className="text-[#1A1A2E] dark:text-gray-100">Total to Pay</span>
-                  <span className="text-[#10B981]">{formatCurrencySync(total, schemeCurrencySymbol(), false)}</span>
+                  <span className="text-[#10B981]">{formatCurrencySync(total, schemeCurrencySymbol(), true)}</span>
                 </div>
               </div>
 
@@ -1558,7 +1620,7 @@ export default function POSMain() {
                       </div>
                       <div className="text-right ml-4 shrink-0">
                         <div className="text-xl font-black text-[#10B981] bg-[#10B981]/10 dark:bg-[#10B981]/20 px-3 py-1 rounded-lg">
-                          {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `-${formatCurrencySync(promo.discount_value, baseCurrency?.symbol || 'UGX', false)}`}
+                          {promo.discount_type === 'percentage' ? `${promo.discount_value}% OFF` : `-${formatCurrencySync(promo.discount_value, baseCurrency?.symbol || 'UGX', true)}`}
                         </div>
                       </div>
                     </div>
@@ -1668,7 +1730,7 @@ export default function POSMain() {
                             <p className="font-bold text-[#1A1A2E] dark:text-gray-100 text-sm whitespace-nowrap">{t.label}</p>
                             {occupied ? (
                               <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 whitespace-nowrap">
-                                {itemCount} item(s) · {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
+                                {itemCount} item(s) · {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', true)}
                               </p>
                             ) : (
                               <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Available</p>
@@ -1734,7 +1796,7 @@ export default function POSMain() {
                         {(sale.items || []).map((item: any) => (
                           <div key={item.id} className="flex justify-between">
                             <span>{item.quantity} × {item.product_name}</span>
-                            <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', false)}</span>
+                            <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', true)}</span>
                           </div>
                         ))}
                       </div>
@@ -1744,7 +1806,7 @@ export default function POSMain() {
                           {new Date(sale.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <p className="text-xl font-bold text-[#10B981]">
-                          {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
+                          {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', true)}
                         </p>
                       </div>
 
