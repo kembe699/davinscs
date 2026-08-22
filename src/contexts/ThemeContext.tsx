@@ -25,11 +25,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [saving] = useState(false);
 
   // Sync theme from localStorage when user changes (login/logout)
-  // Does NOT touch document.documentElement — ThemeWrapper handles scoped DOM application
   useEffect(() => {
     const savedTheme = (localStorage.getItem(getThemeKey()) as Theme) || "dark";
     setThemeState(savedTheme);
   }, [getThemeKey]);
+
+  // index.html hardcodes data-theme="dark" and nothing else ever updated it or the
+  // Tailwind `dark` class (darkMode: ["class"]) — so toggling theme only ever changed
+  // this context's own state, with no visible effect anywhere. This is the one place
+  // that actually applies it to the DOM for both the CSS-variable theme (data-theme)
+  // and every component's `dark:` Tailwind utility classes.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
