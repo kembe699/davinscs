@@ -222,7 +222,7 @@ export default function Receipts() {
                         <td className="px-4 py-3 text-admin-text">{sale.user_name || sale.user_email || "—"}</td>
                         <td className="px-4 py-3 text-admin-text-secondary text-xs">{new Date(sale.created_at).toLocaleString()}</td>
                         <td className="px-4 py-3 text-admin-text">{getPaymentTypeName(sale.payment_type_id)}</td>
-                        <td className="px-4 py-3 font-mono text-admin-text text-right">{formatCurrencySync(sale.total_amount, sym, false)}</td>
+                        <td className="px-4 py-3 font-mono text-admin-text text-right">{formatCurrencySync(sale.total_amount, sym, true)}</td>
                         <td className="px-4 py-3">
                           {sale.voided && (
                             <span className="px-1.5 py-0.5 text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/30">Voided</span>
@@ -298,10 +298,10 @@ export default function Receipts() {
                       <div className="min-w-0">
                         <p className="text-admin-text truncate">{item.product_name}</p>
                         <p className="text-xs text-admin-text-secondary">
-                          {item.quantity} × {formatCurrencySync(item.unit_price, sym, false)}
+                          {item.quantity} × {formatCurrencySync(item.unit_price, sym, true)}
                         </p>
                       </div>
-                      <span className="font-mono text-admin-text shrink-0">{formatCurrencySync(item.subtotal, sym, false)}</span>
+                      <span className="font-mono text-admin-text shrink-0">{formatCurrencySync(item.subtotal, sym, true)}</span>
                     </div>
                   ))}
                 </div>
@@ -311,21 +311,21 @@ export default function Receipts() {
               <div className="bg-admin-surface border border-admin-border p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-admin-text-secondary">Subtotal</span>
-                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.subtotal, sym, false)}</span>
+                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.subtotal, sym, true)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-admin-text-secondary">Tax</span>
-                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.tax_amount, sym, false)}</span>
+                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.tax_amount, sym, true)}</span>
                 </div>
                 {detail.discount_amount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-admin-text-secondary">Discount</span>
-                    <span className="text-admin-text font-mono">-{formatCurrencySync(detail.discount_amount, sym, false)}</span>
+                    <span className="text-admin-text font-mono">-{formatCurrencySync(detail.discount_amount, sym, true)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-base font-bold border-t border-admin-border pt-2 mt-1">
                   <span className="text-admin-text">Total</span>
-                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.total_amount, sym, false)}</span>
+                  <span className="text-admin-text font-mono">{formatCurrencySync(detail.total_amount, sym, true)}</span>
                 </div>
               </div>
             </div>

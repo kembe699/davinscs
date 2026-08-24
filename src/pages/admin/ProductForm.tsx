@@ -6,6 +6,7 @@ import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { roundToCents } from "@/utils/currency";
 
 type Spec = { label: string; value: string };
 
@@ -285,7 +286,7 @@ export default function ProductForm() {
                         set("cost_price", raw as unknown as number | "");
                         const cpNum = parseFloat(raw);
                         if (!isNaN(cpNum) && cpNum > 0 && margin !== "") {
-                          set("price", Math.round(cpNum * (1 + Number(margin) / 100)));
+                          set("price", roundToCents(cpNum * (1 + Number(margin) / 100)));
                         }
                       }}
                       placeholder="Cost (optional)"
@@ -303,7 +304,7 @@ export default function ProductForm() {
                         const mNum = parseFloat(raw);
                         const cpNum = parseFloat(String(form.cost_price));
                         if (!isNaN(mNum) && !isNaN(cpNum) && cpNum > 0) {
-                          set("price", Math.round(cpNum * (1 + mNum / 100)));
+                          set("price", roundToCents(cpNum * (1 + mNum / 100)));
                         }
                       }}
                       placeholder="Insert margin percentage"

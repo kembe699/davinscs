@@ -304,9 +304,9 @@ export default function EndOfDay() {
         {closeResult && (
           <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 text-sm flex items-center gap-2">
             <Receipt size={15} />
-            Shift closed — Closing cash: {formatCurrencySync(closeResult.closing_cash, sym, false)} |
-            Expected: {formatCurrencySync(closeResult.expected_cash, sym, false)} |
-            Difference: {formatCurrencySync(closeResult.cash_difference, sym, false)}
+            Shift closed — Closing cash: {formatCurrencySync(closeResult.closing_cash, sym, true)} |
+            Expected: {formatCurrencySync(closeResult.expected_cash, sym, true)} |
+            Difference: {formatCurrencySync(closeResult.cash_difference, sym, true)}
           </div>
         )}
 
@@ -319,9 +319,9 @@ export default function EndOfDay() {
         {session && (
           <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 px-4 py-3 text-sm flex items-center gap-2 flex-wrap">
             <Lock size={14} />
-            Cash drawer is <strong>open</strong> — opened at {new Date(session.opened_at).toLocaleTimeString()} with {formatCurrencySync(session.opening_cash, sym, false)} opening cash.
+            Cash drawer is <strong>open</strong> — opened at {new Date(session.opened_at).toLocaleTimeString()} with {formatCurrencySync(session.opening_cash, sym, true)} opening cash.
             {expectedCash != null && (
-              <span className="font-bold">You should have {formatCurrencySync(expectedCash, sym, false)} in the drawer right now.</span>
+              <span className="font-bold">You should have {formatCurrencySync(expectedCash, sym, true)} in the drawer right now.</span>
             )}
             <button onClick={() => setShowCloseModal(true)} className="ml-auto underline whitespace-nowrap">Close shift →</button>
           </div>
@@ -359,7 +359,7 @@ export default function EndOfDay() {
                     <Icon size={15} className={color} />
                   </div>
                   <div className={`text-2xl font-bold ${color} ${mono ? "font-mono" : ""}`}>
-                    {mono ? formatCurrencySync(Number(value), sym, false) : Number(value)}
+                    {mono ? formatCurrencySync(Number(value), sym, true) : Number(value)}
                   </div>
                 </div>
               ))}
@@ -370,13 +370,13 @@ export default function EndOfDay() {
               {Number(report?.refund_summary?.count) > 0 && (
                 <div className="flex-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 px-4 py-3 text-sm flex items-center justify-between">
                   <span>↩ <strong>{report.refund_summary.count}</strong> refund(s) processed today</span>
-                  <span className="font-mono font-bold">{formatCurrencySync(Number(report.refund_summary.total_refunded), sym, false)} refunded</span>
+                  <span className="font-mono font-bold">{formatCurrencySync(Number(report.refund_summary.total_refunded), sym, true)} refunded</span>
                 </div>
               )}
               {Number(report?.voided_sales?.count) > 0 && (
                 <div className="flex-1 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-4 py-3 text-sm flex items-center justify-between">
                   <span>⚠ <strong>{report.voided_sales.count}</strong> voided sale(s)</span>
-                  <span className="font-mono font-bold">{formatCurrencySync(Number(report.voided_sales.total), sym, false)} voided</span>
+                  <span className="font-mono font-bold">{formatCurrencySync(Number(report.voided_sales.total), sym, true)} voided</span>
                 </div>
               )}
             </div>
@@ -389,8 +389,8 @@ export default function EndOfDay() {
                     <DollarSign size={15} /> Cash In / Cash Out
                   </h2>
                   <div className="flex items-center gap-4 text-sm font-mono">
-                    <span className="text-emerald-400 flex items-center gap-1"><TrendingUp size={13} /> +{formatCurrencySync(cashInTotal, sym, false)}</span>
-                    <span className="text-red-400 flex items-center gap-1"><TrendingDown size={13} /> -{formatCurrencySync(cashOutTotal, sym, false)}</span>
+                    <span className="text-emerald-400 flex items-center gap-1"><TrendingUp size={13} /> +{formatCurrencySync(cashInTotal, sym, true)}</span>
+                    <span className="text-red-400 flex items-center gap-1"><TrendingDown size={13} /> -{formatCurrencySync(cashOutTotal, sym, true)}</span>
                   </div>
                 </div>
                 <table className="w-full text-sm">
@@ -413,7 +413,7 @@ export default function EndOfDay() {
                         </td>
                         <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100">{m.reason || '—'}</td>
                         <td className={`px-4 py-2 text-right font-mono font-semibold ${m.type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {m.type === 'out' ? '-' : '+'}{formatCurrencySync(Number(m.amount), sym, false)}
+                          {m.type === 'out' ? '-' : '+'}{formatCurrencySync(Number(m.amount), sym, true)}
                         </td>
                       </tr>
                     ))}
@@ -445,10 +445,10 @@ export default function EndOfDay() {
                         <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{c.email}</td>
                         <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{c.total_transactions}</td>
                         <td className="px-4 py-2 text-red-400 text-right font-mono">
-                          -{formatCurrencySync(Number(c.total_discounts), sym, false)}
+                          -{formatCurrencySync(Number(c.total_discounts), sym, true)}
                         </td>
                         <td className="px-4 py-2 text-emerald-400 text-right font-mono">
-                          {formatCurrencySync(Number(c.total_sales), sym, false)}
+                          {formatCurrencySync(Number(c.total_sales), sym, true)}
                         </td>
                       </tr>
                     ))
@@ -482,7 +482,7 @@ export default function EndOfDay() {
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100">{pm.name}</td>
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{pm.count}</td>
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
-                            {formatCurrencySync(Number(pm.total), sym, false)}
+                            {formatCurrencySync(Number(pm.total), sym, true)}
                           </td>
                         </tr>
                       ))
@@ -496,7 +496,7 @@ export default function EndOfDay() {
                         <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100">Total</td>
                         <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100 text-right">{ss?.total_transactions ?? 0}</td>
                         <td className="px-4 py-2 font-bold text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
-                          {formatCurrencySync(Number(ss?.total_sales ?? 0), sym, false)}
+                          {formatCurrencySync(Number(ss?.total_sales ?? 0), sym, true)}
                         </td>
                       </tr>
                     </tfoot>
@@ -524,7 +524,7 @@ export default function EndOfDay() {
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 truncate max-w-[140px]">{p.product_name}</td>
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right">{p.quantity}</td>
                           <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
-                            {formatCurrencySync(Number(p.revenue), sym, false)}
+                            {formatCurrencySync(Number(p.revenue), sym, true)}
                           </td>
                         </tr>
                       ))
@@ -559,7 +559,7 @@ export default function EndOfDay() {
                           />
                           {cnt > 0 && (
                             <div className="absolute bottom-full mb-1 hidden group-hover:block bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs text-[#1A1A2E] dark:text-gray-100 px-2 py-1 whitespace-nowrap z-10">
-                              {h}:00 — {cnt} sale{cnt !== 1 ? "s" : ""}<br />{formatCurrencySync(amt, sym, false)}
+                              {h}:00 — {cnt} sale{cnt !== 1 ? "s" : ""}<br />{formatCurrencySync(amt, sym, true)}
                             </div>
                           )}
                         </div>
@@ -579,7 +579,7 @@ export default function EndOfDay() {
                         <div className="text-xs text-gray-500 dark:text-gray-400">{String(h.hour).padStart(2,"0")}:00</div>
                         <div className="text-sm font-bold text-[#1A1A2E] dark:text-gray-100">{h.sales_count}</div>
                         <div className="text-xs font-mono text-gray-500 dark:text-gray-400">
-                          {formatCurrencySync(Number(h.total_amount), sym, false)}
+                          {formatCurrencySync(Number(h.total_amount), sym, true)}
                         </div>
                       </div>
                     ))}
@@ -614,28 +614,28 @@ export default function EndOfDay() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">Opening cash</span>
-                    <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(session.opening_cash, sym, false)}</span>
+                    <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(session.opening_cash, sym, true)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">Sales this shift</span>
-                    <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(sessionSales ?? 0), sym, false)}</span>
+                    <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(sessionSales ?? 0), sym, true)}</span>
                   </div>
                   {cashOutTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Cash out</span>
-                      <span className="text-red-400 font-mono">-{formatCurrencySync(cashOutTotal, sym, false)}</span>
+                      <span className="text-red-400 font-mono">-{formatCurrencySync(cashOutTotal, sym, true)}</span>
                     </div>
                   )}
                   {cashInTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Cash in</span>
-                      <span className="text-emerald-400 font-mono">+{formatCurrencySync(cashInTotal, sym, false)}</span>
+                      <span className="text-emerald-400 font-mono">+{formatCurrencySync(cashInTotal, sym, true)}</span>
                     </div>
                   )}
                   {expectedCash != null && (
                     <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700 font-bold">
                       <span className="text-[#1A1A2E] dark:text-gray-100">You should submit</span>
-                      <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(expectedCash, sym, false)}</span>
+                      <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(expectedCash, sym, true)}</span>
                     </div>
                   )}
                 </div>

@@ -396,7 +396,7 @@ export default function ReportsNew() {
     if (selectedReport === "sales-by-scheme" && Array.isArray(reportData)) {
       return reportData.map((row: any) => {
         const sym = row.currency_symbol || baseCurrency?.symbol || 'UGX';
-        const fmt = (v: any) => `${sym} ${Math.round(parseFloat(v)).toLocaleString('en-US')}`;
+        const fmt = (v: any) => `${sym} ${(parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         return {
           scheme_name: row.scheme_name,
           currency_code: row.currency_code || baseCurrency?.code || 'UGX',
@@ -754,10 +754,10 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'Date', accessor: 'date', format: (val) => new Date(val).toLocaleDateString() },
                       { header: 'Sales Count', accessor: 'total_sales', align: 'right' },
-                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Tax', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Discounts', accessor: 'total_discounts', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Tax', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Discounts', accessor: 'total_discounts', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['date', 'average_sale']}
@@ -770,9 +770,9 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'User', accessor: 'user_email' },
                       { header: 'Sales Count', accessor: 'total_sales', align: 'right' },
-                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Tax Collected', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Tax Collected', accessor: 'total_tax', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Avg Sale', accessor: 'average_sale', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['user_email', 'average_sale']}
@@ -785,8 +785,8 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'Customer', accessor: 'customer_name' },
                       { header: 'Purchases', accessor: 'total_purchases', align: 'right' },
-                      { header: 'Total Spent', accessor: 'total_spent', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Avg Purchase', accessor: 'average_purchase', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Total Spent', accessor: 'total_spent', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Avg Purchase', accessor: 'average_purchase', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
                       { header: 'Last Purchase', accessor: 'last_purchase', align: 'right', format: (val) => new Date(val).toLocaleDateString() }
                     ]}
                     data={reportData}
@@ -800,9 +800,9 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'Product', accessor: 'product_name' },
                       { header: 'Quantity Sold', accessor: 'total_quantity', align: 'right' },
-                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) },
                       { header: 'Times Sold', accessor: 'times_sold', align: 'right' },
-                      { header: 'Avg Price', accessor: 'average_price', align: 'right', format: (val) => formatCurrencySync(Math.round(parseFloat(val)), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Avg Price', accessor: 'average_price', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['product_name', 'average_price']}
@@ -818,7 +818,7 @@ export default function ReportsNew() {
                       {(reportData.revenue || []).map((r: any, i: number) => (
                         <div key={i} className="flex justify-between py-1.5 text-sm border-b border-gray-100">
                           <span className="text-gray-700">{r.label}</span>
-                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(r.amount, baseCurrency?.symbol || 'UGX', false)}</span>
+                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(r.amount, baseCurrency?.symbol || 'UGX', true)}</span>
                         </div>
                       ))}
                       {(reportData.revenue || []).length === 0 && (
@@ -826,7 +826,7 @@ export default function ReportsNew() {
                       )}
                       <div className="flex justify-between py-2 border-t-2 border-gray-800 mt-1 font-bold">
                         <span className="text-gray-900">Total Revenue</span>
-                        <span className="font-mono text-green-700">{formatCurrencySync(reportData.total_revenue, baseCurrency?.symbol || 'UGX', false)}</span>
+                        <span className="font-mono text-green-700">{formatCurrencySync(reportData.total_revenue, baseCurrency?.symbol || 'UGX', true)}</span>
                       </div>
                     </div>
 
@@ -835,11 +835,11 @@ export default function ReportsNew() {
                       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b-2 border-orange-600 pb-1 mb-3">Cost of Goods Sold</h3>
                       <div className="flex justify-between py-1.5 text-sm border-b border-gray-100">
                         <span className="text-gray-700">Cost of Goods Sold (COGS)</span>
-                        <span className="font-mono font-medium text-orange-700">{formatCurrencySync(reportData.cogs || 0, baseCurrency?.symbol || 'UGX', false)}</span>
+                        <span className="font-mono font-medium text-orange-700">{formatCurrencySync(reportData.cogs || 0, baseCurrency?.symbol || 'UGX', true)}</span>
                       </div>
                       <div className={`flex justify-between py-2 border-t-2 mt-1 font-bold ${(reportData.gross_profit ?? reportData.total_revenue) >= 0 ? 'border-green-700 text-green-800' : 'border-red-600 text-red-700'}`}>
                         <span>Gross Profit</span>
-                        <span className="font-mono">{formatCurrencySync(reportData.gross_profit ?? reportData.total_revenue, baseCurrency?.symbol || 'UGX', false)}</span>
+                        <span className="font-mono">{formatCurrencySync(reportData.gross_profit ?? reportData.total_revenue, baseCurrency?.symbol || 'UGX', true)}</span>
                       </div>
                     </div>
 
@@ -849,7 +849,7 @@ export default function ReportsNew() {
                       {(reportData.expenses || []).map((e: any, i: number) => (
                         <div key={i} className="flex justify-between py-1.5 text-sm border-b border-gray-100">
                           <span className="text-gray-700">{e.label}</span>
-                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(e.amount, baseCurrency?.symbol || 'UGX', false)}</span>
+                          <span className="font-mono font-medium text-gray-900">{formatCurrencySync(e.amount, baseCurrency?.symbol || 'UGX', true)}</span>
                         </div>
                       ))}
                       {(reportData.expenses || []).length === 0 && (
@@ -857,7 +857,7 @@ export default function ReportsNew() {
                       )}
                       <div className="flex justify-between py-2 border-t-2 border-gray-800 mt-1 font-bold">
                         <span className="text-gray-900">Total Operating Expenses</span>
-                        <span className="font-mono text-red-600">{formatCurrencySync(reportData.total_expenses, baseCurrency?.symbol || 'UGX', false)}</span>
+                        <span className="font-mono text-red-600">{formatCurrencySync(reportData.total_expenses, baseCurrency?.symbol || 'UGX', true)}</span>
                       </div>
                     </div>
 
@@ -866,7 +866,7 @@ export default function ReportsNew() {
                       reportData.net_income >= 0 ? 'border-green-600 bg-green-50 text-green-800' : 'border-red-500 bg-red-50 text-red-800'
                     }`}>
                       <span>{reportData.net_income >= 0 ? 'Net Income (Profit)' : 'Net Loss'}</span>
-                      <span className="font-mono">{formatCurrencySync(Math.abs(reportData.net_income), baseCurrency?.symbol || 'UGX', false)}</span>
+                      <span className="font-mono">{formatCurrencySync(Math.abs(reportData.net_income), baseCurrency?.symbol || 'UGX', true)}</span>
                     </div>
                   </div>
                 )}
@@ -878,25 +878,25 @@ export default function ReportsNew() {
                       <div className="border border-admin-border p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Procurement Payments</p>
                         <p className="text-xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.procurement_payments) || 0, baseCurrency?.symbol || 'UGX', false)}
+                          {formatCurrencySync(parseFloat(reportData.procurement_payments) || 0, baseCurrency?.symbol || 'UGX', true)}
                         </p>
                       </div>
                       <div className="border border-admin-border p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Accounting Expenses</p>
                         <p className="text-xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.accounting_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
+                          {formatCurrencySync(parseFloat(reportData.accounting_expenses) || 0, baseCurrency?.symbol || 'UGX', true)}
                         </p>
                       </div>
                       <div className="border border-admin-border p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Cash Drawer Expenses</p>
                         <p className="text-xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.cash_drawer_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
+                          {formatCurrencySync(parseFloat(reportData.cash_drawer_expenses) || 0, baseCurrency?.symbol || 'UGX', true)}
                         </p>
                       </div>
                       <div className="border border-admin-text bg-admin-text/5 p-4">
                         <p className="text-xs text-admin-text-secondary mb-2">Total Expenses</p>
                         <p className="text-xl font-bold font-mono text-admin-text">
-                          {formatCurrencySync(parseInt(reportData.total_expenses) || 0, baseCurrency?.symbol || 'UGX', false)}
+                          {formatCurrencySync(parseFloat(reportData.total_expenses) || 0, baseCurrency?.symbol || 'UGX', true)}
                         </p>
                       </div>
                     </div>
@@ -910,7 +910,7 @@ export default function ReportsNew() {
                       { header: 'Account Code', accessor: 'code' },
                       { header: 'Category', accessor: 'category_name' },
                       { header: 'Transactions', accessor: 'transaction_count', align: 'right' },
-                      { header: 'Total Amount', accessor: 'total_amount', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Total Amount', accessor: 'total_amount', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['code', 'category_name']}
@@ -924,7 +924,7 @@ export default function ReportsNew() {
                       { header: 'Date', accessor: 'created_at', format: (val) => new Date(val).toLocaleString() },
                       { header: 'User', accessor: 'user_email' },
                       { header: 'Reason', accessor: 'reason' },
-                      { header: 'Amount', accessor: 'amount', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Amount', accessor: 'amount', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['created_at', 'user_email', 'reason']}
@@ -1012,7 +1012,7 @@ export default function ReportsNew() {
                     columns={[
                       { header: 'Product', accessor: 'product_name' },
                       { header: 'Total Qty', accessor: 'total_quantity', align: 'right' },
-                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseInt(val), baseCurrency?.symbol || 'UGX', false) }
+                      { header: 'Total Revenue', accessor: 'total_revenue', align: 'right', format: (val) => formatCurrencySync(parseFloat(val), baseCurrency?.symbol || 'UGX', true) }
                     ]}
                     data={reportData}
                     totalsExclude={['product_name']}
@@ -1028,9 +1028,9 @@ export default function ReportsNew() {
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       {[
                         { label: "Total Invoices", value: reportData.totals?.total_invoices ?? 0, mono: false },
-                        { label: "Total Billed", value: formatCurrencySync(parseInt(reportData.totals?.total_billed || 0), baseCurrency?.symbol || 'UGX', false), mono: true },
-                        { label: "Total Collected", value: formatCurrencySync(parseInt(reportData.totals?.total_collected || 0), baseCurrency?.symbol || 'UGX', false), mono: true, green: true },
-                        { label: "Outstanding", value: formatCurrencySync(parseInt(reportData.totals?.total_outstanding || 0), baseCurrency?.symbol || 'UGX', false), mono: true, red: true },
+                        { label: "Total Billed", value: formatCurrencySync(parseFloat(reportData.totals?.total_billed || 0), baseCurrency?.symbol || 'UGX', true), mono: true },
+                        { label: "Total Collected", value: formatCurrencySync(parseFloat(reportData.totals?.total_collected || 0), baseCurrency?.symbol || 'UGX', true), mono: true, green: true },
+                        { label: "Outstanding", value: formatCurrencySync(parseFloat(reportData.totals?.total_outstanding || 0), baseCurrency?.symbol || 'UGX', true), mono: true, red: true },
                       ].map(k => (
                         <div key={k.label} className={`border p-4 ${k.green ? 'border-green-400 bg-green-50' : k.red ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
                           <p className="text-xs text-gray-500 mb-1">{k.label}</p>
@@ -1058,9 +1058,9 @@ export default function ReportsNew() {
                         columns={[
                           { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
                           { header: 'Count', accessor: 'invoice_count', align: 'right' },
-                          { header: 'Total Billed', accessor: 'total_billed', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                          { header: 'Total Paid', accessor: 'total_paid', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                          { header: 'Outstanding', accessor: 'total_outstanding', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                          { header: 'Total Billed', accessor: 'total_billed', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                          { header: 'Total Paid', accessor: 'total_paid', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                          { header: 'Outstanding', accessor: 'total_outstanding', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
                         ]}
                         data={reportData.byStatus}
                         totalsExclude={['status']}
@@ -1078,9 +1078,9 @@ export default function ReportsNew() {
                       { header: 'Phone', accessor: 'customer_phone' },
                       { header: 'Date', accessor: 'date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
                       { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
-                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
                       { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
                     ]}
                     data={reportData}
@@ -1097,9 +1097,9 @@ export default function ReportsNew() {
                       { header: 'Phone', accessor: 'customer_phone' },
                       { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
                       { header: 'Days Overdue', accessor: 'days_overdue', align: 'right', format: (v) => `${v} days` },
-                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Balance Due', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Balance Due', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
                       { header: 'Status', accessor: 'status', format: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
                     ]}
                     data={reportData}
@@ -1116,9 +1116,9 @@ export default function ReportsNew() {
                       { header: 'Phone', accessor: 'customer_phone' },
                       { header: 'Date', accessor: 'date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
                       { header: 'Due Date', accessor: 'due_date', format: (v) => v ? new Date(v).toLocaleDateString() : '—' },
-                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
-                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Total', accessor: 'total_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Paid', accessor: 'paid_amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
+                      { header: 'Balance', accessor: 'balance_due', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
                       { header: '% Paid', accessor: 'payment_pct', align: 'right', format: (v) => `${v}%` },
                     ]}
                     data={reportData}
@@ -1134,7 +1134,7 @@ export default function ReportsNew() {
                       { header: 'Invoice #', accessor: 'invoice_number' },
                       { header: 'Customer', accessor: 'customer_name' },
                       { header: 'Method', accessor: 'payment_method' },
-                      { header: 'Amount', accessor: 'amount', align: 'right', format: (v) => formatCurrencySync(parseInt(v), baseCurrency?.symbol || 'UGX', false) },
+                      { header: 'Amount', accessor: 'amount', align: 'right', format: (v) => formatCurrencySync(parseFloat(v), baseCurrency?.symbol || 'UGX', true) },
                       { header: 'Notes', accessor: 'notes' },
                     ]}
                     data={reportData}
@@ -1161,10 +1161,10 @@ export default function ReportsNew() {
                               <td className="px-4 py-3 border-b border-gray-100 text-gray-900">{row.scheme_name}</td>
                               <td className="px-4 py-3 border-b border-gray-100 text-gray-900">{row.currency_code || baseCurrency?.code || 'UGX'}</td>
                               <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{row.total_sales}</td>
-                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_revenue), sym, false)}</td>
-                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_tax), sym, false)}</td>
-                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseInt(row.total_discounts), sym, false)}</td>
-                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(Math.round(parseFloat(row.average_sale)), sym, false)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseFloat(row.total_revenue), sym, true)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseFloat(row.total_tax), sym, true)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseFloat(row.total_discounts), sym, true)}</td>
+                              <td className="px-4 py-3 border-b border-gray-100 text-right font-mono text-gray-900">{formatCurrencySync(parseFloat(row.average_sale), sym, true)}</td>
                             </tr>
                           );
                         })}

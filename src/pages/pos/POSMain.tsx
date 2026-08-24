@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatCurrencySync } from "@/utils/currency";
+import { formatCurrencySync, roundToCents } from "@/utils/currency";
 import { printDocument, printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -186,7 +186,7 @@ export default function POSMain() {
     if (promo.discount_type === "percentage") {
       setDiscountType("percentage");
       setDiscountValue(promo.discount_value);
-      setCartDiscount(Math.round(subtotal * (promo.discount_value / 100)));
+      setCartDiscount(roundToCents(subtotal * (promo.discount_value / 100)));
     } else {
       setDiscountType("amount");
       setDiscountValue(promo.discount_value);
@@ -520,14 +520,14 @@ export default function POSMain() {
     // Apply cart-level discount
     let discountAmount = cartDiscount;
     if (discountType === "percentage" && discountValue > 0) {
-      discountAmount = Math.round(subtotal * (discountValue / 100));
+      discountAmount = roundToCents(subtotal * (discountValue / 100));
     } else if (discountType === "amount" && discountValue > 0) {
       discountAmount = discountValue;
     }
 
     const afterDiscount = subtotal - discountAmount;
     const taxRate = defaultTax?.rate || 0;
-    const taxAmount = Math.round(afterDiscount * (taxRate / 100));
+    const taxAmount = roundToCents(afterDiscount * (taxRate / 100));
     const total = afterDiscount + taxAmount;
 
     return { subtotal, taxAmount, total, discountAmount };
@@ -537,7 +537,7 @@ export default function POSMain() {
     setAppliedPromotion(null);
     const { subtotal } = calculateTotalsRaw();
     if (discountType === "percentage") {
-      setCartDiscount(Math.round(subtotal * (discountValue / 100)));
+      setCartDiscount(roundToCents(subtotal * (discountValue / 100)));
     } else {
       setCartDiscount(discountValue);
     }

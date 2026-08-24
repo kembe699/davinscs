@@ -34,7 +34,7 @@ export default function CashflowReport() {
 
   useEffect(() => { load(); }, []);
 
-  const fmt = (v: number) => formatCurrencySync(v, sym, false);
+  const fmt = (v: number) => formatCurrencySync(v, sym, true);
   const s = data?.summary;
 
   const exportCSV = () => {

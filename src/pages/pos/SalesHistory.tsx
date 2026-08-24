@@ -223,7 +223,7 @@ export default function SalesHistory() {
       const ri = refundItems[item.product_id];
       if (!ri?.checked) return sum;
       const ratio = ri.qty / item.quantity;
-      return sum + Math.round(item.subtotal * ratio);
+      return sum + item.subtotal * ratio;
     }, 0);
   };
 
@@ -236,7 +236,7 @@ export default function SalesHistory() {
     setRefundProcessing(true);
     try {
       const res = await api.pos.refundSale(selectedSale.id, selected, refundMethod, refundReason);
-      setRefundResult({ ok: true, text: `Refund ${res.refund_number} processed — ${formatCurrencySync(res.refund_amount, baseCurrency?.symbol || 'UGX', false)} refunded via ${refundMethod}.` });
+      setRefundResult({ ok: true, text: `Refund ${res.refund_number} processed — ${formatCurrencySync(res.refund_amount, baseCurrency?.symbol || 'UGX', true)} refunded via ${refundMethod}.` });
       loadData();
       await loadSaleDetails(selectedSale.id);
     } catch (err: any) {
@@ -431,11 +431,11 @@ export default function SalesHistory() {
                       <td className="px-3 py-2 text-xs text-[#1A1A2E] dark:text-gray-100">{getPaymentTypeName(sale.payment_type_id)}</td>
                       <td className="px-3 py-2 text-xs text-right text-[#1A1A2E] dark:text-gray-100">
                         {sale.discount_amount > 0
-                          ? formatCurrencySync(sale.discount_amount, baseCurrency?.symbol || 'UGX', false)
+                          ? formatCurrencySync(sale.discount_amount, baseCurrency?.symbol || 'UGX', true)
                           : '—'}
                       </td>
                       <td className="px-3 py-2 text-xs text-right font-mono text-[#1A1A2E] dark:text-gray-100">
-                        {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', false)}
+                        {formatCurrencySync(sale.total_amount, baseCurrency?.symbol || 'UGX', true)}
                       </td>
                     </tr>
                   ))}
@@ -544,7 +544,7 @@ export default function SalesHistory() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[#1A1A2E] dark:text-gray-100 text-xs font-medium truncate">{item.product_name}</p>
                           <p className="text-gray-500 dark:text-gray-400 text-[10px]">
-                            Sold qty: {item.quantity} · Unit: {formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', false)}
+                            Sold qty: {item.quantity} · Unit: {formatCurrencySync(item.unit_price, baseCurrency?.symbol || 'UGX', true)}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -564,7 +564,7 @@ export default function SalesHistory() {
                         </div>
                         <div className="text-xs font-mono text-[#1A1A2E] dark:text-gray-100 w-24 text-right shrink-0">
                           {ri.checked
-                            ? formatCurrencySync(Math.round(item.subtotal * (ri.qty / item.quantity)), baseCurrency?.symbol || 'UGX', false)
+                            ? formatCurrencySync(item.subtotal * (ri.qty / item.quantity), baseCurrency?.symbol || 'UGX', true)
                             : "—"}
                         </div>
                       </div>
@@ -611,7 +611,7 @@ export default function SalesHistory() {
               <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
                 <span className="text-[#1A1A2E] dark:text-gray-100 text-sm font-semibold">Refund Total</span>
                 <span className="text-emerald-400 font-mono font-bold text-lg">
-                  {formatCurrencySync(calcRefundTotal(), baseCurrency?.symbol || 'UGX', false)}
+                  {formatCurrencySync(calcRefundTotal(), baseCurrency?.symbol || 'UGX', true)}
                 </span>
               </div>
 

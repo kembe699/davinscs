@@ -158,7 +158,7 @@ export default function CashManagement() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Opening Cash</p>
-              <p className="text-xl font-mono text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', false)}</p>
+              <p className="text-xl font-mono text-[#1A1A2E] dark:text-gray-100">{formatCurrencySync(currentSession.opening_cash, baseCurrency?.symbol || 'UGX', true)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Opened At</p>
@@ -213,7 +213,7 @@ export default function CashManagement() {
                       </td>
                       <td className="py-2 pr-4 text-[#1A1A2E] dark:text-gray-100">{m.reason || '—'}</td>
                       <td className={`py-2 text-right font-mono font-semibold ${m.type === 'in' ? 'text-admin-success' : 'text-admin-danger'}`}>
-                        {m.type === 'out' ? '-' : '+'}{formatCurrencySync(m.amount, baseCurrency?.symbol || 'UGX', false)}
+                        {m.type === 'out' ? '-' : '+'}{formatCurrencySync(m.amount, baseCurrency?.symbol || 'UGX', true)}
                       </td>
                     </tr>
                   ))}
@@ -252,15 +252,15 @@ export default function CashManagement() {
                   {session.closed_at ? new Date(session.closed_at).toLocaleString() : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
-                  {formatCurrencySync(session.opening_cash, baseCurrency?.symbol || 'UGX', false)}
+                  {formatCurrencySync(session.opening_cash, baseCurrency?.symbol || 'UGX', true)}
                 </td>
                 <td className="px-4 py-3 text-sm text-[#1A1A2E] dark:text-gray-100 text-right font-mono">
-                  {session.closing_cash ? formatCurrencySync(session.closing_cash, baseCurrency?.symbol || 'UGX', false) : '-'}
+                  {session.closing_cash ? formatCurrencySync(session.closing_cash, baseCurrency?.symbol || 'UGX', true) : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-right font-mono">
                   {session.cash_difference ? (
                     <span className={session.cash_difference >= 0 ? 'text-admin-success' : 'text-admin-danger'}>
-                      {formatCurrencySync(session.cash_difference, baseCurrency?.symbol || 'UGX', false)}
+                      {formatCurrencySync(session.cash_difference, baseCurrency?.symbol || 'UGX', true)}
                     </span>
                   ) : '-'}
                 </td>

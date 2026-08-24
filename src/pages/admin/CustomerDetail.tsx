@@ -203,7 +203,7 @@ export default function CustomerDetail() {
               )}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CreditCard size={13} className="text-primary shrink-0" />
-                <span>Credit Limit: <span className="text-foreground font-mono">{formatCurrencySync(customer.credit_limit || 0, sym, false)}</span></span>
+                <span>Credit Limit: <span className="text-foreground font-mono">{formatCurrencySync(customer.credit_limit || 0, sym, true)}</span></span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock size={13} className="text-primary shrink-0" />
@@ -216,9 +216,9 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-2 gap-3 content-start">
             {[
               { label: "Total Transactions", value: totalOrders, icon: ShoppingBag, color: "text-primary" },
-              { label: "Total Spent", value: formatCurrencySync(totalSpent, sym, false), icon: TrendingUp, color: "text-green-400" },
-              { label: "Total Invoiced", value: formatCurrencySync(totalInvoiced, sym, false), icon: Receipt, color: "text-blue-400" },
-              { label: "Outstanding Balance", value: formatCurrencySync(totalBalance, sym, false), icon: CreditCard, color: "text-yellow-400" },
+              { label: "Total Spent", value: formatCurrencySync(totalSpent, sym, true), icon: TrendingUp, color: "text-green-400" },
+              { label: "Total Invoiced", value: formatCurrencySync(totalInvoiced, sym, true), icon: Receipt, color: "text-blue-400" },
+              { label: "Outstanding Balance", value: formatCurrencySync(totalBalance, sym, true), icon: CreditCard, color: "text-yellow-400" },
             ].map(s => (
               <div key={s.label} className="border border-border-subtle bg-chassis p-4">
                 <s.icon size={14} className={`${s.color} mb-2`} />
@@ -271,7 +271,7 @@ export default function CustomerDetail() {
                       <span className={`px-2 py-0.5 text-[10px] rounded font-mono-tech ${STATUS_STYLE[o.sale_type] || STATUS_STYLE.regular}`}>{o.sale_type || "regular"}</span>
                     </td>
                     <td className="px-6 py-4 text-xs text-muted-foreground">{o.payment_type_name || "—"}</td>
-                    <td className="px-6 py-4 text-right font-mono text-xs">{formatCurrencySync(o.total_amount, sym, false)}</td>
+                    <td className="px-6 py-4 text-right font-mono text-xs">{formatCurrencySync(o.total_amount, sym, true)}</td>
                     <td className="px-6 py-4 text-right text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}
@@ -305,9 +305,9 @@ export default function CustomerDetail() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-0.5 text-[10px] rounded font-mono-tech ${STATUS_STYLE[i.status] || ""}`}>{i.status}</span>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono text-xs">{formatCurrencySync(i.total_amount, sym, false)}</td>
-                      <td className="px-6 py-4 text-right font-mono text-xs text-green-400">{formatCurrencySync(i.paid_amount || 0, sym, false)}</td>
-                      <td className="px-6 py-4 text-right font-mono text-xs text-yellow-400">{formatCurrencySync(i.balance || 0, sym, false)}</td>
+                      <td className="px-6 py-4 text-right font-mono text-xs">{formatCurrencySync(i.total_amount, sym, true)}</td>
+                      <td className="px-6 py-4 text-right font-mono text-xs text-green-400">{formatCurrencySync(i.paid_amount || 0, sym, true)}</td>
+                      <td className="px-6 py-4 text-right font-mono text-xs text-yellow-400">{formatCurrencySync(i.balance || 0, sym, true)}</td>
                       <td className="px-6 py-4 text-right text-xs text-muted-foreground">
                         {i.due_date ? new Date(i.due_date).toLocaleDateString() : "—"}
                       </td>

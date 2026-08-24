@@ -173,7 +173,7 @@ export default function PublicMenu() {
           </div>
           <h1 className="text-xl font-extrabold text-gray-900 mb-1">Order sent!</h1>
           <p className="text-sm text-gray-500 mb-1">{orderPlaced.saleNumber}</p>
-          <p className="text-base font-bold text-gray-900 mb-4">{formatCurrencySync(orderPlaced.total, sym, false)}</p>
+          <p className="text-base font-bold text-gray-900 mb-4">{formatCurrencySync(orderPlaced.total, sym, true)}</p>
           <p className="text-sm text-gray-500">A member of staff will be with you shortly.</p>
           <button
             onClick={() => setOrderPlaced(null)}
@@ -255,7 +255,7 @@ export default function PublicMenu() {
                   <p className="font-bold text-gray-900 text-sm truncate">{product.name}</p>
                   {product.description && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{product.description}</p>}
                   <div className="flex items-center justify-between mt-auto pt-2">
-                    <span className="font-bold text-sm text-gray-900">{formatCurrencySync(product.price, sym, false)}</span>
+                    <span className="font-bold text-sm text-gray-900">{formatCurrencySync(product.price, sym, true)}</span>
                     {soldOut && <span className="text-[10px] font-bold text-red-500">Sold out</span>}
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export default function PublicMenu() {
           style={{ background: BRAND_GRADIENT, borderRadius: BRAND_RADIUS }}
         >
           <span>{cartCount} item(s)</span>
-          <span>{formatCurrencySync(cartTotal, sym, false)}</span>
+          <span>{formatCurrencySync(cartTotal, sym, true)}</span>
         </button>
       )}
 
@@ -293,7 +293,7 @@ export default function PublicMenu() {
               <div key={line.product.id} className="flex items-center justify-between py-2.5 border-b border-gray-100">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{line.product.name}</p>
-                  <p className="text-xs text-gray-400">{formatCurrencySync(line.product.price, sym, false)} each</p>
+                  <p className="text-xs text-gray-400">{formatCurrencySync(line.product.price, sym, true)} each</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -318,7 +318,7 @@ export default function PublicMenu() {
 
             <div className="flex items-center justify-between py-3 font-extrabold text-gray-900">
               <span>Total</span>
-              <span>{formatCurrencySync(cartTotal, sym, false)}</span>
+              <span>{formatCurrencySync(cartTotal, sym, true)}</span>
             </div>
 
             <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">Your table</label>
@@ -358,7 +358,7 @@ export default function PublicMenu() {
                 ? "Sending…"
                 : !tableId
                   ? "Choose a table to continue"
-                  : `Send order — ${formatCurrencySync(cartTotal, sym, false)}`}
+                  : `Send order — ${formatCurrencySync(cartTotal, sym, true)}`}
             </button>
           </div>
         </div>

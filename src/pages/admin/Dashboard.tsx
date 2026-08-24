@@ -133,7 +133,7 @@ export default function Dashboard() {
                   <DollarSign size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Total Revenue</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalRevenue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalRevenue || 0, baseCurrency?.symbol || 'UGX', true)}</p>
                 <div className="flex items-center gap-2 mt-2">
                   {financialData?.revenueChange >= 0 ? (
                     <ArrowUp size={14} className="text-green-500" />
@@ -152,7 +152,7 @@ export default function Dashboard() {
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Today's Sales</span>
                 </div>
                 <p className="text-3xl font-bold text-foreground">{financialData?.todaySales || 0}</p>
-                <p className="text-xs text-muted-foreground mt-2 font-mono">{formatCurrencySync(financialData?.todayRevenue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
+                <p className="text-xs text-muted-foreground mt-2 font-mono">{formatCurrencySync(financialData?.todayRevenue || 0, baseCurrency?.symbol || 'UGX', true)}</p>
               </div>
               
               <div className="border border-border-subtle bg-chassis p-6">
@@ -160,7 +160,7 @@ export default function Dashboard() {
                   <TrendingUp size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Avg Order Value</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.averageOrderValue || 0, baseCurrency?.symbol || 'UGX', false)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.averageOrderValue || 0, baseCurrency?.symbol || 'UGX', true)}</p>
                 <p className="text-xs text-muted-foreground mt-2">{financialData?.totalSales || 0} total sales</p>
               </div>
               
@@ -169,8 +169,8 @@ export default function Dashboard() {
                   <Package size={16} className="text-primary" />
                   <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">Tax Collected</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalTax || 0, baseCurrency?.symbol || 'UGX', false)}</p>
-                <p className="text-xs text-muted-foreground mt-2">Discounts: {formatCurrencySync(financialData?.totalDiscount || 0, baseCurrency?.symbol || 'UGX', false)}</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatCurrencySync(financialData?.totalTax || 0, baseCurrency?.symbol || 'UGX', true)}</p>
+                <p className="text-xs text-muted-foreground mt-2">Discounts: {formatCurrencySync(financialData?.totalDiscount || 0, baseCurrency?.symbol || 'UGX', true)}</p>
               </div>
             </div>
 
@@ -210,7 +210,7 @@ export default function Dashboard() {
                         contentStyle={{ backgroundColor: chartTooltipBg, border: `1px solid ${chartTooltipBorder}` }}
                         itemStyle={{ color: chartTooltipText }}
                         labelStyle={{ color: chartTooltipText }}
-                        formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
+                        formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', true)}
                       />
                       <Line type="monotone" dataKey="sales" stroke={chartAccent} strokeWidth={2} dot={{ fill: chartAccent }} />
                     </LineChart>
@@ -238,7 +238,7 @@ export default function Dashboard() {
                     </p>
                     <p className="text-lg font-bold text-foreground">{salesSummary?.topMonth || '---'}</p>
                     <p className="text-sm text-primary font-mono mt-1">
-                      {salesSummary ? formatCurrencySync(salesSummary.topMonthAmount, baseCurrency?.symbol || 'UGX', false) : '0'}
+                      {salesSummary ? formatCurrencySync(salesSummary.topMonthAmount, baseCurrency?.symbol || 'UGX', true) : '0'}
                     </p>
                   </div>
                 </div>
@@ -261,7 +261,7 @@ export default function Dashboard() {
                       contentStyle={{ backgroundColor: chartTooltipBg, border: `1px solid ${chartTooltipBorder}` }}
                       itemStyle={{ color: chartTooltipText }}
                       labelStyle={{ color: chartTooltipText }}
-                      formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', false)}
+                      formatter={(value: any) => formatCurrencySync(value, baseCurrency?.symbol || 'UGX', true)}
                     />
                     <Bar dataKey="total" fill={chartAccent} />
                   </BarChart>

@@ -160,8 +160,8 @@ export default function Customers() {
                     <td className="px-4 py-3 text-muted-foreground">{c.phone || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.city || "—"}</td>
                     <td className="px-4 py-3 text-right text-primary font-mono-tech text-xs">{c.order_count || 0}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{formatCurrencySync(Number(c.total_spent || 0), sym, false)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-yellow-400">{formatCurrencySync(Number(c.balance || 0), sym, false)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{formatCurrencySync(Number(c.total_spent || 0), sym, true)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-yellow-400">{formatCurrencySync(Number(c.balance || 0), sym, true)}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => navigate(tp(`/admin/customers/${c.id}`))} className="p-1 text-muted-foreground hover:text-primary transition-colors"><ChevronRight size={14} /></button>

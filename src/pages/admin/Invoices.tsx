@@ -25,8 +25,8 @@ const STATUS_ICON: Record<string, JSX.Element> = {
 };
 
 function fmt(amount: number | string, sym = "UGX") {
-  const n = Math.round(parseFloat(String(amount)));
-  return `${sym} ${n.toLocaleString("en-US")}`;
+  const n = parseFloat(String(amount)) || 0;
+  return `${sym} ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -106,7 +106,7 @@ export default function Invoices() {
     setPayLoading(true);
     try {
       await api.invoices.recordPayment(detail.id, {
-        amount: Math.round(parseFloat(payAmount) * 100),
+        amount: parseFloat(payAmount),
         payment_method: payMethod,
         notes: payNotes || undefined,
       });

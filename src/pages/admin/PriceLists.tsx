@@ -179,7 +179,7 @@ export default function PriceLists() {
       }
       const price = Number(trimmed);
       if (Number.isNaN(price) || price < 0) { setError("Enter a valid positive number"); return; }
-      const saved = await api.priceLists.upsertItem(selectedSchemeId, productId, Math.round(price * 100));
+      const saved = await api.priceLists.upsertItem(selectedSchemeId, productId, price);
       setItems((prev) => {
         const without = prev.filter((x) => x.product_id !== productId);
         const product = products.find((p) => p.id === productId);
@@ -211,7 +211,7 @@ export default function PriceLists() {
         const rawPrice = row["scheme_price"] ?? row["Scheme Price"] ?? row["price"] ?? "";
         const price = Number(String(rawPrice).replace(/,/g, "").trim());
         if (!pid || !price || price <= 0) continue;
-        await api.priceLists.upsertItem(selectedSchemeId, pid, Math.round(price * 100));
+        await api.priceLists.upsertItem(selectedSchemeId, pid, price);
         count++;
       }
       await loadItems(selectedSchemeId);
@@ -633,7 +633,7 @@ export default function PriceLists() {
                           <tr key={p.id} className={it ? "bg-green-50/30" : ""}>
                             <td className="px-4 py-2 text-admin-text">{p.name}</td>
                             <td className="px-4 py-2 text-right font-mono text-admin-text-secondary text-xs">
-                              {formatCurrencySync(p.price, baseCurrency?.symbol || "UGX", false)}
+                              {formatCurrencySync(p.price, baseCurrency?.symbol || "UGX", true)}
                             </td>
                             <td className="px-4 py-2 text-right">
                               <input

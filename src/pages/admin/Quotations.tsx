@@ -4,7 +4,7 @@ import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { formatCurrencySync } from "@/utils/currency";
+import { formatCurrencySync, roundToCents } from "@/utils/currency";
 import { Plus, Search, Trash2, Edit2, X, Eye, FileText, ChevronRight, Printer, Download } from "lucide-react";
 import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 import { useTranslation } from "react-i18next";
@@ -29,7 +29,7 @@ const emptyForm = {
 
 function calcTotals(items: ReturnType<typeof emptyItem>[], discount: number) {
   const subtotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-  const tax = items.reduce((s, i) => s + Math.round(i.unit_price * i.quantity * (i.tax_rate || 0) / 100), 0);
+  const tax = items.reduce((s, i) => s + roundToCents(i.unit_price * i.quantity * (i.tax_rate || 0) / 100), 0);
   return { subtotal, tax, total: subtotal + tax - discount };
 }
 
@@ -359,7 +359,7 @@ export default function Quotations() {
                         {STATUS_OPTIONS.map(s => <option key={s} value={s} className="bg-background text-foreground">{s}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{formatCurrencySync(q.total_amount, sym, false)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{formatCurrencySync(q.total_amount, sym, true)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button onClick={() => openDetail(q.id)} className="p-1 text-muted-foreground hover:text-primary"><Eye size={14} /></button>
@@ -586,9 +586,9 @@ export default function Quotations() {
                         <tr key={item.id}>
                           <td className="py-3 text-foreground">{item.product_name}{item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}</td>
                           <td className="py-3 text-center text-muted-foreground">{item.quantity}</td>
-                          <td className="py-3 text-right font-mono text-xs">{formatCurrencySync(item.unit_price, sym, false)}</td>
+                          <td className="py-3 text-right font-mono text-xs">{formatCurrencySync(item.unit_price, sym, true)}</td>
                           <td className="py-3 text-right text-xs text-muted-foreground">{item.tax_rate || 0}%</td>
-                          <td className="py-3 text-right font-mono text-xs">{formatCurrencySync(item.subtotal, sym, false)}</td>
+                          <td className="py-3 text-right font-mono text-xs">{formatCurrencySync(item.subtotal, sym, true)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -596,11 +596,11 @@ export default function Quotations() {
 
                   {/* Totals */}
                   <div className="ml-auto w-64 space-y-1 border-t border-border-subtle pt-4">
-                    <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span className="font-mono">{formatCurrencySync(detail.subtotal, sym, false)}</span></div>
-                    <div className="flex justify-between text-sm text-muted-foreground"><span>Tax</span><span className="font-mono">{formatCurrencySync(detail.tax_amount, sym, false)}</span></div>
-                    {detail.discount_amount > 0 && <div className="flex justify-between text-sm text-muted-foreground"><span>Discount</span><span className="font-mono">-{formatCurrencySync(detail.discount_amount, sym, false)}</span></div>}
+                    <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span className="font-mono">{formatCurrencySync(detail.subtotal, sym, true)}</span></div>
+                    <div className="flex justify-between text-sm text-muted-foreground"><span>Tax</span><span className="font-mono">{formatCurrencySync(detail.tax_amount, sym, true)}</span></div>
+                    {detail.discount_amount > 0 && <div className="flex justify-between text-sm text-muted-foreground"><span>Discount</span><span className="font-mono">-{formatCurrencySync(detail.discount_amount, sym, true)}</span></div>}
                     <div className="flex justify-between text-base font-bold text-foreground border-t border-border-subtle pt-2 mt-2">
-                      <span>Total</span><span className="font-mono">{formatCurrencySync(detail.total_amount, sym, false)}</span>
+                      <span>Total</span><span className="font-mono">{formatCurrencySync(detail.total_amount, sym, true)}</span>
                     </div>
                   </div>
 

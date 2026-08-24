@@ -85,21 +85,39 @@ export function getCurrencySymbol(code: string): string {
   return currency?.symbol || code;
 }
 
+// Rounds to 2 decimal places (the actual precision every money column in the
+// database stores, NUMERIC(15,2)) — for computed amounts (a % discount, tax on
+// a fractional subtotal, price derived from cost+margin) that would otherwise
+// carry raw floating-point noise (e.g. 13.433000000000002) into a saved value.
+// Never round further than this — a real fractional amount a user typed (7.2,
+// 2.3, …) must reach the database exactly as entered, not snapped to a whole
+// number.
+export function roundToCents(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 // Format amount with currency symbol
 // Amount is expected in cents (divide by 100 for display)
 export async function formatCurrency(
-  amount: number, 
+  amount: number,
   currencyCode?: string,
   showDecimals: boolean = true
 ): Promise<string> {
   const baseCurrency = await getBaseCurrency();
   const code = currencyCode || baseCurrency.code;
   const symbol = getCurrencySymbol(code) || code;
-  
-  const formatted = showDecimals 
-    ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  
+
+  // Postgres NUMERIC columns come back from the API as strings (node-postgres'
+  // default, to avoid silent float precision loss) — String.prototype.toLocaleString
+  // is effectively a no-op (no grouping, no fraction-digit padding), so an
+  // unparsed string here doesn't error, it just silently renders wrong
+  // ("101000.00" instead of "101,000.00"). Number() first makes this safe
+  // regardless of whether the caller already converted it.
+  const n = Number(amount) || 0;
+  const formatted = showDecimals
+    ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return `${symbol} ${formatted}`;
 }
 
@@ -109,10 +127,12 @@ export function formatCurrencySync(
   currencySymbol: string = 'UGX',
   showDecimals: boolean = true
 ): string {
-  const formatted = showDecimals 
-    ? amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  
+  // See formatCurrency above for why this coercion matters.
+  const n = Number(amount) || 0;
+  const formatted = showDecimals
+    ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return `${currencySymbol} ${formatted}`;
 }
 

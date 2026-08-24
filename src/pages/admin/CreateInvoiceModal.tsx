@@ -4,7 +4,8 @@ import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 function fmt(n: number | string, sym = "UGX") {
-  return `${sym} ${Math.round(parseFloat(String(n))).toLocaleString("en-US")}`;
+  const v = parseFloat(String(n)) || 0;
+  return `${sym} ${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 type Line = { product_id: number|null; product_name: string; quantity: number; unit_price: number; discount_amount: number };
 type Props = { onClose: () => void; onCreated: () => void };

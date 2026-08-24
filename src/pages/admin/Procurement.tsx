@@ -1753,10 +1753,10 @@ export default function ProcurementEnhanced() {
                       const rate = selectedBill?.exchange_rate;
                       if (!rate || rate === 1) return null;
                       const base = currencies.find(c => c.is_base);
-                      const baseAmount = Math.round(paymentForm.amount / rate);
+                      const baseAmount = paymentForm.amount / rate;
                       return (
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          Posts to the books as {base?.symbol ?? ""} {baseAmount.toLocaleString()}
+                          Posts to the books as {base?.symbol ?? ""} {baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           {" "}(converted from {selectedBill?.currency_symbol} at this PO's locked-in rate)
                         </p>
                       );
