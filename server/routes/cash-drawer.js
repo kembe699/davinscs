@@ -37,12 +37,15 @@ router.get("/expected", requireAuth, async (req, res) => {
     const session = sessionResult.rows[0];
     if (!session) return res.status(400).json({ error: "No open cash drawer session found" });
 
+    // Every sale counts toward what's expected in the drawer, not just ones tagged
+    // with a specific "cash" payment type — that classification turned out to be
+    // unreliable across tenants (whatever a tenant actually calls their cash
+    // payment type), and what a cashier needs here is simply: everything sold
+    // today, plus/minus whatever cash was manually moved in or out.
     const salesResult = await pool.query(
       `SELECT COALESCE(SUM(total_amount), 0) as total_sales
        FROM pos_sales
-       WHERE session_id = $1 AND voided = false AND payment_type_id IN (
-         SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%'
-       )`,
+       WHERE session_id = $1 AND voided = false AND status != 'held'`,
       [session.id]
     );
     const movementsResult = await pool.query(
@@ -131,13 +134,12 @@ router.post("/close", requireAuth, async (req, res) => {
     
     const session = sessionResult.rows[0];
     
-    // Calculate expected cash
+    // Calculate expected cash — every sale counts, not just ones tagged with a
+    // specific "cash" payment type (see GET /expected for why that was dropped).
     const salesResult = await client.query(
       `SELECT COALESCE(SUM(total_amount), 0) as total_sales
-       FROM pos_sales 
-       WHERE session_id = $1 AND voided = false AND payment_type_id IN (
-         SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%'
-       )`,
+       FROM pos_sales
+       WHERE session_id = $1 AND voided = false AND status != 'held'`,
       [session.id]
     );
     

@@ -60,7 +60,7 @@ export default function EndOfDay() {
       setHourly(Array.isArray(hrs) ? hrs : []);
       setCompanyData(company);
       // Try to load open cash drawer session, plus what's supposed to be in the
-      // drawer right now (opening cash + cash sales +/- cash movements) and every
+      // drawer right now (opening cash + sales +/- cash movements) and every
       // cash in/out recorded against it, so a cashier can see exactly why that
       // number is what it is before they close out.
       try {
@@ -217,7 +217,7 @@ export default function EndOfDay() {
 
       ${session && expectedCash != null ? `
       <div style="background:#e0f2fe;border:1px solid #0284c7;padding:6px 8px;font-size:11px;margin-bottom:10px;">
-        <strong>Expected cash to submit: ${fmt(expectedCash)}</strong> (opening cash + cash sales + cash in − cash out)
+        <strong>Expected cash to submit: ${fmt(expectedCash)}</strong> (opening cash + sales + cash in − cash out)
       </div>` : ""}
 
       ${manualMovements.length ? `<div class="section-title">Cash In / Cash Out</div>${cashMovementsTable}` : ""}
