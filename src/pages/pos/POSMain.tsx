@@ -26,6 +26,8 @@ export default function POSMain() {
   const [cart, setCart] = useState<Array<{ product: ApiProduct; quantity: number; discount: number; unit_price: number }>>([]);
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState("");
+  const [editingQtyId, setEditingQtyId] = useState<number | null>(null);
+  const [qtyDraft, setQtyDraft] = useState("");
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
   const [defaultTax, setDefaultTax] = useState<TaxRate | null>(null);
   const [selectedPaymentType, setSelectedPaymentType] = useState<number | null>(null);
@@ -453,6 +455,29 @@ export default function POSMain() {
     setCart(cart.map(item =>
       item.product.id === productId ? { ...item, quantity } : item
     ));
+  };
+
+  const startEditingQty = (productId: number, currentQty: number) => {
+    setEditingQtyId(productId);
+    setQtyDraft(String(currentQty));
+  };
+
+  const commitQtyEdit = (productId: number) => {
+    const parsed = parseInt(qtyDraft, 10);
+    // An invalid or non-positive entry just cancels the edit instead of falling
+    // through to updateQuantity's own <=0 handling — a blank/garbled field on
+    // blur is far more likely to be an accidental edit than a genuine "remove
+    // this item," so it reverts to the last real quantity instead of deleting it.
+    if (!isNaN(parsed) && parsed > 0) {
+      updateQuantity(productId, parsed);
+    }
+    setEditingQtyId(null);
+    setQtyDraft("");
+  };
+
+  const cancelQtyEdit = () => {
+    setEditingQtyId(null);
+    setQtyDraft("");
   };
 
   const removeFromCart = (productId: number) => {
@@ -1268,9 +1293,31 @@ export default function POSMain() {
                       >
                         <Minus size={12} className="md:w-[14px] md:h-[14px]" />
                       </button>
-                      <span className="w-8 md:w-10 text-center text-xs md:text-sm font-bold text-[#1A1A2E] dark:text-gray-100">
-                        {item.quantity}
-                      </span>
+                      {editingQtyId === item.product.id ? (
+                        <input
+                          type="number"
+                          min="1"
+                          autoFocus
+                          value={qtyDraft}
+                          onChange={(e) => setQtyDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitQtyEdit(item.product.id);
+                            if (e.key === 'Escape') cancelQtyEdit();
+                          }}
+                          onBlur={() => commitQtyEdit(item.product.id)}
+                          onFocus={(e) => e.target.select()}
+                          className="w-10 md:w-12 text-center text-xs md:text-sm font-bold bg-transparent text-[#1A1A2E] dark:text-gray-100 focus:outline-none"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditingQty(item.product.id, item.quantity)}
+                          className="w-8 md:w-10 text-center text-xs md:text-sm font-bold text-[#1A1A2E] dark:text-gray-100"
+                          title="Tap to enter a quantity"
+                        >
+                          {item.quantity}
+                        </button>
+                      )}
                       <button
                         onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                         className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-600 transition-colors"
