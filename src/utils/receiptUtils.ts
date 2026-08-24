@@ -58,10 +58,13 @@ export interface ReceiptOptions {
   /** Pre-generated QR data URI (from generateReceiptQrDataUrl). If omitted,
    *  falls back to the external qrserver.com image URL. */
   qrDataUrl?: string;
+  /** Prints as a held/unpaid order ticket instead of a paid receipt — swaps the
+   *  header and the payment line, no "Change" line (nothing was collected yet). */
+  unpaid?: boolean;
 }
 
 export function buildThermalReceipt(opts: ReceiptOptions): string {
-  const { sale, items, companyData: co, baseCurrencySymbol, baseCurrencyCode, secondaryCurrency, exchangeRate, qrDataUrl } = opts;
+  const { sale, items, companyData: co, baseCurrencySymbol, baseCurrencyCode, secondaryCurrency, exchangeRate, qrDataUrl, unpaid } = opts;
 
   const sym  = baseCurrencySymbol || 'UGX';
   const rate = sale.exchange_rate_used ? Number(sale.exchange_rate_used) : (exchangeRate ?? null);
@@ -144,7 +147,7 @@ ${co?.email   ? `<div class="center">${co.email}</div>` : ''}
 ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_id}</div>` : ''}
 
 <div class="dash">${dash}</div>
-<div class="center bold large" style="margin: 4px 0;">CASH SALE / TAX INVOICE</div>
+<div class="center bold large" style="margin: 4px 0;">${unpaid ? 'UNPAID ORDER / HOLD TICKET' : 'CASH SALE / TAX INVOICE'}</div>
 <div class="center" style="margin-bottom: 6px;">${sale.sale_number}</div>
 
 <div class="barcode-container">
@@ -171,8 +174,10 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
 </table>
 
 <div class="row total-row" style="margin-top: 4px;"><span>Total :</span><span>${money(total).replace(sym+' ', '')}</span></div>
-<div class="row"><span>${paymentName}</span><span>${money(total).replace(sym+' ', '')}</span></div>
-<div class="row"><span>Change :</span><span>0</span></div>
+${unpaid
+  ? `<div class="row bold"><span>Balance Due :</span><span>${money(total).replace(sym+' ', '')}</span></div>`
+  : `<div class="row"><span>${paymentName}</span><span>${money(total).replace(sym+' ', '')}</span></div>
+<div class="row"><span>Change :</span><span>0</span></div>`}
 <div class="row" style="margin-bottom: 4px;"><span>Total Items :</span><span>${items.length}</span></div>
 
 <table class="vat-table">
@@ -201,6 +206,7 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
   <img src="${qrSrc}" style="width:80px; height:80px;" />
 </div>
 
+${unpaid ? '<div class="center bold" style="margin: 6px 0;">*** NOT YET PAID ***</div>' : ''}
 <div class="footer-line">Received By : _______________________</div>
 <div class="footer-line">You Were Served By : ${(sale as any).userName || 'ADMIN'}</div>
 <div class="footer-line bold">Thank You !!! Please Come Again....</div>

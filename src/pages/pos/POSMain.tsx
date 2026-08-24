@@ -46,6 +46,8 @@ export default function POSMain() {
   const [processingHold, setProcessingHold] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [holdingCart, setHoldingCart] = useState(false);
+  const [pendingUnpaidReceipt, setPendingUnpaidReceipt] = useState<any>(null);
+  const [printingUnpaidReceipt, setPrintingUnpaidReceipt] = useState(false);
   const [companyData, setCompanyData] = useState<any>(null);
   const [paymentMode, setPaymentMode] = useState<'cash' | 'credit'>('cash');
   const [creditCustomerName, setCreditCustomerName] = useState('');
@@ -530,6 +532,24 @@ export default function POSMain() {
       // Refresh from the backend so the Held Sales list stays authoritative
       await loadHeldSales();
 
+      // Snapshot what the unpaid-receipt prompt needs from the cart before it's cleared.
+      const { subtotal, discountAmount, taxAmount, total } = calculateTotals();
+      setPendingUnpaidReceipt({
+        sale_number: sale.sale_number,
+        created_at: sale.created_at || new Date().toISOString(),
+        customerName: customerName || 'Walk-in Customer',
+        items: cart.map(item => ({
+          product: { name: item.product.name },
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount: item.discount,
+        })),
+        subtotal,
+        taxAmount,
+        discountAmount,
+        total,
+      });
+
       // Clear current cart
       setCart([]);
       setCartDiscount(0);
@@ -545,7 +565,7 @@ export default function POSMain() {
     }
   };
 
-  const buildReceiptBody = async (sale: any): Promise<string> => {
+  const buildReceiptBody = async (sale: any, opts?: { unpaid?: boolean }): Promise<string> => {
     const items = (sale.items || []).map((item: any) => ({
       name: item.product?.name || item.product_name || '',
       quantity: item.quantity,
@@ -562,7 +582,22 @@ export default function POSMain() {
       secondaryCurrency: secondaryCurrency ? { id: secondaryCurrency.id, code: secondaryCurrency.code, symbol: secondaryCurrency.symbol } : null,
       exchangeRate,
       qrDataUrl,
+      unpaid: opts?.unpaid,
     });
+  };
+
+  const handlePrintUnpaidReceipt = async () => {
+    if (!pendingUnpaidReceipt) return;
+    setPrintingUnpaidReceipt(true);
+    try {
+      const html = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
+      printThermal(`Receipt_${pendingUnpaidReceipt.sale_number}`, html);
+      setPendingUnpaidReceipt(null);
+    } catch {
+      toast("Failed to build receipt", "error", "Print Error");
+    } finally {
+      setPrintingUnpaidReceipt(false);
+    }
   };
 
   const handleConfirmHeldSale = async (sale: any) => {
@@ -1968,6 +2003,35 @@ export default function POSMain() {
           <span className="text-[10px] mt-1 font-medium">Menu</span>
         </button>
       </div>
+
+      {/* Print Unpaid Receipt Prompt — shown right after a sale is held */}
+      {pendingUnpaidReceipt && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full sm:w-96 p-6">
+            <h2 className="text-lg font-bold text-[#1A1A2E] dark:text-gray-100 mb-2">Print Unpaid Receipt?</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Order {pendingUnpaidReceipt.sale_number} was held. Print an unpaid order receipt for it now?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingUnpaidReceipt(null)}
+                disabled={printingUnpaidReceipt}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+              >
+                No
+              </button>
+              <button
+                onClick={handlePrintUnpaidReceipt}
+                disabled={printingUnpaidReceipt}
+                className="flex-1 py-2.5 bg-[#00A896] text-white font-semibold rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {printingUnpaidReceipt && <span className="size-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                Yes, Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
