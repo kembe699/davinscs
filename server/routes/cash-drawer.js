@@ -41,7 +41,7 @@ router.get("/expected", requireAuth, async (req, res) => {
       `SELECT COALESCE(SUM(total_amount), 0) as total_sales
        FROM pos_sales
        WHERE session_id = $1 AND voided = false AND payment_type_id IN (
-         SELECT id FROM payment_types WHERE code = 'cash'
+         SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%'
        )`,
       [session.id]
     );
@@ -136,7 +136,7 @@ router.post("/close", requireAuth, async (req, res) => {
       `SELECT COALESCE(SUM(total_amount), 0) as total_sales
        FROM pos_sales 
        WHERE session_id = $1 AND voided = false AND payment_type_id IN (
-         SELECT id FROM payment_types WHERE code = 'cash'
+         SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%'
        )`,
       [session.id]
     );
