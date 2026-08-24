@@ -19,7 +19,7 @@ export default function CashManagement() {
   const [showCashInModal, setShowCashInModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [openingCash, setOpeningCash] = useState(0);
   const [closingCash, setClosingCash] = useState(0);
@@ -80,10 +80,12 @@ export default function CashManagement() {
   };
 
   const handleCashIn = async () => {
+    const parsed = Number(amount);
+    if (!amount || !(parsed > 0)) { toast("Enter an amount", "warning", "Required"); return; }
     try {
-      await api.cashDrawer.cashIn(amount, reason);
+      await api.cashDrawer.cashIn(parsed, reason);
       setShowCashInModal(false);
-      setAmount(0);
+      setAmount("");
       setReason("");
       await loadData();
     } catch (err: any) {
@@ -92,10 +94,12 @@ export default function CashManagement() {
   };
 
   const handleCashOut = async () => {
+    const parsed = Number(amount);
+    if (!amount || !(parsed > 0)) { toast("Enter an amount", "warning", "Required"); return; }
     try {
-      await api.cashDrawer.cashOut(amount, reason);
+      await api.cashDrawer.cashOut(parsed, reason);
       setShowCashOutModal(false);
-      setAmount(0);
+      setAmount("");
       setReason("");
       await loadData();
     } catch (err: any) {
@@ -323,7 +327,8 @@ export default function CashManagement() {
                 <input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0"
                   className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>
@@ -366,7 +371,8 @@ export default function CashManagement() {
                 <input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0"
                   className="w-full px-3 py-2 bg-[#F8F9FA] dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[#1A1A2E] dark:text-gray-100"
                 />
               </div>

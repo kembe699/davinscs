@@ -904,6 +904,7 @@ export const api = {
   },
   cashDrawer: {
     getCurrent: () => request<CashDrawerSession>("/api/cash-drawer/current"),
+    getExpected: () => request<{ opening_cash: number; expected_cash: number }>("/api/cash-drawer/expected"),
     open: (opening_cash: number) =>
       request<CashDrawerSession>("/api/cash-drawer/open", {
         method: "POST",

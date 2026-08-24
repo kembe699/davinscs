@@ -3,7 +3,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { openPrintWindow, companyHeaderHTML, downloadDocument } from "@/utils/printUtils";
 import {
   ArrowLeft, Printer, RefreshCw, Lock, AlertCircle,
-  ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, Package, Users, Download,
+  ShoppingBag, DollarSign, Tag, Receipt, TrendingUp, TrendingDown, Package, Users, Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
@@ -23,6 +23,8 @@ export default function EndOfDay() {
   const [report, setReport]             = useState<any>(null);
   const [hourly, setHourly]             = useState<any[]>([]);
   const [session, setSession]           = useState<CashDrawerSession | null>(null);
+  const [movements, setMovements]       = useState<any[]>([]);
+  const [expectedCash, setExpectedCash] = useState<number | null>(null);
   const [companyData, setCompanyData]   = useState<any>(null);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState("");
@@ -57,12 +59,28 @@ export default function EndOfDay() {
       setReport(eod);
       setHourly(Array.isArray(hrs) ? hrs : []);
       setCompanyData(company);
-      // Try to load open cash drawer session
+      // Try to load open cash drawer session, plus what's supposed to be in the
+      // drawer right now (opening cash + cash sales +/- cash movements) and every
+      // cash in/out recorded against it, so a cashier can see exactly why that
+      // number is what it is before they close out.
       try {
         const sess = await api.cashDrawer.getCurrent();
         setSession(sess);
+        if (sess?.id) {
+          const [moves, expected] = await Promise.all([
+            api.cashDrawer.getMovements(sess.id).catch(() => []),
+            api.cashDrawer.getExpected().catch(() => null),
+          ]);
+          setMovements(moves);
+          setExpectedCash(expected ? Number(expected.expected_cash) : null);
+        } else {
+          setMovements([]);
+          setExpectedCash(null);
+        }
       } catch {
         setSession(null);
+        setMovements([]);
+        setExpectedCash(null);
       }
     } catch (err: any) {
       setError(err.message || "Failed to load report.");
@@ -86,6 +104,14 @@ export default function EndOfDay() {
       setClosing(false);
     }
   };
+
+  // Manual cash movements only — pos.js also logs an automatic "POS Sale …" cash-in
+  // for every cash sale so the drawer-expected-cash math has a record of it, but
+  // those aren't cash in/out events a cashier did on purpose; showing them here
+  // would just be every sale of the day repeated as a "cash in" line.
+  const manualMovements = movements.filter((m: any) => !String(m.reason || '').startsWith('POS Sale'));
+  const cashInTotal  = manualMovements.filter((m: any) => m.type === 'in').reduce((sum: number, m: any) => sum + Number(m.amount), 0);
+  const cashOutTotal = manualMovements.filter((m: any) => m.type === 'out').reduce((sum: number, m: any) => sum + Number(m.amount), 0);
 
   const buildEodBody = () => {
     const s = report?.sales_summary;
@@ -127,6 +153,19 @@ export default function EndOfDay() {
           </tr>
         </tfoot>
       </table>`;
+
+    const cashMovementRows = manualMovements
+      .map((m: any) =>
+        `<tr><td>${new Date(m.created_at).toLocaleTimeString()}</td><td>${m.type === 'in' ? 'IN' : 'OUT'}</td><td>${m.reason || '—'}</td><td class="right">${m.type === 'out' ? '-' : ''}${fmt(Number(m.amount))}</td></tr>`)
+      .join("");
+    const cashMovementsTable = manualMovements.length ? `
+      <table>
+        <thead><tr><th>Time</th><th>Type</th><th>Reason</th><th class="right">Amount</th></tr></thead>
+        <tbody>${cashMovementRows}</tbody>
+        <tfoot>
+          <tr class="total-row"><td colspan="3"><strong>Cash In / Cash Out</strong></td><td class="right"><strong>+${fmt(cashInTotal)} / -${fmt(cashOutTotal)}</strong></td></tr>
+        </tfoot>
+      </table>` : "";
 
     const cashierTable = `
       <table>
@@ -175,6 +214,13 @@ export default function EndOfDay() {
       ${Number(report?.voided_sales?.count) > 0
         ? `<div style="background:#fffbe6;border:1px solid #f0c000;padding:5px 8px;font-size:10px;margin-bottom:10px;">⚠ ${report.voided_sales.count} voided sale(s) totalling ${fmt(Number(report.voided_sales.total))} excluded.</div>`
         : ""}
+
+      ${session && expectedCash != null ? `
+      <div style="background:#e0f2fe;border:1px solid #0284c7;padding:6px 8px;font-size:11px;margin-bottom:10px;">
+        <strong>Expected cash to submit: ${fmt(expectedCash)}</strong> (opening cash + cash sales + cash in − cash out)
+      </div>` : ""}
+
+      ${manualMovements.length ? `<div class="section-title">Cash In / Cash Out</div>${cashMovementsTable}` : ""}
 
       <div class="section-title">Sales by Cashier</div>
       ${cashierTable}
@@ -256,10 +302,13 @@ export default function EndOfDay() {
         )}
 
         {session && (
-          <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 px-4 py-3 text-sm flex items-center gap-2">
+          <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 px-4 py-3 text-sm flex items-center gap-2 flex-wrap">
             <Lock size={14} />
             Cash drawer is <strong>open</strong> — opened at {new Date(session.opened_at).toLocaleTimeString()} with {formatCurrencySync(session.opening_cash, sym, false)} opening cash.
-            <button onClick={() => setShowCloseModal(true)} className="ml-auto underline">Close shift →</button>
+            {expectedCash != null && (
+              <span className="font-bold">You should have {formatCurrencySync(expectedCash, sym, false)} in the drawer right now.</span>
+            )}
+            <button onClick={() => setShowCloseModal(true)} className="ml-auto underline whitespace-nowrap">Close shift →</button>
           </div>
         )}
 
@@ -316,6 +365,47 @@ export default function EndOfDay() {
                 </div>
               )}
             </div>
+
+            {/* Cash In / Cash Out */}
+            {manualMovements.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
+                  <h2 className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2">
+                    <DollarSign size={15} /> Cash In / Cash Out
+                  </h2>
+                  <div className="flex items-center gap-4 text-sm font-mono">
+                    <span className="text-emerald-400 flex items-center gap-1"><TrendingUp size={13} /> +{formatCurrencySync(cashInTotal, sym, false)}</span>
+                    <span className="text-red-400 flex items-center gap-1"><TrendingDown size={13} /> -{formatCurrencySync(cashOutTotal, sym, false)}</span>
+                  </div>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F8F9FA] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Time</th>
+                      <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Type</th>
+                      <th className="text-left px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Reason</th>
+                      <th className="text-right px-4 py-2 text-[#1A1A2E] dark:text-gray-100">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {manualMovements.map((m: any) => (
+                      <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{new Date(m.created_at).toLocaleTimeString()}</td>
+                        <td className="px-4 py-2">
+                          <span className={`px-2 py-0.5 text-xs font-bold ${m.type === 'in' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {m.type === 'in' ? '▲ IN' : '▼ OUT'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-[#1A1A2E] dark:text-gray-100">{m.reason || '—'}</td>
+                        <td className={`px-4 py-2 text-right font-mono font-semibold ${m.type === 'in' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {m.type === 'out' ? '-' : '+'}{formatCurrencySync(Number(m.amount), sym, false)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Cashier breakdown */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">

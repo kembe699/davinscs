@@ -308,36 +308,33 @@ router.post("/sessions/:id/resolve-difference", requireAuth, async (req, res) =>
 
 // Get session history
 router.get("/sessions", requireAuth, async (req, res) => {
-  const { start_date, end_date, user_id } = req.query;
-  
+  const { start_date, end_date } = req.query;
+
   try {
     let query = `
       SELECT s.*, u.email as user_email
       FROM cash_drawer_sessions s
       LEFT JOIN users u ON s.user_id = u.id
-      WHERE 1=1
+      WHERE s.user_id = $1
     `;
-    const params = [];
-    let paramCount = 1;
-    
+    // Always the requesting user's own sessions (never a client-supplied user_id —
+    // this Session History feeds the same "close my shift" screens as end-of-day,
+    // and every cashier was seeing every other cashier's shift history here too).
+    const params = [req.user.id];
+    let paramCount = 2;
+
     if (start_date) {
       query += ` AND s.opened_at >= $${paramCount}`;
       params.push(start_date);
       paramCount++;
     }
-    
+
     if (end_date) {
       query += ` AND s.opened_at <= $${paramCount}`;
       params.push(end_date);
       paramCount++;
     }
-    
-    if (user_id) {
-      query += ` AND s.user_id = $${paramCount}`;
-      params.push(user_id);
-      paramCount++;
-    }
-    
+
     query += " ORDER BY s.opened_at DESC";
     
     const { rows } = await pool.query(query, params);
@@ -351,8 +348,15 @@ router.get("/sessions", requireAuth, async (req, res) => {
 // Get movements for session
 router.get("/sessions/:id/movements", requireAuth, async (req, res) => {
   const { id } = req.params;
-  
+
   try {
+    // Movements belong to whoever's shift this was — same ownership check as
+    // /sessions above, just per-session since this is reached by id directly.
+    const owner = await pool.query("SELECT user_id FROM cash_drawer_sessions WHERE id = $1", [id]);
+    if (!owner.rows[0] || owner.rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: "Not your cash drawer session" });
+    }
+
     const { rows } = await pool.query(
       `SELECT m.*, u.email as user_email
        FROM cash_movements m
