@@ -605,6 +605,24 @@ export default function EndOfDay() {
                     <span className="text-gray-500 dark:text-gray-400">Sales today</span>
                     <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(ss?.total_sales ?? 0), sym, false)}</span>
                   </div>
+                  {cashOutTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Cash out</span>
+                      <span className="text-red-400 font-mono">-{formatCurrencySync(cashOutTotal, sym, false)}</span>
+                    </div>
+                  )}
+                  {cashInTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Cash in</span>
+                      <span className="text-emerald-400 font-mono">+{formatCurrencySync(cashInTotal, sym, false)}</span>
+                    </div>
+                  )}
+                  {expectedCash != null && (
+                    <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700 font-bold">
+                      <span className="text-[#1A1A2E] dark:text-gray-100">You should submit</span>
+                      <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(expectedCash, sym, false)}</span>
+                    </div>
+                  )}
                 </div>
               )}
               <div>
