@@ -340,6 +340,28 @@ export default function POSMain() {
     setShowTablePicker(false);
   };
 
+  // Loads a held sale's items into the working cart so they can be freely edited
+  // (remove a line, change quantity, adjust price — same controls as any other
+  // cart) before paying. Reuses the exact same resumingHeldSaleId mechanism
+  // selectTable already uses for tables: the old hold is cancelled and replaced
+  // by a new completed sale once Checkout goes through in handleProcessPayment.
+  const resumeHeldSaleForEdit = (sale: any) => {
+    setResumingHeldSaleId(sale.id);
+    setCart((sale.items || []).map((item: any) => ({
+      product: products.find(p => p.id === item.product_id) ?? ({
+        id: item.product_id,
+        name: item.product_name,
+        price: item.unit_price,
+      } as ApiProduct),
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      discount: item.discount_amount || 0,
+    })));
+    setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+    setShowHeldSales(false);
+    setConfirmingHeldSaleId(null);
+  };
+
   const payTableNow = (sale: any) => {
     // Paying directly from the table picker always supersedes whatever the
     // working cart currently holds for that table.
@@ -662,6 +684,14 @@ export default function POSMain() {
     if (cart.length === 0) { toast('Cart is empty', 'warning', 'Empty Cart'); return; }
     setProcessingPayment(true);
     try {
+      // A held sale resumed for editing (see resumeHeldSaleForEdit) that ends up going
+      // to credit instead of cash/card still needs its old hold released — same as the
+      // cash/card path below, or the original hold would sit in Held Sales forever
+      // alongside the new invoice for the same order.
+      if (resumingHeldSaleId) {
+        await api.pos.cancelHeldSale(resumingHeldSaleId);
+      }
+
       const { subtotal, taxAmount, total, discountAmount } = calculateTotals();
       const invoice = await api.invoices.create({
         customer_name: creditCustomerName.trim(),
@@ -688,6 +718,8 @@ export default function POSMain() {
       setCreditDueDate('');
       setPaymentMode('cash');
       setShowPaymentModal(false);
+      setActiveTable(null);
+      setResumingHeldSaleId(null);
       toast(`Invoice ${invoice.invoice_number} created`, 'success', 'Invoice Created');
     } catch (err: any) {
       toast(err.message || 'Failed to create invoice', 'error', 'Error');
@@ -1877,7 +1909,7 @@ export default function POSMain() {
                       ) : (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => { setConfirmingHeldSaleId(sale.id); setConfirmPaymentTypeId(paymentTypes[0]?.id ?? null); }}
+                            onClick={() => resumeHeldSaleForEdit(sale)}
                             disabled={processingHold}
                             className="flex-1 py-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all disabled:opacity-50"
                           >
