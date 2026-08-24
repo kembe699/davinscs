@@ -54,11 +54,16 @@ router.get("/expected", requireAuth, async (req, res) => {
       [session.id]
     );
 
-    const expected_cash = session.opening_cash +
-                         parseInt(salesResult.rows[0].total_sales) +
-                         parseInt(movementsResult.rows[0].net_movements);
+    const session_sales   = parseInt(salesResult.rows[0].total_sales);
+    const net_movements   = parseInt(movementsResult.rows[0].net_movements);
+    const expected_cash = session.opening_cash + session_sales + net_movements;
 
-    res.json({ opening_cash: session.opening_cash, expected_cash });
+    // session_sales is THIS shift's sales only — a cashier who closed an earlier
+    // shift today and opened a new one will have a much smaller number here than
+    // "sales today" (which spans every shift). Returned so the UI can show a
+    // figure that's actually consistent with expected_cash instead of the
+    // whole-day total sitting right next to a math result it doesn't add up to.
+    res.json({ opening_cash: session.opening_cash, session_sales, net_movements, expected_cash });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

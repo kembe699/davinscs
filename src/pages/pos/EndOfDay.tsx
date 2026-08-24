@@ -25,6 +25,7 @@ export default function EndOfDay() {
   const [session, setSession]           = useState<CashDrawerSession | null>(null);
   const [movements, setMovements]       = useState<any[]>([]);
   const [expectedCash, setExpectedCash] = useState<number | null>(null);
+  const [sessionSales, setSessionSales] = useState<number | null>(null);
   const [companyData, setCompanyData]   = useState<any>(null);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState("");
@@ -73,14 +74,17 @@ export default function EndOfDay() {
           ]);
           setMovements(moves);
           setExpectedCash(expected ? Number(expected.expected_cash) : null);
+          setSessionSales(expected ? Number(expected.session_sales) : null);
         } else {
           setMovements([]);
           setExpectedCash(null);
+          setSessionSales(null);
         }
       } catch {
         setSession(null);
         setMovements([]);
         setExpectedCash(null);
+        setSessionSales(null);
       }
     } catch (err: any) {
       setError(err.message || "Failed to load report.");
@@ -602,8 +606,8 @@ export default function EndOfDay() {
                     <span className="text-[#1A1A2E] dark:text-gray-100 font-mono">{formatCurrencySync(session.opening_cash, sym, false)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Sales today</span>
-                    <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(ss?.total_sales ?? 0), sym, false)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Sales this shift</span>
+                    <span className="text-emerald-400 font-mono">{formatCurrencySync(Number(sessionSales ?? 0), sym, false)}</span>
                   </div>
                   {cashOutTotal > 0 && (
                     <div className="flex justify-between">
