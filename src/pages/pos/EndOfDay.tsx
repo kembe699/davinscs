@@ -51,7 +51,7 @@ export default function EndOfDay() {
     try {
       const [eod, hrs, company] = await Promise.all([
         api.posReports.endOfDay({ date: selectedDate }),
-        api.posReports.hourlySales(selectedDate),
+        api.posReports.hourlySales({ date: selectedDate }),
         api.company.get().catch(() => null),
       ]);
       setReport(eod);

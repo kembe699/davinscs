@@ -49,22 +49,31 @@ router.get("/daily-sales", requireAuth, async (req, res) => {
 
 // Hourly sales
 router.get("/hourly-sales", requireAuth, async (req, res) => {
-  const { date } = req.query;
+  const { date, session_id } = req.query;
   const targetDate = date || new Date().toISOString().split('T')[0];
-  
+
   try {
+    // Same personal scoping as /end-of-day (its only caller) — always the
+    // requesting user's own sales, optionally narrowed further to one session.
+    let sessionFilter = " AND user_id = $2";
+    const params = [targetDate, req.user.id];
+    if (session_id) {
+      sessionFilter += " AND session_id = $3";
+      params.push(session_id);
+    }
+
     const { rows } = await pool.query(
       `SELECT
         EXTRACT(HOUR FROM created_at) as hour,
         COUNT(*) FILTER (WHERE sale_type != 'refund') as sales_count,
         COALESCE(SUM(total_amount), 0) as total_amount
        FROM pos_sales
-       WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'
+       WHERE DATE(created_at) = $1 AND voided = false AND status != 'held'${sessionFilter}
        GROUP BY EXTRACT(HOUR FROM created_at)
        ORDER BY hour`,
-      [targetDate]
+      params
     );
-    
+
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -233,16 +242,22 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
 router.get("/end-of-day", requireAuth, async (req, res) => {
   const { date, session_id } = req.query;
   const targetDate = date || new Date().toISOString().split('T')[0];
-  
+
   try {
-    let sessionFilter = "";
-    const params = [targetDate];
-    
+    // Always scoped to the requesting user (never a client-supplied id — this is
+    // a personal "close my shift" report, so every cashier used to see every
+    // other cashier's totals here too, which is exactly what they'd be trying to
+    // reconcile their own drawer against). session_id narrows it further to one
+    // specific shift when given, same as before.
+    let scopeFilter = " AND user_id = $2";
+    const params = [targetDate, req.user.id];
+
     if (session_id) {
-      sessionFilter = " AND session_id = $2";
+      scopeFilter += " AND session_id = $3";
       params.push(session_id);
     }
-    
+    const sessionFilter = scopeFilter;
+
     // Sales summary — COUNT excludes refund rows (a refund isn't another
     // transaction, it's money going back out); SUMs stay unfiltered since a
     // refund's negative total_amount is what nets it back out of revenue.

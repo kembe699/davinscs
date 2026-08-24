@@ -936,9 +936,9 @@ export const api = {
       const qs = date ? `?date=${date}` : "";
       return request<any>(`/api/pos-reports/daily-sales${qs}`);
     },
-    hourlySales: (date?: string) => {
-      const qs = date ? `?date=${date}` : "";
-      return request<any[]>(`/api/pos-reports/hourly-sales${qs}`);
+    hourlySales: (params?: { date?: string; session_id?: number }) => {
+      const qs = new URLSearchParams(params as any).toString();
+      return request<any[]>(`/api/pos-reports/hourly-sales${qs ? `?${qs}` : ""}`);
     },
     topProducts: (params?: { start_date?: string; end_date?: string; limit?: number }) => {
       const qs = new URLSearchParams(params as any).toString();
