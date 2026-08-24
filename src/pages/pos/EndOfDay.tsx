@@ -52,22 +52,34 @@ export default function EndOfDay() {
     if (!background) setLoading(true);
     setError("");
     try {
+      // Current shift first — everything else keys off whether one's open right
+      // now. Closing a shift and opening a fresh one should feel like starting
+      // over: a brand-new session has no sales/movements of its own yet, so
+      // scoping the whole report to it (not just the close-shift math) is what
+      // actually makes the page read as "0, starting again" instead of still
+      // showing the previous shift's — or the whole day's — numbers.
+      let sess: CashDrawerSession | null = null;
+      try {
+        sess = await api.cashDrawer.getCurrent();
+      } catch {
+        sess = null;
+      }
+      setSession(sess);
+
+      const isToday = selectedDate === new Date().toISOString().slice(0, 10);
+      const sessionId = sess?.id && isToday ? sess.id : undefined;
+
       const [eod, hrs, company] = await Promise.all([
-        api.posReports.endOfDay({ date: selectedDate }),
-        api.posReports.hourlySales({ date: selectedDate }),
+        api.posReports.endOfDay({ date: selectedDate, session_id: sessionId }),
+        api.posReports.hourlySales({ date: selectedDate, session_id: sessionId }),
         api.company.get().catch(() => null),
       ]);
       setReport(eod);
       setHourly(Array.isArray(hrs) ? hrs : []);
       setCompanyData(company);
-      // Try to load open cash drawer session, plus what's supposed to be in the
-      // drawer right now (opening cash + sales +/- cash movements) and every
-      // cash in/out recorded against it, so a cashier can see exactly why that
-      // number is what it is before they close out.
-      try {
-        const sess = await api.cashDrawer.getCurrent();
-        setSession(sess);
-        if (sess?.id) {
+
+      if (sess?.id) {
+        try {
           const [moves, expected] = await Promise.all([
             api.cashDrawer.getMovements(sess.id).catch(() => []),
             api.cashDrawer.getExpected().catch(() => null),
@@ -75,13 +87,12 @@ export default function EndOfDay() {
           setMovements(moves);
           setExpectedCash(expected ? Number(expected.expected_cash) : null);
           setSessionSales(expected ? Number(expected.session_sales) : null);
-        } else {
+        } catch {
           setMovements([]);
           setExpectedCash(null);
           setSessionSales(null);
         }
-      } catch {
-        setSession(null);
+      } else {
         setMovements([]);
         setExpectedCash(null);
         setSessionSales(null);
