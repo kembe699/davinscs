@@ -1858,16 +1858,6 @@ export default function POSMain() {
                         </div>
                       </div>
 
-                      {/* Read-only line items */}
-                      <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 mb-3">
-                        {(sale.items || []).map((item: any) => (
-                          <div key={item.id} className="flex justify-between">
-                            <span>{item.quantity} × {item.product_name}</span>
-                            <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', true)}</span>
-                          </div>
-                        ))}
-                      </div>
-
                       <div className="pt-3 border-t border-gray-50 dark:border-gray-700/50 flex justify-between items-end mb-3">
                         <span className="text-xs opacity-70 text-gray-500 dark:text-gray-400">
                           {new Date(sale.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
