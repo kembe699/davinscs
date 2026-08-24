@@ -54,16 +54,22 @@ router.get("/expected", requireAuth, async (req, res) => {
       [session.id]
     );
 
-    const session_sales   = parseInt(salesResult.rows[0].total_sales);
-    const net_movements   = parseInt(movementsResult.rows[0].net_movements);
-    const expected_cash = session.opening_cash + session_sales + net_movements;
+    // opening_cash (and every other cash_drawer_sessions money column) is NUMERIC,
+    // which node-postgres always returns as a string — parseInt would silently
+    // truncate a fractional value (7.5 -> 7) and, worse, session.opening_cash left
+    // unparsed here would make the whole expression string-concatenate instead of
+    // add. parseFloat everywhere a DB-sourced amount enters arithmetic.
+    const opening_cash   = parseFloat(session.opening_cash) || 0;
+    const session_sales  = parseFloat(salesResult.rows[0].total_sales) || 0;
+    const net_movements  = parseFloat(movementsResult.rows[0].net_movements) || 0;
+    const expected_cash  = opening_cash + session_sales + net_movements;
 
     // session_sales is THIS shift's sales only — a cashier who closed an earlier
     // shift today and opened a new one will have a much smaller number here than
     // "sales today" (which spans every shift). Returned so the UI can show a
     // figure that's actually consistent with expected_cash instead of the
     // whole-day total sitting right next to a math result it doesn't add up to.
-    res.json({ opening_cash: session.opening_cash, session_sales, net_movements, expected_cash });
+    res.json({ opening_cash, session_sales, net_movements, expected_cash });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -160,11 +166,13 @@ router.post("/close", requireAuth, async (req, res) => {
       [session.id]
     );
     
-    const expected_cash = session.opening_cash + 
-                         parseInt(salesResult.rows[0].total_sales) + 
-                         parseInt(movementsResult.rows[0].net_movements);
-    
-    const cash_difference = closing_cash - expected_cash;
+    // opening_cash is NUMERIC, always returned as a string by node-postgres — left
+    // unparsed it would string-concatenate instead of add (see GET /expected).
+    const expected_cash = (parseFloat(session.opening_cash) || 0) +
+                         (parseFloat(salesResult.rows[0].total_sales) || 0) +
+                         (parseFloat(movementsResult.rows[0].net_movements) || 0);
+
+    const cash_difference = Number(closing_cash) - expected_cash;
     
     // Close session
     await client.query(

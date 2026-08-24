@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { roundToCents } from "../utils/money.js";
 
 const router = express.Router();
 
@@ -126,7 +127,7 @@ router.post("/", requireAuth, async (req, res) => {
         exchangeRate = Number(rateResult.rows[0].exchange_rate) || 1;
       }
     }
-    const baseAmount = Math.round(amount / exchangeRate);
+    const baseAmount = roundToCents(amount / exchangeRate);
 
     // Create payment
     const paymentResult = await client.query(`

@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { roundToCents } from "../utils/money.js";
 
 const router = express.Router();
 
@@ -64,7 +65,7 @@ router.post("/", requireAuth, async (req, res) => {
     let subtotal = 0, tax_amount = 0;
     for (const item of items) {
       subtotal += (item.unit_price * item.quantity);
-      tax_amount += Math.round(item.unit_price * item.quantity * (item.tax_rate || 0) / 100);
+      tax_amount += roundToCents(item.unit_price * item.quantity * (item.tax_rate || 0) / 100);
     }
     const total_amount = subtotal + tax_amount - (discount_amount || 0);
 
@@ -107,7 +108,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     let subtotal = 0, tax_amount = 0;
     for (const item of items) {
       subtotal += (item.unit_price * item.quantity);
-      tax_amount += Math.round(item.unit_price * item.quantity * (item.tax_rate || 0) / 100);
+      tax_amount += roundToCents(item.unit_price * item.quantity * (item.tax_rate || 0) / 100);
     }
     const total_amount = subtotal + tax_amount - (discount_amount || 0);
 

@@ -3,6 +3,7 @@ import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 import { notifyAdmins } from "../utils/notifications.js";
+import { roundToCents } from "../utils/money.js";
 
 const router = express.Router();
 
@@ -217,7 +218,7 @@ router.post("/sales", requireAuth, async (req, res) => {
       const unit_price = Number(item.unit_price || product.price);
       const item_discount = Number(item.discount_amount || 0);
       const item_subtotal = (unit_price * item.quantity) - item_discount;
-      const item_tax = Math.round(item_subtotal * (product.tax_rate / 100));
+      const item_tax = roundToCents(item_subtotal * (product.tax_rate / 100));
       
       subtotal += item_subtotal;
       tax_amount += item_tax;
@@ -230,7 +231,7 @@ router.post("/sales", requireAuth, async (req, res) => {
         discount_amount: item_discount,
         tax_amount: item_tax,
         subtotal: item_subtotal,
-        cogs: Math.round((product.cost_price || 0) * item.quantity),
+        cogs: roundToCents((product.cost_price || 0) * item.quantity),
       });
       
       if (!isService) {
@@ -615,7 +616,7 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
         }
       }
 
-      const total_cogs = itemsResult.rows.reduce((s, it) => s + Math.round((it.cost_price || 0) * it.quantity), 0);
+      const total_cogs = itemsResult.rows.reduce((s, it) => s + roundToCents((it.cost_price || 0) * it.quantity), 0);
       if (total_cogs > 0 && acct['5000'] && acct['1200']) {
         const { rows: tx2 } = await client.query(
           `INSERT INTO transactions (transaction_date, reference, description, created_by) VALUES ($1,$2,$3,$4) RETURNING id`,
@@ -1122,15 +1123,15 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
       if (refundItem.quantity > item.quantity) throw new Error(`Refund quantity exceeds sold quantity for ${item.product_name}`);
 
       const ratio = refundItem.quantity / item.quantity;
-      const line_subtotal = Math.round(item.subtotal * ratio);
-      const line_tax     = Math.round((item.tax_amount || 0) * ratio);
+      const line_subtotal = roundToCents(item.subtotal * ratio);
+      const line_tax     = roundToCents((item.tax_amount || 0) * ratio);
       refund_subtotal += line_subtotal;
       refund_tax      += line_tax;
       // Cost basis of the returned units, so the refund can reverse
       // exactly this much COGS back onto the books (goods really are
       // coming back into inventory) — computed the same way the original
       // sale computed it (current cost_price × quantity).
-      refund_cogs += Math.round((item.cost_price || 0) * refundItem.quantity);
+      refund_cogs += roundToCents((item.cost_price || 0) * refundItem.quantity);
 
       refundLineItems.push({
         product_id:   item.product_id,

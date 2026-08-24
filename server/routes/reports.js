@@ -197,7 +197,7 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
            AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      accountingTotal = parseInt(accountingExpenses.rows[0].total) || 0;
+      accountingTotal = parseFloat(accountingExpenses.rows[0].total) || 0;
     } catch (err) { /* table not available */ }
 
     // Cash drawer cash-out
@@ -209,7 +209,7 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
            AND DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      cashDrawerTotal = parseInt(cashDrawerExpenses.rows[0].total) || 0;
+      cashDrawerTotal = parseFloat(cashDrawerExpenses.rows[0].total) || 0;
     } catch (err) { /* table not available */ }
 
     // Procurement supplier payments — base_amount is the base-currency equivalent
@@ -222,7 +222,7 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
          WHERE DATE(payment_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      procurementTotal = parseInt(procurementExpenses.rows[0].total) || 0;
+      procurementTotal = parseFloat(procurementExpenses.rows[0].total) || 0;
     } catch (err) { /* table not available */ }
 
     res.json({
@@ -710,7 +710,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
          WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false AND status != 'held'`,
         [startDate, endDate]
       );
-      posRevenue = parseInt(rows[0].total) || 0;
+      posRevenue = parseFloat(rows[0].total) || 0;
     } catch (e) {}
 
     try {
@@ -719,7 +719,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
          WHERE DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      invoiceRevenue = parseInt(rows[0].total) || 0;
+      invoiceRevenue = parseFloat(rows[0].total) || 0;
     } catch (e) {}
 
     // ── COGS (from actual sale items × cost_price) ────────────────────
@@ -733,7 +733,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
          WHERE DATE(ps.created_at) BETWEEN $1 AND $2 AND ps.voided = false AND ps.status != 'held'`,
         [startDate, endDate]
       );
-      cogsAmount = parseInt(rows[0].total) || 0;
+      cogsAmount = parseFloat(rows[0].total) || 0;
     } catch (e) { console.error('COGS query error:', e.message); }
 
     // ── OPERATING EXPENSES ────────────────────────────────────────────
@@ -748,7 +748,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
          WHERE DATE(payment_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      procurementExpenses = parseInt(rows[0].total) || 0;
+      procurementExpenses = parseFloat(rows[0].total) || 0;
     } catch (e) {}
 
     try {
@@ -757,7 +757,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
          WHERE type = 'out' AND DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      cashDrawerExpenses = parseInt(rows[0].total) || 0;
+      cashDrawerExpenses = parseFloat(rows[0].total) || 0;
     } catch (e) { console.error('Cash drawer expenses query error:', e.message); }
 
     // Other accounting expenses (exclude COGS account 5000)
@@ -772,7 +772,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
            AND DATE(t.transaction_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
-      otherAccountingExpenses = parseInt(rows[0].total) || 0;
+      otherAccountingExpenses = parseFloat(rows[0].total) || 0;
     } catch (e) {}
 
     const totalRevenue      = posRevenue + invoiceRevenue;
@@ -858,12 +858,12 @@ router.get("/cashflow", requireAuth, async (req, res) => {
       if (!dayMap[d]) dayMap[d] = { date: d, sales_in: 0, sales_tx: 0, refunds_out: 0, refunds_tx: 0, manual_in: 0, manual_out: 0, manual_in_tx: 0, manual_out_tx: 0 };
     };
 
-    posCashIn.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].sales_in += parseInt(r.amount); dayMap[r.date].sales_tx += parseInt(r.tx_count); });
-    posCashOut.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].refunds_out += parseInt(r.amount); dayMap[r.date].refunds_tx += parseInt(r.tx_count); });
+    posCashIn.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].sales_in += parseFloat(r.amount); dayMap[r.date].sales_tx += parseInt(r.tx_count); });
+    posCashOut.rows.forEach(r => { ensureDay(r.date); dayMap[r.date].refunds_out += parseFloat(r.amount); dayMap[r.date].refunds_tx += parseInt(r.tx_count); });
     manualMovements.rows.forEach(r => {
       ensureDay(r.date);
-      if (r.type === 'in')  { dayMap[r.date].manual_in  += parseInt(r.amount); dayMap[r.date].manual_in_tx  += parseInt(r.tx_count); }
-      if (r.type === 'out') { dayMap[r.date].manual_out += parseInt(r.amount); dayMap[r.date].manual_out_tx += parseInt(r.tx_count); }
+      if (r.type === 'in')  { dayMap[r.date].manual_in  += parseFloat(r.amount); dayMap[r.date].manual_in_tx  += parseInt(r.tx_count); }
+      if (r.type === 'out') { dayMap[r.date].manual_out += parseFloat(r.amount); dayMap[r.date].manual_out_tx += parseInt(r.tx_count); }
     });
 
     const daily = Object.values(dayMap)

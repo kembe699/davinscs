@@ -28,7 +28,7 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
       const found = rows.find(r => parseInt(r.month_num) === index + 1);
       return {
         month,
-        sales: found ? parseInt(found.sales) : 0,
+        sales: found ? parseFloat(found.sales) : 0,
         count: found ? parseInt(found.count) : 0
       };
     });
@@ -65,7 +65,7 @@ router.get("/top-products", requireAuth, async (req, res) => {
       name: r.name,
       category: r.category,
       quantity: parseInt(r.quantity),
-      total: parseInt(r.total)
+      total: parseFloat(r.total)
     })));
   } catch (err) {
     console.error(err);
@@ -100,10 +100,10 @@ router.get("/sales-summary", requireAuth, async (req, res) => {
     );
     
     res.json({
-      totalSales: parseInt(totalRows[0].total_sales),
+      totalSales: parseFloat(totalRows[0].total_sales),
       totalCount: parseInt(totalRows[0].total_count),
       topMonth: monthRows[0]?.month?.trim() || '---',
-      topMonthAmount: monthRows[0] ? parseInt(monthRows[0].amount) : 0
+      topMonthAmount: monthRows[0] ? parseFloat(monthRows[0].amount) : 0
     });
   } catch (err) {
     console.error(err);
@@ -130,7 +130,7 @@ router.get("/hourly-sales", requireAuth, async (req, res) => {
       const found = rows.find(r => parseInt(r.hour) === hour);
       return {
         hour: `${hour}:00`,
-        amount: found ? parseInt(found.amount) : 0,
+        amount: found ? parseFloat(found.amount) : 0,
         count: found ? parseInt(found.count) : 0
       };
     });

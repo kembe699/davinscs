@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { tenantStorage } from "../tenantStorage.js";
 import { notifyAdmins } from "../utils/notifications.js";
+import { roundToCents } from "../utils/money.js";
 
 const router = express.Router();
 
@@ -125,7 +126,7 @@ router.post("/:tenantSlug/order", async (req, res) => {
 
           const unit_price = Number(product.price);
           const item_subtotal = unit_price * item.quantity;
-          const item_tax = Math.round(item_subtotal * (product.tax_rate / 100));
+          const item_tax = roundToCents(item_subtotal * (product.tax_rate / 100));
           subtotal += item_subtotal;
           tax_amount += item_tax;
 

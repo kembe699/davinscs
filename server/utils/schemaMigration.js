@@ -937,7 +937,14 @@ export async function migrateTenant(schemaName = "public") {
           ('customers', 'balance'),
           ('customers', 'credit_limit'),
           ('transaction_lines', 'debit'),
-          ('transaction_lines', 'credit')
+          ('transaction_lines', 'credit'),
+          ('cash_drawer_sessions', 'opening_cash'),
+          ('cash_drawer_sessions', 'closing_cash'),
+          ('cash_drawer_sessions', 'expected_cash'),
+          ('cash_drawer_sessions', 'cash_difference'),
+          ('cash_drawer_sessions', 'difference_resolved_amount'),
+          ('price_list_items', 'price'),
+          ('supplier_payments', 'base_amount')
         ) AS cols(table_name, column_name)
       LOOP
         IF EXISTS (
