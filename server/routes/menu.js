@@ -156,7 +156,7 @@ router.post("/:tenantSlug/order", async (req, res) => {
 
         // No payment_type_id yet (it's unpaid until a cashier completes it)
         // and no user_id/session_id — nobody on staff has rung this up.
-        const { rows: cashCode } = await client.query("SELECT id FROM payment_types WHERE code = 'cash' LIMIT 1");
+        const { rows: cashCode } = await client.query("SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%' LIMIT 1");
         const saleResult = await client.query(
           `INSERT INTO pos_sales
              (sale_number, customer_name, subtotal, tax_amount, discount_amount, total_amount,

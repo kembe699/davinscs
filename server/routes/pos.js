@@ -388,10 +388,11 @@ router.post("/sales", requireAuth, async (req, res) => {
     // Auto-record cash sales as cash_movements 'in' for the active session
     if (session_id && sale_type !== 'credit' && (status || 'completed') === 'completed') {
       const ptResult = await client.query(
-        "SELECT code FROM payment_types WHERE id = $1",
+        "SELECT code, name FROM payment_types WHERE id = $1",
         [payment_type_id]
       );
-      if (ptResult.rows[0]?.code === 'cash') {
+      const pt = ptResult.rows[0];
+      if (pt && (/^cash/i.test(pt.code || '') || /cash/i.test(pt.name || ''))) {
         await client.query(
           `INSERT INTO cash_movements (session_id, user_id, type, amount, reason)
            VALUES ($1, $2, 'in', $3, $4)`,
@@ -629,8 +630,9 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     }
 
     // Cash movement, if paid in cash
-    const ptResult = await client.query("SELECT code FROM payment_types WHERE id = $1", [payment_type_id]);
-    if (ptResult.rows[0]?.code === 'cash') {
+    const ptResult = await client.query("SELECT code, name FROM payment_types WHERE id = $1", [payment_type_id]);
+    const pt2 = ptResult.rows[0];
+    if (pt2 && (/^cash/i.test(pt2.code || '') || /cash/i.test(pt2.name || ''))) {
       await client.query(
         `INSERT INTO cash_movements (session_id, user_id, type, amount, reason) VALUES ($1, $2, 'in', $3, $4)`,
         [session_id, user_id, sale.total_amount, `POS Sale ${sale.sale_number}`]

@@ -819,7 +819,7 @@ router.get("/cashflow", requireAuth, async (req, res) => {
              COUNT(*) as tx_count
       FROM pos_sales s
       JOIN payment_types pt ON s.payment_type_id = pt.id
-      WHERE pt.code = 'cash'
+      WHERE (pt.code ILIKE 'cash%' OR pt.name ILIKE '%cash%')
         AND s.voided = false
         AND s.sale_type != 'refund'
         AND s.status = 'completed'
@@ -834,7 +834,7 @@ router.get("/cashflow", requireAuth, async (req, res) => {
              COUNT(*) as tx_count
       FROM pos_sales s
       JOIN payment_types pt ON s.payment_type_id = pt.id
-      WHERE pt.code = 'cash'
+      WHERE (pt.code ILIKE 'cash%' OR pt.name ILIKE '%cash%')
         AND s.sale_type = 'refund'
         AND DATE(s.created_at) BETWEEN $1 AND $2
       GROUP BY DATE(s.created_at)
