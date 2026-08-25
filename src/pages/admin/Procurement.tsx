@@ -163,6 +163,19 @@ export default function ProcurementEnhanced() {
     }).catch(() => {});
   }, []);
 
+  // total_amount/paid_amount are stored in each record's own currency (a PO/bill
+  // created in USD keeps its total in USD, not converted) — summing across records
+  // only means something in a single currency, so a per-supplier total only gets
+  // that currency's own symbol when every record it's summing actually shares one;
+  // a supplier with genuinely mixed-currency POs/bills falls back to the base
+  // currency symbol, same as before, since there's no single correct label for a
+  // sum that's silently mixing currencies.
+  const dominantSymbol = (records: Array<{ currency_symbol?: string }>) => {
+    const symbols = new Set(records.map(r => r.currency_symbol).filter(Boolean));
+    if (symbols.size === 1) return records[0].currency_symbol as string;
+    return currencies.find(c => c.is_base)?.symbol ?? "UGX";
+  };
+
   // Everything needed is already loaded (pos/grns/bills/payments) — no extra fetch required.
   const getSupplierOverview = (supplierId: number) => {
     const supplierPOs = pos.filter(p => p.supplier_id === supplierId);
@@ -185,6 +198,8 @@ export default function ProcurementEnhanced() {
       totalBilled,
       totalPaid,
       balance,
+      orderedSym: dominantSymbol(supplierPOs),
+      billedSym: dominantSymbol(supplierBills),
       payments: supplierPayments,
     };
   };
@@ -304,13 +319,20 @@ export default function ProcurementEnhanced() {
   };
 
   const downloadSupplierReportPdf = (supplier: ApiSupplier, billGroups: SupplierBillGroup[]) => {
-    const sym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
-    const fmt = (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;
+    const baseSym = currencies.find(c => c.is_base)?.symbol ?? "UGX";
+    const fmtIn = (sym: string) => (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;
+    // The overall summary sums across every bill, which only means something in one
+    // currency — it gets that bill's symbol only when every bill here actually shares
+    // one, same reasoning as the on-screen supplier tiles (dominantSymbol).
+    const billSymbols = new Set(billGroups.map(g => g.bill.currency_symbol).filter(Boolean));
+    const summarySym = billSymbols.size === 1 ? (billGroups[0].bill.currency_symbol as string) : baseSym;
+    const fmtSummary = fmtIn(summarySym);
 
     let totalBilled = 0, totalPaid = 0;
     const sections = billGroups.map(({ bill, items, billTotal, paid, balance }) => {
       totalBilled += billTotal;
       totalPaid += paid;
+      const fmt = fmtIn(bill.currency_symbol || baseSym);
       const reference = (bill as any).po_number || (bill as any).grn_number || "";
       const itemRows = items.length
         ? items.map((it: any) => {
@@ -337,9 +359,9 @@ export default function ProcurementEnhanced() {
       ${sections || `<p class="no-data">No bills recorded for this supplier.</p>`}
       <div class="summary">
         <table class="summary-table">
-          <tr><td>Total Billed</td><td class="num">${fmt(totalBilled)}</td></tr>
-          <tr class="paid-row"><td>Total Paid</td><td class="num">${fmt(totalPaid)}</td></tr>
-          <tr class="balance-row total-row"><td>Balance Owed</td><td class="num">${fmt(totalBilled - totalPaid)}</td></tr>
+          <tr><td>Total Billed</td><td class="num">${fmtSummary(totalBilled)}</td></tr>
+          <tr class="paid-row"><td>Total Paid</td><td class="num">${fmtSummary(totalPaid)}</td></tr>
+          <tr class="balance-row total-row"><td>Balance Owed</td><td class="num">${fmtSummary(totalBilled - totalPaid)}</td></tr>
         </table>
       </div>
       <div class="footer">Generated on ${new Date().toLocaleString()}</div>
@@ -1030,7 +1052,7 @@ export default function ProcurementEnhanced() {
                               <div className="border border-border-subtle bg-chassis p-3">
                                 <div className="flex items-center gap-2 mb-1 text-muted-foreground"><ShoppingCart size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Orders</span></div>
                                 <p className="text-lg font-bold text-foreground">{ov.poCount}</p>
-                                <p className="text-[10px] text-muted-foreground font-mono-tech">{sym}{ov.totalOrdered.toLocaleString()}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono-tech">{ov.orderedSym}{ov.totalOrdered.toLocaleString()}</p>
                               </div>
                               <div className="border border-border-subtle bg-chassis p-3">
                                 <div className="flex items-center gap-2 mb-1 text-muted-foreground"><Truck size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Received (GRN)</span></div>
@@ -1039,15 +1061,15 @@ export default function ProcurementEnhanced() {
                               <div className="border border-border-subtle bg-chassis p-3">
                                 <div className="flex items-center gap-2 mb-1 text-muted-foreground"><FileText size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Bills</span></div>
                                 <p className="text-lg font-bold text-foreground">{ov.billCount}</p>
-                                <p className="text-[10px] text-muted-foreground font-mono-tech">{sym}{ov.totalBilled.toLocaleString()}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono-tech">{ov.billedSym}{ov.totalBilled.toLocaleString()}</p>
                               </div>
                               <div className="border border-border-subtle bg-chassis p-3">
                                 <div className="flex items-center gap-2 mb-1 text-muted-foreground"><DollarSign size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Total Paid</span></div>
-                                <p className="text-lg font-bold text-green-500">{sym}{ov.totalPaid.toLocaleString()}</p>
+                                <p className="text-lg font-bold text-green-500">{ov.billedSym}{ov.totalPaid.toLocaleString()}</p>
                               </div>
                               <div className="border border-border-subtle bg-chassis p-3">
                                 <div className="flex items-center gap-2 mb-1 text-muted-foreground"><Wallet size={13} /><span className="text-[9px] font-mono-tech uppercase tracking-widest">Balance Owed</span></div>
-                                <p className={`text-lg font-bold ${ov.balance > 0 ? 'text-red-500' : 'text-foreground'}`}>{sym}{ov.balance.toLocaleString()}</p>
+                                <p className={`text-lg font-bold ${ov.balance > 0 ? 'text-red-500' : 'text-foreground'}`}>{ov.billedSym}{ov.balance.toLocaleString()}</p>
                               </div>
                             </div>
 
@@ -1095,6 +1117,10 @@ export default function ProcurementEnhanced() {
                                       const rowExpanded = !!p.bill_id && expandedPaymentBillId === p.bill_id;
                                       const items = p.bill_id ? billItemsMap[p.bill_id] : undefined;
                                       const isLoadingItems = p.bill_id && loadingBillItemsFor === p.bill_id;
+                                      // A payment stays in its bill's own native currency (see
+                                      // getSupplierOverview) — look that bill up rather than
+                                      // assuming the base currency every payment is shown with.
+                                      const paymentSym = bills.find(b => b.id === p.bill_id)?.currency_symbol || sym;
                                       return (
                                         <Fragment key={p.id}>
                                           <tr
@@ -1107,7 +1133,7 @@ export default function ProcurementEnhanced() {
                                             <td className="px-3 py-2 text-muted-foreground">{new Date(p.payment_date).toLocaleDateString()}</td>
                                             <td className="px-3 py-2 text-foreground">{p.bill_number || "—"}</td>
                                             <td className="px-3 py-2 text-muted-foreground capitalize">{p.payment_method?.replace('_', ' ')}</td>
-                                            <td className="px-3 py-2 text-right font-mono-tech text-foreground">{sym}{Number(p.amount).toLocaleString()}</td>
+                                            <td className="px-3 py-2 text-right font-mono-tech text-foreground">{paymentSym}{Number(p.amount).toLocaleString()}</td>
                                             <td className="px-3 py-2 text-muted-foreground">{p.notes || "—"}</td>
                                           </tr>
                                           {rowExpanded && (
@@ -1132,8 +1158,8 @@ export default function ProcurementEnhanced() {
                                                         <tr key={i}>
                                                           <td className="py-1 text-foreground">{it.product_name || "—"}</td>
                                                           <td className="py-1 text-right text-muted-foreground">{Number(it.received_quantity || 0)}</td>
-                                                          <td className="py-1 text-right font-mono-tech text-muted-foreground">{sym}{Number(it.unit_price || 0).toLocaleString()}</td>
-                                                          <td className="py-1 text-right font-mono-tech text-foreground">{sym}{(Number(it.received_quantity || 0) * Number(it.unit_price || 0)).toLocaleString()}</td>
+                                                          <td className="py-1 text-right font-mono-tech text-muted-foreground">{paymentSym}{Number(it.unit_price || 0).toLocaleString()}</td>
+                                                          <td className="py-1 text-right font-mono-tech text-foreground">{paymentSym}{(Number(it.received_quantity || 0) * Number(it.unit_price || 0)).toLocaleString()}</td>
                                                         </tr>
                                                       ))}
                                                     </tbody>
