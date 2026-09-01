@@ -398,7 +398,7 @@ router.get("/inventory/expiring", requireAuth, async (req, res) => {
           barcode,
           quantity_on_hand,
           expiry_date,
-          EXTRACT(DAY FROM (expiry_date - CURRENT_DATE)) as days_until_expiry
+          (expiry_date - CURRENT_DATE) as days_until_expiry
          FROM products
          WHERE expiry_date IS NOT NULL
            AND expiry_date > CURRENT_DATE
@@ -408,7 +408,7 @@ router.get("/inventory/expiring", requireAuth, async (req, res) => {
       );
       res.json(rows);
     } catch (err) {
-      console.log("Expiry date column not available in products table");
+      console.error("Expiring products query failed:", err);
       res.json([]);
     }
   } catch (err) {
@@ -428,7 +428,7 @@ router.get("/inventory/expired", requireAuth, async (req, res) => {
           barcode,
           quantity_on_hand,
           expiry_date,
-          EXTRACT(DAY FROM (CURRENT_DATE - expiry_date)) as days_expired
+          (CURRENT_DATE - expiry_date) as days_expired
          FROM products
          WHERE expiry_date IS NOT NULL
            AND expiry_date < CURRENT_DATE
@@ -437,7 +437,7 @@ router.get("/inventory/expired", requireAuth, async (req, res) => {
       );
       res.json(rows);
     } catch (err) {
-      console.log("Expiry date column not available in products table");
+      console.error("Expired products query failed:", err);
       res.json([]);
     }
   } catch (err) {
