@@ -1,6 +1,8 @@
 @echo off
-title FlippedPos - Stopping...
-echo Stopping FlippedPos...
-docker-compose down
-echo Done. Data is preserved in the Docker volume.
+title FlippedPOS - Stop
+echo Stopping FlippedPOS...
+docker compose down
+echo.
+echo Stopped. Your data is kept - run start.bat to bring it back.
+echo (To erase all data instead, run: docker compose down -v)
 pause

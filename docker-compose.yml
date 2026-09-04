@@ -1,38 +1,58 @@
-version: "3.9"
+# FlippedPOS — offline/on-premise deployment.
+#
+# Brings up the application and its database together on one machine. Values
+# come from .env (copy .env.example to .env and edit it first); the defaults
+# below only exist so the stack still starts if a key is missing.
 
 services:
   db:
     image: postgres:15-alpine
+    container_name: flippedpos-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: flippedpos
-      POSTGRES_PASSWORD: flippedpos123
-      POSTGRES_DB: flippedpos
+      POSTGRES_USER: ${DB_USER:-flippedpos}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-flippedpos123}
+      POSTGRES_DB: ${DB_NAME:-flippedpos}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flippedpos"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-flippedpos} -d ${DB_NAME:-flippedpos}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   app:
     build: .
+    image: flippedpos-app:latest
+    container_name: flippedpos-app
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      # Host port is configurable; the container always listens on 3001.
+      - "${APP_PORT:-3001}:3001"
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgres://flippedpos:flippedpos123@db:5432/flippedpos
-      JWT_SECRET: change-me-to-a-strong-secret-min-32-chars!!
-      APP_URL: http://localhost:3001
+      DATABASE_URL: postgres://${DB_USER:-flippedpos}:${DB_PASSWORD:-flippedpos123}@db:5432/${DB_NAME:-flippedpos}
       DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env - see .env.example}
+      APP_URL: ${APP_URL:-http://localhost:3001}
+      # Offline mode: this install has no tenants of its own. On first login it
+      # fetches the tenant's licence and schema from the master and re-checks
+      # every 6 hours, so MASTER_API_URL must be reachable at least that often.
       OFFLINE_MODE: "true"
-      MASTER_API_URL: "https://davinscs.onrender.com"
+      MASTER_API_URL: ${MASTER_API_URL:-https://davinscs.onrender.com}
+      # Optional. Left unset, the app runs normally and simply skips email.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      start_period: 40s
+      retries: 5
 
 volumes:
   pgdata:

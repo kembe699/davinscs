@@ -22,8 +22,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
 ENV NODE_ENV=production
-ENV PORT=10000
+# Matches the port docker-compose maps and the healthcheck probes.
+ENV PORT=3001
 
-EXPOSE 10000
+EXPOSE 3001
 
 CMD ["node", "server/index.js"]

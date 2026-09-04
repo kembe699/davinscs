@@ -2,8 +2,34 @@ import { Resend } from 'resend';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const fromAddress = process.env.EMAIL_FROM || 'FlippedPOS <notifications@flippedpos.com>';
+
+// Built on first use, not at import.
+//
+// `new Resend(undefined)` throws, and this module is imported on the server's
+// startup path — so an install without RESEND_API_KEY did not merely lose
+// email, it crash-looped before the HTTP server ever listened. That is the
+// normal case for an offline deployment, which has no outbound mail and no key
+// to give. Sending is now skipped with one warning and the rest of the
+// application runs untouched.
+let resendClient = null;
+let warnedNoKey = false;
+
+const resend = {
+  emails: {
+    async send(payload) {
+      if (!process.env.RESEND_API_KEY) {
+        if (!warnedNoKey) {
+          console.warn('Email disabled: RESEND_API_KEY is not set. Messages will be skipped.');
+          warnedNoKey = true;
+        }
+        return { data: null, error: null, skipped: true };
+      }
+      if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
+      return resendClient.emails.send(payload);
+    },
+  },
+};
 
 export const sendWelcomeEmail = async (email, businessName, customerCode, schemaName, tenantSlug, trialEndsAt) => {
   const portalUrl = process.env.APP_URL || 'https://flippedpos.com';

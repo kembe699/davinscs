@@ -1,0 +1,6 @@
+# Excluded from `git archive`, which is how the offline installer is built
+# (scripts/build-offline-package.sh). Development-only files, and anything that
+# has ever held a credential, must not reach a customer's machine.
+.env              export-ignore
+.windsurf         export-ignore
+.gitattributes    export-ignore

@@ -27,3 +27,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# curl session jars — these captured a real login cookie once already
+cookie.txt
+cookies.txt
+
+# built offline packages — regenerate with scripts/build-offline-package.sh
+FlippedPos_Offline_*.zip
+dist-offline/
+
+# The offline installer's template is meant to be committed; it holds no secrets.
+!.env.docker.example
