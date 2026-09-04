@@ -34,7 +34,7 @@ services:
       PORT: 3001
       DATABASE_URL: postgres://${DB_USER:-flippedpos}:${DB_PASSWORD:-flippedpos123}@db:5432/${DB_NAME:-flippedpos}
       DB_SSL: "false"
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env - see .env.example}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env - see .env.docker.example}
       APP_URL: ${APP_URL:-http://localhost:3001}
       # Offline mode: this install has no tenants of its own. On first login it
       # fetches the tenant's licence and schema from the master and re-checks
