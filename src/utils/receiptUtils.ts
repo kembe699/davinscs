@@ -2,6 +2,7 @@
  *  Used by POSMain (live sale) and SalesHistory (reprint). */
 
 import QRCode from 'qrcode';
+import { formatConvertedCurrency } from './currency';
 
 /** The URL a scan of the receipt's QR code should land on. */
 export function getReceiptVerifyUrl(saleNumber: string): string {
@@ -73,13 +74,10 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const money  = (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;
   const fxMoney = (n: number) => {
     if (!hasFx) return '';
-    const converted = n * rate!;
-    // Always two decimals. Rounding anything over 10 to a whole number turned a
-    // 10.40 total into 10 — forty cents off a figure the customer may be paying
-    // in that currency, printed on the slip they keep.
-    return `${secondaryCurrency!.symbol} ${converted.toLocaleString('en-US', {
-      minimumFractionDigits: 2, maximumFractionDigits: 2,
-    })}`;
+    // Shared with the till, so the slip states what the screen did. Two decimals
+    // once the figure is big enough to mean something, and the literal value
+    // below that — a 2.50 item at 0.00013 is 0.000325, not "0.00".
+    return formatConvertedCurrency(n * rate!, secondaryCurrency!.symbol);
   };
 
   const COLS = 42;

@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatCurrencySync, roundToCents } from "@/utils/currency";
+import { formatCurrencySync, roundToCents, formatConvertedCurrency } from "@/utils/currency";
 import { printDocument, printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -213,9 +213,9 @@ export default function POSMain() {
   const inSecondary = (amount: number): string | null => {
     if (!secondaryCurrency || !exchangeRate) return null;
     const converted = (Number(amount) || 0) * exchangeRate;
-    // Two decimals always, matching the printed receipt. Rounding to whole units
-    // drops real money at these scales — a 10.40 total would read 10.
-    return formatCurrencySync(converted, secondaryCurrency.symbol, true);
+    // formatConvertedCurrency, not the fixed-2dp formatter: at a rate like
+    // 0.00013 a 2.50 item is 0.000325, which two decimals renders as "0.00".
+    return formatConvertedCurrency(converted, secondaryCurrency.symbol);
   };
 
   const loadSecondaryCurrency = async () => {

@@ -85,4 +85,46 @@ describe('receipt shows the second currency', () => {
     expect(html).toContain('$ 20.00');    // 40000 * 0.0005
     expect(html).not.toContain('$ 10.40'); // not today's rate
   });
+
+  it('shows a tiny converted amount literally, not as 0.00', () => {
+    // 1 SSP = 0.00013 USD, so a 2.50 item is 0.000325. Two fixed decimals
+    // renders that as "0.00", which reads as a broken conversion rather than a
+    // small number.
+    const smallSale = { ...sale, subtotal: 2.5, total_amount: 2.5 };
+    const smallItems = [{ name: 'Tea', quantity: 1, unit_price: 2.5, total: 2.5 }] as any;
+
+    const html = buildThermalReceipt({
+      sale: smallSale, items: smallItems, companyData: {} as any,
+      baseCurrencySymbol: 'SSP', baseCurrencyCode: 'SSP',
+      secondaryCurrency: usd, exchangeRate: 0.00013,
+    } as any);
+
+    expect(html).toContain('$ 0.000325');
+    expect(html).not.toContain('$ 0.00<');
+  });
+
+  it('trims trailing zeros so the figure reads as itself', () => {
+    // 1 * 0.00013 is 0.00013, not 0.000130.
+    const oneSale = { ...sale, subtotal: 1, total_amount: 1 };
+    const oneItem = [{ name: 'Sweet', quantity: 1, unit_price: 1, total: 1 }] as any;
+
+    const html = buildThermalReceipt({
+      sale: oneSale, items: oneItem, companyData: {} as any,
+      baseCurrencySymbol: 'SSP', baseCurrencyCode: 'SSP',
+      secondaryCurrency: usd, exchangeRate: 0.00013,
+    } as any);
+
+    expect(html).toContain('$ 0.00013');
+    expect(html).not.toContain('$ 0.000130');
+  });
+
+  it('keeps two decimals once the amount is large enough to matter', () => {
+    // The small-number handling must not follow a normal amount around: 10.40
+    // stays 10.40, not 10.4.
+    const html = buildThermalReceipt({
+      sale, items, companyData: {} as any, ...base,
+      secondaryCurrency: usd, exchangeRate: 0.00026,
+    } as any);
+    expect(html).toContain('$ 10.40');
+  });
 });

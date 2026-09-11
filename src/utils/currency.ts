@@ -156,3 +156,37 @@ export async function convertAmount(
   
   return convertedAmount;
 }
+
+/**
+ * Format an amount that has been converted into another currency.
+ *
+ * A fixed two decimals is right for money people hand over and wrong for money
+ * they only read. At a rate of 0.00013, a 2.50 item is 0.000325 in the second
+ * currency — two decimals renders that as "0.00", which tells the customer
+ * nothing and looks like the conversion is broken.
+ *
+ * So: two decimals once the figure is large enough for them to mean something,
+ * and below that, enough decimals to show the number rather than round it away.
+ * Trailing zeros are trimmed so the result reads as the literal value — 0.00013,
+ * not 0.000130.
+ */
+export function formatConvertedAmount(amount: number): string {
+  const n = Number(amount) || 0;
+  const abs = Math.abs(n);
+
+  if (abs === 0) return '0.00';
+
+  if (abs >= 0.01) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Three significant figures, however small. Capped so a rate with an absurd
+  // number of zeros cannot produce an unreadable string.
+  const decimals = Math.min(10, Math.ceil(-Math.log10(abs)) + 2);
+  return n.toFixed(decimals).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/** The same, with the currency's symbol in front. */
+export function formatConvertedCurrency(amount: number, symbol: string): string {
+  return `${symbol} ${formatConvertedAmount(amount)}`;
+}
