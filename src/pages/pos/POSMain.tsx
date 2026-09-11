@@ -238,6 +238,17 @@ export default function POSMain() {
           if (r) resolvedRate = 1 / parseFloat(r.rate.toString());
         } catch { /* not found in reverse either */ }
       }
+      // Fall back to the rate held on the currency itself.
+      //
+      // Admin ▸ Currencies sets exchange_rate on the currency record; the
+      // exchange_rates table is a separate, dated history that a shop may never
+      // have added a row to. Looking only there meant a shop that had set its
+      // rate — and could see it on the Currencies page — got no conversion
+      // anywhere, which reads as the feature being broken rather than unset.
+      if (!resolvedRate) {
+        const onRecord = parseFloat(String(secondary.exchange_rate ?? ''));
+        if (Number.isFinite(onRecord) && onRecord > 0) resolvedRate = onRecord;
+      }
       if (resolvedRate && resolvedRate > 0) setExchangeRate(resolvedRate);
     } catch (err) {
       console.error("Error loading secondary currency:", err);
@@ -838,6 +849,12 @@ export default function POSMain() {
               const r = await api.exchangeRates.getActive(printSec.id, printBase.id);
               if (r) printRate = 1 / parseFloat(r.rate.toString());
             } catch { /* no rate */ }
+          }
+          // Same fallback as the till: the rate may live only on the currency
+          // record, never having been written into the dated exchange_rates table.
+          if (!printRate) {
+            const onRecord = parseFloat(String(printSec.exchange_rate ?? ''));
+            if (Number.isFinite(onRecord) && onRecord > 0) printRate = onRecord;
           }
         }
       } catch { /* use state fallback */ }

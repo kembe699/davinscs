@@ -68,7 +68,20 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const { sale, items, companyData: co, baseCurrencySymbol, baseCurrencyCode, secondaryCurrency, exchangeRate, qrDataUrl, unpaid } = opts;
 
   const sym  = baseCurrencySymbol || 'UGX';
-  const rate = sale.exchange_rate_used ? Number(sale.exchange_rate_used) : (exchangeRate ?? null);
+  // Two different rates, and they answer different questions.
+  //
+  // exchange_rate_used records what this sale was transacted at. A sale taken in
+  // the base currency stores 1.0, which is correct and means "no conversion
+  // happened" — it does not mean "there is nothing to display". Treating it as
+  // the display rate switched the second currency off on every ordinary sale,
+  // which is nearly all of them: the till showed a converted price and the
+  // receipt showed none.
+  //
+  // So: a sale struck in a foreign currency carries its own rate and a reprint
+  // must use that snapshot, however far the rate has moved since. Anything else
+  // is converted for information at the rate set now.
+  const saleRate = sale.exchange_rate_used ? Number(sale.exchange_rate_used) : null;
+  const rate = (saleRate && saleRate !== 1) ? saleRate : (exchangeRate ?? null);
   const hasFx = rate && rate !== 1 && secondaryCurrency;
 
   const money  = (n: number) => `${sym} ${Number(n || 0).toLocaleString()}`;

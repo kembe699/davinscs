@@ -118,6 +118,20 @@ describe('receipt shows the second currency', () => {
     expect(html).not.toContain('$ 0.000130');
   });
 
+  it('still converts a sale taken in the base currency', () => {
+    // exchange_rate_used is 1.0 on every ordinary sale — it records that no
+    // conversion happened at the till, not that none should be shown. Reading it
+    // as the display rate silenced the second currency on nearly every receipt.
+    const html = buildThermalReceipt({
+      sale: { ...sale, exchange_rate_used: 1 },
+      items, companyData: {} as any, ...base,
+      secondaryCurrency: usd, exchangeRate: 0.00026,
+    } as any);
+
+    expect(html).toContain('Total (USD)');
+    expect(html).toContain('$ 10.40');
+  });
+
   it('keeps two decimals once the amount is large enough to matter', () => {
     // The small-number handling must not follow a normal amount around: 10.40
     // stays 10.40, not 10.4.
