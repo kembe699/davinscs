@@ -106,10 +106,14 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const saleDate     = new Date(sale.created_at).toLocaleString();
   const runDate      = new Date().toLocaleDateString();
 
-  // fxMoney was defined but never printed, so a receipt carried no second
-  // currency at all — the customer was quoted one on screen and handed a slip
-  // showing only the base. Each line gets the converted amount beneath it, and
-  // the totals below carry it too.
+  // The converted figure goes on the total, not on every line.
+  //
+  // A line each doubled the rows and, at real magnitudes, wrapped: a 42-column
+  // slip cannot hold an item name, a quantity, a price and a nine-digit
+  // conversion, so the name broke across three lines and the receipt became
+  // harder to read than it was without any of it. The total is the number the
+  // customer is actually converting, and the rate below it lets any line be
+  // worked out.
   const itemRows = items.map(item => `
     <tr class="item-row">
       <td class="col-item">${item.name.substring(0, 20)}</td>
@@ -118,13 +122,6 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
       <td class="col-price">${money(item.unit_price).replace(sym+' ', '')}</td>
       <td class="col-total">${money(item.total).replace(sym+' ', '')}</td>
     </tr>
-    ${hasFx ? `<tr class="item-row fx-row">
-      <td class="col-item" style="padding-left:4px;">&nbsp;</td>
-      <td class="col-qty"></td>
-      <td class="col-unit"></td>
-      <td class="col-price">${fxMoney(item.unit_price)}</td>
-      <td class="col-total">${fxMoney(item.total)}</td>
-    </tr>` : ''}
   `).join('');
 
   // Tax breakdown (approximate based on standard VAT)

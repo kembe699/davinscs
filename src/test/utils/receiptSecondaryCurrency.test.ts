@@ -30,19 +30,33 @@ const base = { baseCurrencySymbol: 'UGX', baseCurrencyCode: 'UGX' };
 const usd = { id: 2, code: 'USD', symbol: '$' };
 
 describe('receipt shows the second currency', () => {
-  it('prints a converted amount for every line and for the total', () => {
+  it('prints a converted total, and not a line for every item', () => {
     const html = buildThermalReceipt({
       sale, items, companyData: {} as any, ...base,
       secondaryCurrency: usd, exchangeRate: 0.00026,
     } as any);
 
-    // 15000 * 0.00026 = 3.90, under 10 so it keeps its decimals.
-    expect(html).toContain('$ 3.90');
-    // 30000 -> 7.80, 10000 -> 2.60, total 40000 -> 10.40
-    expect(html).toContain('$ 7.80');
-    expect(html).toContain('$ 2.60');
     expect(html).toContain('Total (USD)');
-    expect(html).toContain('$ 10.40');
+    expect(html).toContain('$ 10.40');       // 40000 * 0.00026
+
+    // Per-item conversions doubled the rows and wrapped the item name on a
+    // 42-column slip. The rate below the total covers the same ground.
+    expect(html).not.toContain('$ 7.80');    // 30000 converted
+    expect(html).not.toContain('$ 2.60');    // 10000 converted
+    expect(html).not.toContain('class="item-row fx-row"');
+  });
+
+  it('drops the decimals on a large converted figure', () => {
+    // At a rate of 7500 a 200,000 total is 1,500,000,000 — nobody reads the
+    // cents there, and they cost a line wrap on thermal paper.
+    const html = buildThermalReceipt({
+      sale: { ...sale, total_amount: 200000 }, items, companyData: {} as any,
+      baseCurrencySymbol: 'USD', baseCurrencyCode: 'USD',
+      secondaryCurrency: { id: 3, code: 'SSP', symbol: 'SSP' }, exchangeRate: 7500,
+    } as any);
+
+    expect(html).toContain('SSP 1,500,000,000');
+    expect(html).not.toContain('1,500,000,000.00');
   });
 
   it('states the rate it converted at, so the slip can be checked later', () => {
@@ -99,8 +113,8 @@ describe('receipt shows the second currency', () => {
       secondaryCurrency: usd, exchangeRate: 0.00013,
     } as any);
 
+    // The total converts to 0.000325 and must read as that, not "0.00".
     expect(html).toContain('$ 0.000325');
-    expect(html).not.toContain('$ 0.00<');
   });
 
   it('trims trailing zeros so the figure reads as itself', () => {

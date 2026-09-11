@@ -176,6 +176,12 @@ export function formatConvertedAmount(amount: number): string {
 
   if (abs === 0) return '0.00';
 
+  // Past a thousand, decimals are noise — nobody reads the cents on a figure
+  // like 1,500,000,000, and on 42-column thermal paper they cost a line wrap.
+  if (abs >= 1000) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
   if (abs >= 0.01) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
