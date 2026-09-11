@@ -29,6 +29,26 @@ const items = [
 const base = { baseCurrencySymbol: 'UGX', baseCurrencyCode: 'UGX' };
 const usd = { id: 2, code: 'USD', symbol: '$' };
 
+describe('receipt names its currency', () => {
+  it('puts the base currency in the money column headers', () => {
+    // Once in the header rather than on every row: repeating a symbol down forty
+    // lines wraps a 42-column slip for no extra information.
+    const html = buildThermalReceipt({
+      sale, items, companyData: {} as any, ...base, secondaryCurrency: null, exchangeRate: null,
+    } as any);
+    expect(html).toContain('Price (UGX)');
+    expect(html).toContain('Amount (UGX)');
+  });
+
+  it('shows the symbol on the figures money changes hands against', () => {
+    const html = buildThermalReceipt({
+      sale, items, companyData: {} as any, ...base, secondaryCurrency: null, exchangeRate: null,
+    } as any);
+    expect(html).toMatch(/Total :<\/span><span>UGX /);
+    expect(html).toMatch(/Cash<\/span><span>UGX /);
+  });
+});
+
 describe('receipt shows the second currency', () => {
   it('prints a converted total, and not a line for every item', () => {
     const html = buildThermalReceipt({

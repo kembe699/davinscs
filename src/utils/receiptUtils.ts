@@ -192,19 +192,19 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
       <th class="col-item">Item</th>
       <th class="col-qty">Qty</th>
       <th class="col-unit">Unit</th>
-      <th class="col-price">Price</th>
-      <th class="col-total">Amount</th>
+      <th class="col-price">Price (${sym})</th>
+      <th class="col-total">Amount (${sym})</th>
     </tr>
   </thead>
   <tbody>${itemRows}</tbody>
 </table>
 
-<div class="row total-row" style="margin-top: 4px;"><span>Total :</span><span>${money(total).replace(sym+' ', '')}</span></div>
+<div class="row total-row" style="margin-top: 4px;"><span>Total :</span><span>${money(total)}</span></div>
 ${hasFx ? `<div class="row fx-row"><span>Total (${secondaryCurrency!.code}) :</span><span>${fxMoney(total)}</span></div>
 <div class="row fx-row"><span>Rate :</span><span>1 ${baseCurrencyCode || sym} = ${rate} ${secondaryCurrency!.code}</span></div>` : ''}
 ${unpaid
-  ? `<div class="row bold"><span>Balance Due :</span><span>${money(total).replace(sym+' ', '')}</span></div>`
-  : `<div class="row"><span>${paymentName}</span><span>${money(total).replace(sym+' ', '')}</span></div>
+  ? `<div class="row bold"><span>Balance Due :</span><span>${money(total)}</span></div>`
+  : `<div class="row"><span>${paymentName}</span><span>${money(total)}</span></div>
 <div class="row"><span>Change :</span><span>0</span></div>`}
 <div class="row" style="margin-bottom: 4px;"><span>Total Items :</span><span>${items.length}</span></div>
 
