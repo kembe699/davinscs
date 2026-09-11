@@ -204,6 +204,20 @@ export default function POSMain() {
     return baseCurrency?.symbol || 'UGX';
   };
 
+  // The same amount in the shop's second currency, at the rate currently set.
+  //
+  // Returns null when there is no second currency or no rate, so callers render
+  // nothing rather than a misleading "≈ 0". Small amounts keep two decimals —
+  // a 4,000 UGX item is about $1.05, and rounding that to $1 loses the part the
+  // customer is actually asking about.
+  const inSecondary = (amount: number): string | null => {
+    if (!secondaryCurrency || !exchangeRate) return null;
+    const converted = (Number(amount) || 0) * exchangeRate;
+    // Two decimals always, matching the printed receipt. Rounding to whole units
+    // drops real money at these scales — a 10.40 total would read 10.
+    return formatCurrencySync(converted, secondaryCurrency.symbol, true);
+  };
+
   const loadSecondaryCurrency = async () => {
     try {
       const currencies = await api.currencies.list();
@@ -1132,6 +1146,11 @@ export default function POSMain() {
                           <div className="pos-price-gradient text-sm md:text-base font-bold mt-1">
                             {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
                           </div>
+                          {inSecondary(getEffectivePrice(product)) && (
+                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500">
+                              ≈ {inSecondary(getEffectivePrice(product))}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">
                           {isService ? (
@@ -1188,8 +1207,15 @@ export default function POSMain() {
                       </div>
 
                       <div className="mt-auto flex justify-between items-end pt-1 md:pt-0">
-                        <div className="pos-price-gradient text-xs md:text-base truncate mr-1">
-                          {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
+                        <div className="truncate mr-1">
+                          <div className="pos-price-gradient text-xs md:text-base">
+                            {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
+                          </div>
+                          {inSecondary(getEffectivePrice(product)) && (
+                            <div className="text-[9px] md:text-[11px] text-gray-400 dark:text-gray-500 leading-tight">
+                              ≈ {inSecondary(getEffectivePrice(product))}
+                            </div>
+                          )}
                         </div>
                         {isService ? (
                           <span className="text-[9px] md:text-xs font-medium shrink-0 text-gray-400 dark:text-gray-500">Service</span>
@@ -1330,6 +1356,11 @@ export default function POSMain() {
                       <div className="text-[#1A1A2E] dark:text-gray-100 font-bold text-xs md:text-base">
                         {formatCurrencySync(item.unit_price * item.quantity - item.discount, schemeCurrencySymbol(), true)}
                       </div>
+                      {inSecondary(item.unit_price * item.quantity - item.discount) && (
+                        <div className="text-[9px] md:text-[11px] text-gray-400 dark:text-gray-500 leading-tight">
+                          ≈ {inSecondary(item.unit_price * item.quantity - item.discount)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1425,7 +1456,7 @@ export default function POSMain() {
                   </span>
                   {secondaryCurrency && exchangeRate && (
                     <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 mt-0.5 md:mt-1">
-                      ≈ {formatCurrencySync(Math.round(total * exchangeRate), secondaryCurrency.symbol, false)}
+                      ≈ {inSecondary(total)}
                     </div>
                   )}
                 </div>
@@ -1561,7 +1592,14 @@ export default function POSMain() {
                 </div>
                 <div className="flex justify-between text-xl font-bold border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
                   <span className="text-[#1A1A2E] dark:text-gray-100">Total to Pay</span>
-                  <span className="text-[#10B981]">{formatCurrencySync(total, schemeCurrencySymbol(), true)}</span>
+                  <span className="text-right">
+                    <span className="text-[#10B981]">{formatCurrencySync(total, schemeCurrencySymbol(), true)}</span>
+                    {inSecondary(total) && (
+                      <span className="block text-[10px] md:text-xs font-normal text-gray-400 dark:text-gray-500">
+                        ≈ {inSecondary(total)}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
 

@@ -74,10 +74,12 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const fxMoney = (n: number) => {
     if (!hasFx) return '';
     const converted = n * rate!;
-    const formatted = converted >= 10
-      ? Math.round(converted).toLocaleString()
-      : converted.toFixed(2);
-    return `${secondaryCurrency!.symbol} ${formatted}`;
+    // Always two decimals. Rounding anything over 10 to a whole number turned a
+    // 10.40 total into 10 — forty cents off a figure the customer may be paying
+    // in that currency, printed on the slip they keep.
+    return `${secondaryCurrency!.symbol} ${converted.toLocaleString('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    })}`;
   };
 
   const COLS = 42;
@@ -93,6 +95,10 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const saleDate     = new Date(sale.created_at).toLocaleString();
   const runDate      = new Date().toLocaleDateString();
 
+  // fxMoney was defined but never printed, so a receipt carried no second
+  // currency at all — the customer was quoted one on screen and handed a slip
+  // showing only the base. Each line gets the converted amount beneath it, and
+  // the totals below carry it too.
   const itemRows = items.map(item => `
     <tr class="item-row">
       <td class="col-item">${item.name.substring(0, 20)}</td>
@@ -101,6 +107,13 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
       <td class="col-price">${money(item.unit_price).replace(sym+' ', '')}</td>
       <td class="col-total">${money(item.total).replace(sym+' ', '')}</td>
     </tr>
+    ${hasFx ? `<tr class="item-row fx-row">
+      <td class="col-item" style="padding-left:4px;">&nbsp;</td>
+      <td class="col-qty"></td>
+      <td class="col-unit"></td>
+      <td class="col-price">${fxMoney(item.unit_price)}</td>
+      <td class="col-total">${fxMoney(item.total)}</td>
+    </tr>` : ''}
   `).join('');
 
   // Tax breakdown (approximate based on standard VAT)
@@ -120,6 +133,11 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
     .small  { font-size: 9px; }
     .dash   { white-space: pre; overflow: hidden; margin: 3px 0; }
     .row    { display: flex; justify-content: space-between; margin: 1px 0; }
+    /* Converted amounts sit under the figure they restate, lighter and smaller,
+       so the base currency stays the one the eye lands on. Thermal paper has no
+       colour, so the distinction is size and italics rather than grey. */
+    .fx-row { font-size: 0.82em; font-style: italic; }
+    .fx-row td { padding-bottom: 2px; }
     .total-row { font-size: 13px; font-weight: bold; margin: 2px 0; }
     table  { width: 100%; border-collapse: collapse; margin: 2px 0; }
     th     { font-size: 10px; font-weight: normal; padding: 1px 1px; border-bottom: 1px dashed #000; text-align: right; }
@@ -174,6 +192,8 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
 </table>
 
 <div class="row total-row" style="margin-top: 4px;"><span>Total :</span><span>${money(total).replace(sym+' ', '')}</span></div>
+${hasFx ? `<div class="row fx-row"><span>Total (${secondaryCurrency!.code}) :</span><span>${fxMoney(total)}</span></div>
+<div class="row fx-row"><span>Rate :</span><span>1 ${baseCurrencyCode || sym} = ${rate} ${secondaryCurrency!.code}</span></div>` : ''}
 ${unpaid
   ? `<div class="row bold"><span>Balance Due :</span><span>${money(total).replace(sym+' ', '')}</span></div>`
   : `<div class="row"><span>${paymentName}</span><span>${money(total).replace(sym+' ', '')}</span></div>
