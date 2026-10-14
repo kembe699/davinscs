@@ -985,7 +985,7 @@ export default function POSMain() {
         </div>
 
         {/* Center: Search (Desktop) */}
-        <div className="hidden md:flex flex-1 justify-center px-4 max-w-2xl">
+        <div className="hidden lg:flex flex-1 justify-center px-4 max-w-2xl">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
             <input
@@ -1048,8 +1048,12 @@ export default function POSMain() {
       {/* Main Area: Three Panels */}
       <div className="flex-1 flex overflow-hidden relative">
 
-        {/* LEFT: Categories Sidebar */}
-        <div className="hidden md:flex w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col shrink-0 overflow-hidden">
+        {/* LEFT: Categories Sidebar — lg+ only now (was md+). Common POS
+            terminal resolutions (1024x600, 1280x800) sit between the two,
+            and a docked 56-unit sidebar + docked cart left them cramped —
+            those widths now get the same horizontal category strip + full-
+            width grid + toggled cart that phones already got. */}
+        <div className="hidden lg:flex w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col shrink-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto py-2">
             <button
               onClick={() => setSelectedCategory('all')}
@@ -1089,8 +1093,9 @@ export default function POSMain() {
 
         {/* CENTER: Product Grid */}
         <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
-          {/* Mobile Category Chips & View Toggle */}
-          <div className="md:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
+          {/* Category Chips & View Toggle — shown below lg now (was md),
+              matching the sidebar's new breakpoint above. */}
+          <div className="lg:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
             <div className="flex-1 flex overflow-x-auto gap-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setSelectedCategory('all')}
@@ -1117,8 +1122,9 @@ export default function POSMain() {
             </button>
           </div>
 
-          {/* Mobile Search */}
-          <div className="mb-4 relative md:hidden">
+          {/* Search — shown below lg now (was md), matching the header's
+              desktop search bar above which switched to lg:flex. */}
+          <div className="mb-4 relative lg:hidden">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
             <input
               id="mobile-search"
@@ -1260,22 +1266,26 @@ export default function POSMain() {
           })()}
         </div>
 
-        {/* RIGHT: Order Summary */}
+        {/* RIGHT: Order Summary — docks at xl now (was lg), matching the
+            sidebar/bottom-nav change above: a 1024-1279px POS terminal gets
+            the same toggled full-screen cart a phone gets, instead of
+            squeezing a docked 380px panel in alongside a now-also-toggled
+            category strip. */}
         <div className={`
-          ${showMobileCart ? 'fixed inset-0 z-50 flex' : 'hidden lg:flex'}
-          w-full lg:w-[380px] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex-col shrink-0 lg:z-20 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]
+          ${showMobileCart ? 'fixed inset-0 z-50 flex' : 'hidden xl:flex'}
+          w-full xl:w-[380px] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex-col shrink-0 xl:z-20 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]
         `}>
           {/* Header & Customer */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 space-y-3 relative">
             {showMobileCart && (
-              <button 
+              <button
                 onClick={() => setShowMobileCart(false)}
-                className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                className="xl:hidden absolute top-4 right-4 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               >
                 <X size={20} />
               </button>
             )}
-            <div className="flex justify-between items-center pr-10 lg:pr-0">
+            <div className="flex justify-between items-center pr-10 xl:pr-0">
               <h2 className="font-bold text-lg text-[#1A1A2E] dark:text-gray-100">Current Order</h2>
               <button
                 onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
@@ -2108,8 +2118,11 @@ export default function POSMain() {
           </div>
         </div>
       )}
-    {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+    {/* Bottom Navigation Bar — shown below xl now (was md). Carries the only
+        button that opens the toggled cart (setShowMobileCart), so it must
+        stay visible exactly as long as the cart panel below is in toggle
+        mode rather than docked — kept in sync with that xl breakpoint. */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <button className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors">
           <Home size={20} />
           <span className="text-[10px] mt-1 font-medium">Home</span>
