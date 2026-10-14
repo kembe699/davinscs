@@ -1266,26 +1266,26 @@ export default function POSMain() {
           })()}
         </div>
 
-        {/* RIGHT: Order Summary — docks at xl now (was lg), matching the
-            sidebar/bottom-nav change above: a 1024-1279px POS terminal gets
-            the same toggled full-screen cart a phone gets, instead of
-            squeezing a docked 380px panel in alongside a now-also-toggled
-            category strip. */}
+        {/* RIGHT: Order Summary — back to its original docked-at-lg
+            behavior (the xl experiment was reverted per request: category
+            selection stays the horizontal carousel strip on small/POS
+            screens, but the cart goes back to a normal docked sidebar as
+            soon as there's room for it, same breakpoint as before). */}
         <div className={`
-          ${showMobileCart ? 'fixed inset-0 z-50 flex' : 'hidden xl:flex'}
-          w-full xl:w-[380px] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex-col shrink-0 xl:z-20 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]
+          ${showMobileCart ? 'fixed inset-0 z-50 flex' : 'hidden lg:flex'}
+          w-full lg:w-[380px] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex-col shrink-0 lg:z-20 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]
         `}>
           {/* Header & Customer */}
           <div className="p-4 border-b border-gray-100 dark:border-gray-700/50 space-y-3 relative">
             {showMobileCart && (
               <button
                 onClick={() => setShowMobileCart(false)}
-                className="xl:hidden absolute top-4 right-4 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               >
                 <X size={20} />
               </button>
             )}
-            <div className="flex justify-between items-center pr-10 xl:pr-0">
+            <div className="flex justify-between items-center pr-10 lg:pr-0">
               <h2 className="font-bold text-lg text-[#1A1A2E] dark:text-gray-100">Current Order</h2>
               <button
                 onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
@@ -2118,11 +2118,10 @@ export default function POSMain() {
           </div>
         </div>
       )}
-    {/* Bottom Navigation Bar — shown below xl now (was md). Carries the only
-        button that opens the toggled cart (setShowMobileCart), so it must
-        stay visible exactly as long as the cart panel below is in toggle
-        mode rather than docked — kept in sync with that xl breakpoint. */}
-      <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+    {/* Bottom Navigation Bar — shown below lg (back to matching the cart's
+        reverted lg breakpoint; carries the only button that opens the
+        toggled cart, so it must stay in sync with that panel above). */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <button className="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-[#10B981] transition-colors">
           <Home size={20} />
           <span className="text-[10px] mt-1 font-medium">Home</span>
