@@ -940,6 +940,17 @@ export default function POSMain() {
           >
             Retry
           </button>
+          {/* A cashier lands here right after closing their own shift (no
+              session open yet for the next one) — give them a direct way
+              back to the login screen instead of only "open a session" /
+              "retry", which both assume they're about to start selling
+              again right now. */}
+          <button
+            onClick={posLogout}
+            className="w-full py-2 text-admin-text-secondary text-sm hover:text-admin-text transition-colors"
+          >
+            Log Out
+          </button>
         </div>
       </div>
     );
