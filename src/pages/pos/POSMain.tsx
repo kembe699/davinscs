@@ -985,7 +985,7 @@ export default function POSMain() {
         </div>
 
         {/* Center: Search (Desktop) */}
-        <div className="hidden lg:flex flex-1 justify-center px-4 max-w-2xl">
+        <div className="hidden xl:flex flex-1 justify-center px-4 max-w-2xl">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
             <input
@@ -1048,12 +1048,14 @@ export default function POSMain() {
       {/* Main Area: Three Panels */}
       <div className="flex-1 flex overflow-hidden relative">
 
-        {/* LEFT: Categories Sidebar — lg+ only now (was md+). Common POS
-            terminal resolutions (1024x600, 1280x800) sit between the two,
-            and a docked 56-unit sidebar + docked cart left them cramped —
-            those widths now get the same horizontal category strip + full-
-            width grid + toggled cart that phones already got. */}
-        <div className="hidden lg:flex w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col shrink-0 overflow-hidden">
+        {/* LEFT: Categories Sidebar — xl+ only now (was md+, then lg+; lg
+            alone still wasn't wide enough to catch the actual reported
+            terminal, which reports a logical width at/above 1024px). The
+            cart panel deliberately stays docked from its original lg
+            breakpoint (reverted per request) — this is now decoupled from
+            that, so a screen between lg and xl gets the horizontal category
+            carousel + full-width grid AND a normally-docked cart at once. */}
+        <div className="hidden xl:flex w-56 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col shrink-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto py-2">
             <button
               onClick={() => setSelectedCategory('all')}
@@ -1093,9 +1095,9 @@ export default function POSMain() {
 
         {/* CENTER: Product Grid */}
         <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
-          {/* Category Chips & View Toggle — shown below lg now (was md),
-              matching the sidebar's new breakpoint above. */}
-          <div className="lg:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
+          {/* Category Chips & View Toggle — shown below xl now, matching
+              the sidebar's breakpoint above. */}
+          <div className="xl:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
             <div className="flex-1 flex overflow-x-auto gap-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setSelectedCategory('all')}
@@ -1122,9 +1124,9 @@ export default function POSMain() {
             </button>
           </div>
 
-          {/* Search — shown below lg now (was md), matching the header's
-              desktop search bar above which switched to lg:flex. */}
-          <div className="mb-4 relative lg:hidden">
+          {/* Search — shown below xl now, matching the category sidebar's
+              breakpoint (and the header's desktop search bar, synced below). */}
+          <div className="mb-4 relative xl:hidden">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
             <input
               id="mobile-search"
@@ -1236,9 +1238,18 @@ export default function POSMain() {
                         {product.name}
                       </div>
 
-                      <div className="mt-auto flex justify-between items-end pt-1 md:pt-0">
-                        <div className="truncate mr-1">
-                          <div className="pos-price-gradient text-xs md:text-base">
+                      <div className="mt-auto flex flex-wrap justify-between items-end gap-x-1 gap-y-0.5 pt-1 md:pt-0">
+                        {/* Was `truncate` (overflow:hidden + nowrap) — on a
+                            narrow 2-column card the shrink-0 stock/"Service"
+                            label next to it claimed its width first, leaving
+                            too little room and clipping the price itself
+                            mid-digit ("$ 6.0" instead of "$6.00"). A price
+                            must never be the thing that gets cut off, so it
+                            no longer shrinks or clips; flex-wrap lets the
+                            stock label drop to its own line instead if the
+                            card is ever too narrow for both side by side. */}
+                        <div className="mr-1">
+                          <div className="pos-price-gradient text-xs md:text-base whitespace-nowrap">
                             {formatCurrencySync(getEffectivePrice(product), schemeCurrencySymbol(), true)}
                           </div>
                           {inSecondary(getEffectivePrice(product)) && (
