@@ -832,12 +832,14 @@ export default function POSMain() {
       };
 
       // Fetch currency data fresh for print (avoids any stale-state issue)
+      let printBaseCurrency: { code: string; symbol: string } | null = null;
       let printSecondary: { id: number; code: string; symbol: string } | null = null;
       let printRate: number | null = null;
       try {
         const allCurrencies = await api.currencies.list();
         const printBase = allCurrencies.find((c: ApiCurrency) => c.is_base);
         const printSec = allCurrencies.find((c: ApiCurrency) => !c.is_base && c.is_active);
+        if (printBase) printBaseCurrency = { code: printBase.code, symbol: printBase.symbol };
         if (printBase && printSec) {
           printSecondary = { id: printSec.id, code: printSec.code, symbol: printSec.symbol };
           try {
@@ -870,8 +872,13 @@ export default function POSMain() {
         sale: completedSaleData,
         items: receiptItems,
         companyData,
-        baseCurrencySymbol: baseCurrency?.symbol || 'SSP',
-        baseCurrencyCode: baseCurrency?.code || 'SSP',
+        // Was reading the possibly-stale context value and falling back to a
+        // hardcoded 'SSP' (every other call site in this file falls back to
+        // 'UGX' instead — this was the one inconsistent, wrong literal) —
+        // the freshly-fetched printBaseCurrency above was already sitting
+        // right here unused. Use it first now, same as printSecondary does.
+        baseCurrencySymbol: printBaseCurrency?.symbol || baseCurrency?.symbol || 'UGX',
+        baseCurrencyCode: printBaseCurrency?.code || baseCurrency?.code || 'UGX',
         secondaryCurrency: printSecondary,
         exchangeRate: printRate,
         qrDataUrl,
