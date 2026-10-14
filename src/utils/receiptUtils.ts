@@ -133,7 +133,13 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const css = `
     @page { size: 80mm auto; margin: 4mm 3mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; background: #fff; width: 74mm; padding-bottom: 20px; }
+    /* color was already pure #000, but a thin monospace at 10-11px prints
+       visibly faded on a lot of real thermal printers regardless of the
+       colour value — more heat gets applied per stroke on a bolder
+       weight, which is what actually reads as "darker" on thermal paper.
+       600 (not full 700/bold) keeps .total-row's existing bold still
+       reading as the heaviest line on the slip. */
+    body { font-family: 'Courier New', Courier, monospace; font-weight: 600; font-size: 11px; color: #000; background: #fff; width: 74mm; padding-bottom: 20px; }
     .center { text-align: center; }
     .left { text-align: left; }
     .bold   { font-weight: bold; }
@@ -148,7 +154,7 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
     .fx-row td { padding-bottom: 2px; }
     .total-row { font-size: 13px; font-weight: bold; margin: 2px 0; }
     table  { width: 100%; border-collapse: collapse; margin: 2px 0; }
-    th     { font-size: 10px; font-weight: normal; padding: 1px 1px; border-bottom: 1px dashed #000; text-align: right; }
+    th     { font-size: 10px; font-weight: 600; padding: 1px 1px; border-bottom: 1px dashed #000; text-align: right; }
     th.col-item { text-align: left; }
     td     { font-size: 10px; padding: 2px 1px; vertical-align: top; text-align: right; }
     .col-item  { width: 40%; text-align: left; }
