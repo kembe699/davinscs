@@ -1105,12 +1105,18 @@ export default function POSMain() {
         </div>
 
         {/* CENTER: Product Grid */}
-        <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
+        <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 pb-20 overflow-y-auto">
           {/* Category chips + search stay stuck to the top of the scroll
-              area as the product grid scrolls underneath, instead of
-              scrolling away with it — same background as the page behind
-              them so cards sliding under don't show through. */}
-          <div className="sticky top-0 z-10 bg-[#F8F9FA] dark:bg-gray-900 pt-2 -mt-2 md:pt-6 md:-mt-6 pb-1">
+              area as the product grid scrolls underneath. The negative-
+              margin trick this used before (cancel the parent's padding,
+              re-add it as the sticky element's own) left a thin unpainted
+              seam where a scrolled-up card could still peek through at the
+              very top edge — the parent no longer has any top/horizontal
+              padding at all now, this element owns real padding of its
+              own instead, so there's no seam for anything to show through.
+              Tightened pt-3 (was pt-6 on desktop) per request to sit higher,
+              closer under the header. */}
+          <div className="sticky top-0 z-10 bg-[#F8F9FA] dark:bg-gray-900 px-2 pt-2 md:px-6 md:pt-3 pb-1">
           {/* Category Chips & View Toggle — shown below xl now, matching
               the sidebar's breakpoint above. */}
           <div className="xl:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
@@ -1156,6 +1162,11 @@ export default function POSMain() {
           </div>
           </div>
 
+          {/* The parent scroll container's own horizontal/top padding moved
+              onto the sticky bar above (and this wrapper), so the sticky
+              element can own a real, unbroken background instead of a
+              negative-margin patch over it. */}
+          <div className="px-2 pt-2 md:px-6">
           {(() => {
             const visibleProducts = filteredProducts.filter(p => !selectedCategory || selectedCategory === 'all' || p.category === selectedCategory);
             
@@ -1292,6 +1303,7 @@ export default function POSMain() {
             </div>
             );
           })()}
+          </div>
         </div>
 
         {/* RIGHT: Order Summary — back to its original docked-at-lg
