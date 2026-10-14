@@ -1106,6 +1106,11 @@ export default function POSMain() {
 
         {/* CENTER: Product Grid */}
         <div className="flex-1 bg-[#F8F9FA] dark:bg-gray-900 p-2 md:p-6 pb-20 overflow-y-auto">
+          {/* Category chips + search stay stuck to the top of the scroll
+              area as the product grid scrolls underneath, instead of
+              scrolling away with it — same background as the page behind
+              them so cards sliding under don't show through. */}
+          <div className="sticky top-0 z-10 bg-[#F8F9FA] dark:bg-gray-900 pt-2 -mt-2 md:pt-6 md:-mt-6 pb-1">
           {/* Category Chips & View Toggle — shown below xl now, matching
               the sidebar's breakpoint above. */}
           <div className="xl:hidden flex items-center gap-2 pb-3 mb-2 -mx-2 px-2">
@@ -1148,6 +1153,7 @@ export default function POSMain() {
               placeholder="Search or scan barcode..."
               className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-[11px] md:text-sm text-[#1A1A2E] dark:text-gray-100 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent"
             />
+          </div>
           </div>
 
           {(() => {
