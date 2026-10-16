@@ -118,7 +118,10 @@ router.post("/", requireAuth, async (req, res) => {
 
     // Process each item
     for (const item of items) {
-      const { po_item_id, received_quantity, notes: itemNotes, storage_location_id } = item;
+      const { po_item_id, received_quantity, notes: itemNotes, storage_location_id, show_in_pos } = item;
+      // Receiving stock doesn't mean it's ready to sell — staff decide that
+      // explicitly per item, and silence defaults to "not yet".
+      const showInPos = show_in_pos === true;
 
       if (received_quantity <= 0) continue;
 
@@ -162,10 +165,10 @@ router.post("/", requireAuth, async (req, res) => {
 
         const productResult = await client.query(`
           INSERT INTO products
-          (slug, name, brand, price, category, in_stock, quantity_on_hand, product_type, uom, storage_location_id)
-          VALUES ($1, $2, $3, $4, $5, true, 0, 'product', $6, $7)
+          (slug, name, brand, price, category, in_stock, quantity_on_hand, product_type, uom, storage_location_id, show_in_pos)
+          VALUES ($1, $2, $3, $4, $5, true, 0, 'product', $6, $7, $8)
           RETURNING id
-        `, [slug, item_name, '', unit_price, defaultCategory, uom || 'pcs', storage_location_id]);
+        `, [slug, item_name, '', unit_price, defaultCategory, uom || 'pcs', storage_location_id, showInPos]);
 
         finalProductId = productResult.rows[0].id;
 
@@ -192,9 +195,12 @@ router.post("/", requireAuth, async (req, res) => {
       // Update product inventory — this receipt's chosen location becomes the
       // product's current location (last-received-location wins; this app
       // tracks one location per product, not a per-location stock split).
+      // show_in_pos is likewise set fresh from this receipt's choice every
+      // time, not just when the product is first created — receiving stock
+      // is exactly the moment staff decide whether it's ready to sell yet.
       await client.query(
-        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, storage_location_id = $2 WHERE id = $3",
-        [received_quantity, storage_location_id, finalProductId]
+        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, storage_location_id = $2, show_in_pos = $3 WHERE id = $4",
+        [received_quantity, storage_location_id, showInPos, finalProductId]
       );
 
       // Create stock movement

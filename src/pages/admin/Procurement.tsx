@@ -67,7 +67,7 @@ export default function ProcurementEnhanced() {
     po_id: 0,
     received_date: new Date().toISOString().split('T')[0],
     notes: "",
-    items: [] as { po_item_id: number; received_quantity: number; notes?: string; storage_location_id?: number }[]
+    items: [] as { po_item_id: number; received_quantity: number; notes?: string; storage_location_id?: number; show_in_pos?: boolean }[]
   });
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
   
@@ -872,6 +872,9 @@ export default function ProcurementEnhanced() {
           storage_location_id: item.product_id
             ? products.find(p => p.id === item.product_id)?.storage_location_id || undefined
             : undefined,
+          // Receiving stock doesn't mean it's ready to sell — off by default,
+          // staff turn it on per item when it actually is.
+          show_in_pos: false,
         }))
       });
       setCreatingGRN(true);
@@ -1567,6 +1570,7 @@ export default function ProcurementEnhanced() {
                             <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Price</th>
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Receive Qty</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Storage Location</th>
+                            <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Show in POS</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Notes</th>
                           </tr>
                         </thead>
@@ -1609,6 +1613,20 @@ export default function ProcurementEnhanced() {
                                     <option key={sl.id} value={sl.id}>{sl.name}</option>
                                   ))}
                                 </select>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].show_in_pos = !newItems[idx]?.show_in_pos;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  title={grnForm.items[idx]?.show_in_pos ? "Will appear on the POS screen" : "Stays out of the POS screen"}
+                                  className={`relative w-9 h-5 rounded-full transition-colors ${grnForm.items[idx]?.show_in_pos ? "bg-primary" : "bg-border-subtle"}`}
+                                >
+                                  <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-background transition-transform ${grnForm.items[idx]?.show_in_pos ? "translate-x-4" : ""}`} />
+                                </button>
                               </td>
                               <td className="px-3 py-2">
                                 <input
