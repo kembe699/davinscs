@@ -154,6 +154,7 @@ export default function Inventory() {
             <thead>
               <tr className="border-b border-border-subtle bg-chassis">
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Product</th>
+                <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Store</th>
                 <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">On Hand</th>
                 <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Reserved</th>
                 <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Available</th>
@@ -164,13 +165,13 @@ export default function Inventory() {
             <tbody className="divide-y divide-border-subtle">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
+                  <td colSpan={7} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">
                     Loading…
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
+                  <td colSpan={7} className="px-4 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
                     No items found
                   </td>
                 </tr>
@@ -178,6 +179,7 @@ export default function Inventory() {
                 adjusting === item.id ? (
                   <tr key={item.id} className="bg-primary/5 border-l-2 border-primary/40">
                     <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{item.storage_location_name || "—"}</td>
                     <td className="px-4 py-3 text-center">
                       <input
                         type="number"
@@ -227,6 +229,7 @@ export default function Inventory() {
                         <p className="text-xs text-muted-foreground">{item.category}</p>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{item.storage_location_name || "—"}</td>
                     <td className="px-4 py-3 text-center font-mono-tech text-foreground">{item.quantity_on_hand}</td>
                     <td className="px-4 py-3 text-center font-mono-tech text-muted-foreground">{item.quantity_reserved}</td>
                     <td className="px-4 py-3 text-center">

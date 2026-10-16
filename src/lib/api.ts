@@ -98,6 +98,19 @@ export type ApiProduct = {
   tax_rate_id?: number | null;
   uom?: string;
   expiry_date?: string | null;
+  product_type?: string;
+  storage_location_id?: number | null;
+  storage_location_name?: string | null;
+  show_in_pos?: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiStorageLocation = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  product_count?: number;
   created_at: string;
   updated_at: string;
 };
@@ -132,6 +145,9 @@ export type ApiInventoryItem = {
   reorder_level: number;
   available: number;
   supplier_name?: string;
+  storage_location_id?: number | null;
+  storage_location_name?: string | null;
+  show_in_pos?: boolean;
 };
 
 export type ApiStockMovement = {
@@ -187,6 +203,7 @@ export type ApiPurchaseOrderItem = {
   quantity: number;
   unit_price: number;
   received_quantity: number;
+  uom?: string;
 };
 
 export type ApiGRN = {
@@ -215,6 +232,7 @@ export type ApiGRNItem = {
   received_quantity: number;
   unit_price: number;
   notes?: string;
+  storage_location_id?: number | null;
 };
 
 export type ApiSupplierBill = {
@@ -626,10 +644,11 @@ export type CashMovement = {
 // Products
 export const api = {
   products: {
-    list: (category?: string, featured?: boolean) => {
+    list: (category?: string, featured?: boolean, posOnly?: boolean) => {
       const params = new URLSearchParams();
       if (category) params.set("category", category);
       if (featured) params.set("featured", "true");
+      if (posOnly) params.set("pos", "true");
       const qs = params.toString();
       return request<ApiProduct[]>(`/api/products${qs ? `?${qs}` : ""}`);
     },
@@ -696,6 +715,15 @@ export const api = {
         body: JSON.stringify({ product_id, quantity, notes }),
       }),
     valuation: () => request<{ total_value: number; total_products: number; total_units: number }>("/api/inventory/valuation"),
+    storageLocations: {
+      list: () => request<ApiStorageLocation[]>("/api/inventory/storage-locations"),
+      create: (name: string) =>
+        request<ApiStorageLocation>("/api/inventory/storage-locations", { method: "POST", body: JSON.stringify({ name }) }),
+      update: (id: number, data: { name?: string; is_active?: boolean }) =>
+        request<ApiStorageLocation>(`/api/inventory/storage-locations/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      delete: (id: number) =>
+        request<{ success: boolean }>(`/api/inventory/storage-locations/${id}`, { method: "DELETE" }),
+    },
   },
   procurement: {
     suppliers: {

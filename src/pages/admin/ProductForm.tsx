@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, ApiProduct, ApiCategory } from "@/lib/api";
+import { api, ApiProduct, ApiCategory, ApiStorageLocation } from "@/lib/api";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
@@ -38,7 +38,7 @@ const empty = {
   slug: "", name: "", brand: "", price: "" as number | "", cost_price: "" as number | "", tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "",
   barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: "" as number | "", reorder_level: "" as number | "",
-  expense_account_id: 0, uom: "pcs",
+  expense_account_id: 0, uom: "pcs", storage_location_id: 0, show_in_pos: true,
 };
 
 type Account = { id: number; code: string; name: string; account_type: string };
@@ -58,9 +58,11 @@ export default function ProductForm() {
   const [error, setError] = useState("");
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
 
   useEffect(() => {
     api.categories.list().then(setCategories).catch(() => {});
+    api.inventory.storageLocations.list().then(setStorageLocations).catch(() => {});
     fetch("/api/accounting/accounts", {
       headers: { Authorization: `Bearer ${localStorage.getItem("cms_token")}` },
     })
@@ -94,6 +96,8 @@ export default function ProductForm() {
           reorder_level: (p as any).reorder_level ?? "" as number | "",
           expense_account_id: (p as any).expense_account_id || 0,
           uom: (p as any).uom || "pcs",
+          storage_location_id: (p as any).storage_location_id || 0,
+          show_in_pos: (p as any).show_in_pos ?? true,
         });
         if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
@@ -436,6 +440,32 @@ export default function ProductForm() {
                         placeholder="Insert quantity in stock"
                         className="field-input"
                       />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="field-label">Storage location</label>
+                      <select
+                        value={(form as any).storage_location_id || 0}
+                        onChange={(e) => set("storage_location_id", Number(e.target.value))}
+                        className="field-input appearance-none"
+                      >
+                        <option value={0}>— Unassigned —</option>
+                        {storageLocations.map(sl => (
+                          <option key={sl.id} value={sl.id}>{sl.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2 flex items-center justify-between py-1">
+                      <div>
+                        <label className="field-label mb-0">Show in POS</label>
+                        <p className="text-[11px] text-muted-foreground">Turn off to keep this item in inventory without it appearing on the POS screen.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => set("show_in_pos", !(form as any).show_in_pos)}
+                        className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${(form as any).show_in_pos ? "bg-primary" : "bg-border-subtle"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-background transition-transform ${(form as any).show_in_pos ? "translate-x-5" : ""}`} />
+                      </button>
                     </div>
                   </div>
                 </section>

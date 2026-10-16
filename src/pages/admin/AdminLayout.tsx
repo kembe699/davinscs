@@ -9,7 +9,7 @@ import {
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
   ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
   ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X, ExternalLink,
-  CalendarClock, AlertTriangle, UtensilsCrossed,
+  CalendarClock, AlertTriangle, UtensilsCrossed, Warehouse,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
@@ -42,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Categories",  path: "/admin/categories",  icon: Layers,       permission: "categories.view" },
       { label: "Products",    path: "/admin/products",    icon: Package,      permission: "products.view" },
       { label: "Stock",       path: "/admin/inventory",   icon: PackageCheck, permission: "inventory.view" },
+      { label: "Storage",     path: "/admin/storage-locations", icon: Warehouse, permission: "inventory.view" },
       { label: "Procurement", path: "/admin/procurement", icon: ShoppingCart, permission: "procurement.view" },
     ],
   },

@@ -7,13 +7,16 @@ const router = express.Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT 
+      SELECT
         p.id, p.name, p.slug, p.category, p.price, p.cost_price,
         p.quantity_on_hand, p.quantity_reserved, p.reorder_level,
         (p.quantity_on_hand - p.quantity_reserved) as available,
-        s.name as supplier_name
+        s.name as supplier_name,
+        p.storage_location_id, sl.name as storage_location_name,
+        p.show_in_pos
       FROM products p
       LEFT JOIN suppliers s ON p.supplier_id = s.id
+      LEFT JOIN storage_locations sl ON p.storage_location_id = sl.id
       ORDER BY p.name
     `);
     res.json(rows);
@@ -126,13 +129,86 @@ router.post("/adjust", requireAuth, async (req, res) => {
 router.get("/valuation", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT 
+      SELECT
         SUM(quantity_on_hand * cost_price) as total_value,
         COUNT(*) as total_products,
         SUM(quantity_on_hand) as total_units
       FROM products
     `);
     res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ── Storage Locations ──────────────────────────────────────────────────────
+// Where physical stock actually sits (e.g. "Main Store", "Chicken Store").
+// Every physical product can be assigned one; services never need one.
+router.get("/storage-locations", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT sl.*, COUNT(p.id)::int as product_count
+       FROM storage_locations sl
+       LEFT JOIN products p ON p.storage_location_id = sl.id
+       GROUP BY sl.id
+       ORDER BY sl.name`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/storage-locations", requireAuth, async (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+  try {
+    const { rows } = await pool.query(
+      "INSERT INTO storage_locations (name) VALUES ($1) RETURNING *",
+      [name.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "A storage location with that name already exists" });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.put("/storage-locations/:id", requireAuth, async (req, res) => {
+  const { name, is_active } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE storage_locations SET
+         name = COALESCE($1, name),
+         is_active = COALESCE($2, is_active),
+         updated_at = NOW()
+       WHERE id = $3 RETURNING *`,
+      [name?.trim() || null, is_active ?? null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Storage location not found" });
+    res.json(rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "A storage location with that name already exists" });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.delete("/storage-locations/:id", requireAuth, async (req, res) => {
+  try {
+    const { rows: inUse } = await pool.query(
+      "SELECT COUNT(*)::int as n FROM products WHERE storage_location_id = $1",
+      [req.params.id]
+    );
+    if (inUse[0].n > 0) {
+      return res.status(409).json({ error: `${inUse[0].n} product(s) still use this location — reassign them first` });
+    }
+    const { rowCount } = await pool.query("DELETE FROM storage_locations WHERE id = $1", [req.params.id]);
+    if (!rowCount) return res.status(404).json({ error: "Storage location not found" });
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

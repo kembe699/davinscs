@@ -118,28 +118,33 @@ router.post("/", requireAuth, async (req, res) => {
 
     // Process each item
     for (const item of items) {
-      const { po_item_id, received_quantity, notes: itemNotes } = item;
-      
+      const { po_item_id, received_quantity, notes: itemNotes, storage_location_id } = item;
+
       if (received_quantity <= 0) continue;
-      
+
+      if (!storage_location_id) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Which storage location is this item being received into?" });
+      }
+
       // Get PO item details
       const poItemResult = await client.query(
-        "SELECT product_id, item_name, quantity, unit_price, received_quantity FROM purchase_order_items WHERE id = $1",
+        "SELECT product_id, item_name, quantity, unit_price, received_quantity, uom FROM purchase_order_items WHERE id = $1",
         [po_item_id]
       );
-      
+
       if (!poItemResult.rows[0]) continue;
-      
-      const { product_id, item_name, quantity, unit_price, received_quantity: currentReceived } = poItemResult.rows[0];
+
+      const { product_id, item_name, quantity, unit_price, received_quantity: currentReceived, uom } = poItemResult.rows[0];
       const newReceived = currentReceived + received_quantity;
-      
+
       if (newReceived > quantity) {
         await client.query("ROLLBACK");
         return res.status(400).json({ error: `Cannot receive more than ordered for item` });
       }
-      
+
       let finalProductId = product_id;
-      
+
       // If item_name exists but no product_id, create new product
       if (!product_id && item_name) {
         const slug = item_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -157,39 +162,41 @@ router.post("/", requireAuth, async (req, res) => {
 
         const productResult = await client.query(`
           INSERT INTO products
-          (slug, name, brand, price, category, in_stock, quantity_on_hand)
-          VALUES ($1, $2, $3, $4, $5, true, 0)
+          (slug, name, brand, price, category, in_stock, quantity_on_hand, product_type, uom, storage_location_id)
+          VALUES ($1, $2, $3, $4, $5, true, 0, 'product', $6, $7)
           RETURNING id
-        `, [slug, item_name, '', unit_price, defaultCategory]);
-        
+        `, [slug, item_name, '', unit_price, defaultCategory, uom || 'pcs', storage_location_id]);
+
         finalProductId = productResult.rows[0].id;
-        
+
         // Update PO item with new product_id
         await client.query(
           "UPDATE purchase_order_items SET product_id = $1 WHERE id = $2",
           [finalProductId, po_item_id]
         );
       }
-      
+
       // Create GRN item
       await client.query(`
-        INSERT INTO grn_items 
-        (grn_id, po_item_id, product_id, ordered_quantity, received_quantity, unit_price, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `, [grnId, po_item_id, finalProductId, quantity, received_quantity, unit_price, itemNotes]);
-      
+        INSERT INTO grn_items
+        (grn_id, po_item_id, product_id, ordered_quantity, received_quantity, unit_price, notes, storage_location_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [grnId, po_item_id, finalProductId, quantity, received_quantity, unit_price, itemNotes, storage_location_id]);
+
       // Update PO item received quantity
       await client.query(
         "UPDATE purchase_order_items SET received_quantity = $1 WHERE id = $2",
         [newReceived, po_item_id]
       );
-      
-      // Update product inventory
+
+      // Update product inventory — this receipt's chosen location becomes the
+      // product's current location (last-received-location wins; this app
+      // tracks one location per product, not a per-location stock split).
       await client.query(
-        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1 WHERE id = $2",
-        [received_quantity, finalProductId]
+        "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, storage_location_id = $2 WHERE id = $3",
+        [received_quantity, storage_location_id, finalProductId]
       );
-      
+
       // Create stock movement
       await client.query(`
         INSERT INTO stock_movements

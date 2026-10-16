@@ -145,6 +145,15 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     ALTER TABLE categories ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) DEFAULT '';
+    -- Where physical stock actually sits (e.g. "Main Store", "Chicken Store").
+    -- Services never need one — only product_type = 'product' rows get assigned.
+    CREATE TABLE IF NOT EXISTS storage_locations (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS products (
       id SERIAL PRIMARY KEY,
       slug VARCHAR(255) UNIQUE NOT NULL,
@@ -173,6 +182,10 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type VARCHAR(50) DEFAULT 'product';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS expense_account_id INTEGER;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS uom VARCHAR(50) DEFAULT 'pcs';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS storage_location_id INTEGER REFERENCES storage_locations(id);
+    -- Default TRUE so every existing product keeps showing in the POS exactly
+    -- as it does today — this is an opt-out toggle, not an opt-in gate.
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS show_in_pos BOOLEAN DEFAULT TRUE;
     ALTER TABLE products ALTER COLUMN brand DROP NOT NULL;
     ALTER TABLE products ALTER COLUMN category DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS password_resets (
@@ -232,6 +245,9 @@ export async function migrateTenant(schemaName = "public") {
       received_quantity INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    -- Lets a brand-new item (no product_id yet) carry its unit of measure
+    -- through to GRN receiving, where it becomes the new product's uom.
+    ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS uom VARCHAR(50);
     
     CREATE TABLE IF NOT EXISTS goods_received_notes (
       id SERIAL PRIMARY KEY,
@@ -257,6 +273,10 @@ export async function migrateTenant(schemaName = "public") {
       notes TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    -- Which store this specific receipt went into — also written onto the
+    -- product itself (last-received-location wins), but kept here too as a
+    -- per-receipt record.
+    ALTER TABLE grn_items ADD COLUMN IF NOT EXISTS storage_location_id INTEGER REFERENCES storage_locations(id);
     
     CREATE TABLE IF NOT EXISTS supplier_bills (
       id SERIAL PRIMARY KEY,

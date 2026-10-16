@@ -1,6 +1,6 @@
 import { useEffect, useState, Fragment } from "react";
 import * as XLSX from "xlsx";
-import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency } from "@/lib/api";
+import { api, ApiSupplier, ApiPurchaseOrder, ApiProduct, ApiGRN, ApiSupplierBill, ApiSupplierPayment, ApiCurrency, ApiStorageLocation } from "@/lib/api";
 import AdminLayout from "./AdminLayout";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Check, X, Package, FileText, DollarSign, Printer, Mail, Download, ChevronDown, ChevronUp, ShoppingCart, Truck, Wallet, FileSpreadsheet } from "lucide-react";
@@ -9,6 +9,11 @@ import { companyHeaderHTML, downloadDocument, printDocument } from "@/utils/prin
 import { exportToExcel, exportToPDF, CompanyInfo } from "@/utils/reportExports";
 
 type Tab = "suppliers" | "purchase-orders" | "grn" | "bills" | "payments";
+
+// Kept short and generic here (vs. ProductForm.tsx's full catalog list) — this
+// is just enough to describe a new item on a PO before it has its own product
+// record; once received via GRN it gets this value as its real uom.
+const PO_UOM_OPTIONS = ["pcs", "box", "pack", "dozen", "kg", "g", "L", "ml", "carton", "tray", "bag", "set"];
 
 export default function ProcurementEnhanced() {
   const { toast } = useToast();
@@ -52,9 +57,9 @@ export default function ProcurementEnhanced() {
     currency_id: 0 as number | 0,
     currency_code: "UGX",
     currency_symbol: "UGX",
-    items: [] as { product_id?: number; item_name?: string; quantity: number; unit_price: number }[]
+    items: [] as { product_id?: number; item_name?: string; quantity: number; unit_price: number; uom?: string }[]
   });
-  
+
   // GRN form
   const [creatingGRN, setCreatingGRN] = useState(false);
   const [selectedPOForGRN, setSelectedPOForGRN] = useState<(ApiPurchaseOrder & { items: any[] }) | null>(null);
@@ -62,8 +67,9 @@ export default function ProcurementEnhanced() {
     po_id: 0,
     received_date: new Date().toISOString().split('T')[0],
     notes: "",
-    items: [] as { po_item_id: number; received_quantity: number; notes?: string }[]
+    items: [] as { po_item_id: number; received_quantity: number; notes?: string; storage_location_id?: number }[]
   });
+  const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
   
   // Payment form
   const [creatingPayment, setCreatingPayment] = useState(false);
@@ -131,12 +137,20 @@ export default function ProcurementEnhanced() {
     }
   };
 
+  const loadStorageLocations = async () => {
+    try {
+      setStorageLocations(await api.inventory.storageLocations.list());
+    } catch (err) {
+      console.error("Failed to load storage locations:", err);
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       const [,, currencyList] = await Promise.all([
         loadSuppliers(), loadPOs(), api.currencies.list().catch(() => [] as ApiCurrency[]),
-        loadGRNs(), loadBills(), loadPayments(), loadProducts()
+        loadGRNs(), loadBills(), loadPayments(), loadProducts(), loadStorageLocations()
       ]);
       setCurrencies(currencyList as ApiCurrency[]);
       // set default currency to base
@@ -500,6 +514,13 @@ export default function ProcurementEnhanced() {
       setError("PO and items required");
       return;
     }
+    const missingLocation = grnForm.items.some(
+      (it) => Number(it.received_quantity || 0) > 0 && !it.storage_location_id
+    );
+    if (missingLocation) {
+      setError("Choose a storage location for every item being received");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -844,7 +865,13 @@ export default function ProcurementEnhanced() {
         items: po.items.map(item => ({
           po_item_id: item.id,
           received_quantity: item.quantity - item.received_quantity,
-          notes: ""
+          notes: "",
+          // Pre-fill with wherever this product is currently stored, if
+          // anywhere — still changeable per receipt, and required for a
+          // brand-new item that has no product/location yet.
+          storage_location_id: item.product_id
+            ? products.find(p => p.id === item.product_id)?.storage_location_id || undefined
+            : undefined,
         }))
       });
       setCreatingGRN(true);
@@ -1259,6 +1286,7 @@ export default function ProcurementEnhanced() {
                           <tr className="bg-chassis border-b border-border-subtle">
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Product / Item</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Custom Name</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">UOM</th>
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Qty</th>
                             <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Cost ({poForm.currency_code})</th>
                             <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Subtotal</th>
@@ -1279,6 +1307,7 @@ export default function ProcurementEnhanced() {
                                       ...newItems[idx],
                                       product_id: pid,
                                       item_name: undefined,
+                                      uom: undefined,
                                       unit_price: prod ? Number(prod.cost_price ?? prod.price) : newItems[idx].unit_price,
                                     };
                                     setPoForm({ ...poForm, items: newItems });
@@ -1304,6 +1333,26 @@ export default function ProcurementEnhanced() {
                                   />
                                 ) : (
                                   <span className="text-muted-foreground italic text-[10px]">using product name</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {!item.product_id ? (
+                                  <select
+                                    value={item.uom || ""}
+                                    onChange={(e) => {
+                                      const newItems = [...poForm.items];
+                                      newItems[idx].uom = e.target.value || undefined;
+                                      setPoForm({ ...poForm, items: newItems });
+                                    }}
+                                    className="w-full px-2 py-1 bg-background border border-border-subtle text-xs appearance-none"
+                                  >
+                                    <option value="">— select —</option>
+                                    {PO_UOM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                  </select>
+                                ) : (
+                                  <span className="text-muted-foreground italic text-[10px]">
+                                    {products.find(p => p.id === item.product_id)?.uom || "—"}
+                                  </span>
                                 )}
                               </td>
                               <td className="px-3 py-2">
@@ -1517,6 +1566,7 @@ export default function ProcurementEnhanced() {
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Remaining</th>
                             <th className="text-right px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Unit Price</th>
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Receive Qty</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Storage Location</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Notes</th>
                           </tr>
                         </thead>
@@ -1540,6 +1590,25 @@ export default function ProcurementEnhanced() {
                                   }}
                                   className="w-20 px-2 py-1 bg-background border border-border-subtle text-xs text-center"
                                 />
+                              </td>
+                              <td className="px-3 py-2">
+                                <select
+                                  value={grnForm.items[idx]?.storage_location_id || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].storage_location_id = e.target.value ? Number(e.target.value) : undefined;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  className={`w-full px-2 py-1 bg-background border text-xs appearance-none ${
+                                    Number(grnForm.items[idx]?.received_quantity || 0) > 0 && !grnForm.items[idx]?.storage_location_id
+                                      ? "border-red-400" : "border-border-subtle"
+                                  }`}
+                                >
+                                  <option value="">Which store?</option>
+                                  {storageLocations.map(sl => (
+                                    <option key={sl.id} value={sl.id}>{sl.name}</option>
+                                  ))}
+                                </select>
                               </td>
                               <td className="px-3 py-2">
                                 <input

@@ -187,9 +187,9 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     for (const item of parsedItems) {
       await client.query(
         `INSERT INTO purchase_order_items
-         (po_id, product_id, item_name, quantity, unit_price)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [poId, item.product_id || null, item.item_name || null, item.quantity, item.unit_price]
+         (po_id, product_id, item_name, quantity, unit_price, uom)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [poId, item.product_id || null, item.item_name || null, item.quantity, item.unit_price, item.uom || null]
       );
     }
     

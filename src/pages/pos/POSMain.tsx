@@ -287,7 +287,7 @@ export default function POSMain() {
   const loadData = async () => {
     try {
       const [productsData, paymentTypesData, taxData, catsData] = await Promise.all([
-        api.products.list(),
+        api.products.list(undefined, undefined, true),
         api.paymentTypes.active(),
         api.taxRates.default(),
         api.categories.list(),
