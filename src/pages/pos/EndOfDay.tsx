@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { api, CashDrawerSession } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
 
 export default function EndOfDay() {
@@ -16,8 +17,18 @@ export default function EndOfDay() {
   const navigate = useNavigate();
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
+  const { user } = useAuth();
   const sym = baseCurrency?.symbol || "UGX";
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Defense-in-depth: a Waiter has no reason to be on this screen (no cash
+  // session, no end-of-day reconciliation) — bounce back to the POS cart if
+  // they land here by direct URL, same as CashManagement.
+  useEffect(() => {
+    if (user?.role_name?.toLowerCase() === 'waiter') {
+      navigate(tp("/pos"), { replace: true });
+    }
+  }, [user, navigate, tp]);
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [report, setReport]             = useState<any>(null);

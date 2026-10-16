@@ -41,7 +41,9 @@ router.post("/", requireAuth, async (req, res) => {
     let role = 'cashier';
     if (role_id) {
       const { rows: roleRows } = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
-      if (roleRows[0]?.name?.toLowerCase() === 'admin') role = 'admin';
+      const roleName = roleRows[0]?.name?.toLowerCase();
+      if (roleName === 'admin') role = 'admin';
+      else if (roleName === 'waiter') role = 'waiter';
     }
     const { rows } = await pool.query(
       "INSERT INTO users (email, password_hash, role, role_id, name, pin) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, name, pin, role, role_id, created_at",
@@ -119,7 +121,9 @@ router.put("/:id/role", requireAuth, async (req, res) => {
     let role = 'cashier';
     if (role_id) {
       const { rows: roleRows } = await pool.query("SELECT name FROM roles WHERE id = $1", [role_id]);
-      if (roleRows[0]?.name?.toLowerCase() === 'admin') role = 'admin';
+      const roleName = roleRows[0]?.name?.toLowerCase();
+      if (roleName === 'admin') role = 'admin';
+      else if (roleName === 'waiter') role = 'waiter';
     }
     const { rows } = await pool.query(
       `UPDATE users SET role_id = $1, role = $2 WHERE id = $3

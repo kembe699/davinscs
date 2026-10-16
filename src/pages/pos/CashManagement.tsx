@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { api } from "@/lib/api";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync } from "@/utils/currency";
 import { CashDrawerSession } from "@/lib/api";
 
@@ -13,6 +14,17 @@ export default function CashManagement() {
   const navigate = useNavigate();
   const tp = useTenantPath();
   const { baseCurrency } = useCurrency();
+  const { user } = useAuth();
+
+  // Waiters never open/close the drawer or move cash — a Waiter who reaches
+  // this screen by direct URL (ProtectedRoute only checks for a token, not
+  // role) gets bounced straight back to the POS cart, same defense-in-depth
+  // pattern as AdminLayout's cashier redirect.
+  useEffect(() => {
+    if (user?.role_name?.toLowerCase() === 'waiter') {
+      navigate(tp("/pos"), { replace: true });
+    }
+  }, [user, navigate, tp]);
   const [currentSession, setCurrentSession] = useState<CashDrawerSession | null>(null);
   const [sessions, setSessions] = useState<CashDrawerSession[]>([]);
   const [movements, setMovements] = useState<any[]>([]);

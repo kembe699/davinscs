@@ -108,7 +108,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [i18n.language]);
 
   useEffect(() => {
-    if (user?.role_name?.toLowerCase() === 'cashier') {
+    const roleName = user?.role_name?.toLowerCase();
+    if (roleName === 'cashier' || roleName === 'waiter') {
       navigate(`/${tenantSlug}/pos`, { replace: true });
     }
   }, [user, navigate, tenantSlug]);

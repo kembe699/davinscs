@@ -19,6 +19,10 @@ export default function POSMain() {
   const { baseCurrency } = useCurrency();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme("pos");
+  // A Waiter only adds items to the cart and holds the order — no cash
+  // drawer, no checkout/payment, no end-of-day. Cashiers still do all of
+  // that exactly as before; this flag just narrows what a Waiter sees.
+  const isWaiter = user?.role_name?.toLowerCase() === "waiter";
   
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
@@ -914,7 +918,7 @@ export default function POSMain() {
     );
   }
 
-  if (!cashDrawerSession) {
+  if (!cashDrawerSession && !isWaiter) {
     return (
       <div className="h-screen bg-admin-bg flex items-center justify-center">
         <div className="bg-admin-surface border border-admin-border p-10 max-w-md w-full text-center space-y-5">
@@ -1537,13 +1541,15 @@ export default function POSMain() {
               </div>
             </div>
 
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              disabled={cart.length === 0}
-              className="pos-accent-bg w-full py-3 md:py-4 disabled:opacity-50 disabled:cursor-not-allowed font-bold rounded-lg md:rounded-xl text-sm md:text-lg transition-all shadow-lg flex items-center justify-center gap-2"
-            >
-              Checkout
-            </button>
+            {!isWaiter && (
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                disabled={cart.length === 0}
+                className="pos-accent-bg w-full py-3 md:py-4 disabled:opacity-50 disabled:cursor-not-allowed font-bold rounded-lg md:rounded-xl text-sm md:text-lg transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                Checkout
+              </button>
+            )}
 
             <div className="flex gap-2 mt-2 md:mt-3">
               <button
@@ -1580,7 +1586,7 @@ export default function POSMain() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {user?.role_name?.toLowerCase() !== 'cashier' && (
+              {user?.role_name?.toLowerCase() !== 'cashier' && !isWaiter && (
                 <button
                   onClick={() => navigate(tp("/admin"))}
                   className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
@@ -1588,26 +1594,32 @@ export default function POSMain() {
                   Dashboard Management
                 </button>
               )}
-              <button
-                onClick={() => navigate(tp("/pos/sales-history"))}
-                className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
-              >
-                View Sales History
-              </button>
-              <button
-                onClick={() => navigate(tp("/pos/cash-management"))}
-                className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
-              >
-                Cash In / Out
-              </button>
-              <button
-                onClick={() => navigate(tp("/pos/end-of-day"))}
-                className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
-              >
-                End of Day
-              </button>
+              {!isWaiter && (
+                <button
+                  onClick={() => navigate(tp("/pos/sales-history"))}
+                  className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
+                >
+                  View Sales History
+                </button>
+              )}
+              {!isWaiter && (
+                <button
+                  onClick={() => navigate(tp("/pos/cash-management"))}
+                  className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
+                >
+                  Cash In / Out
+                </button>
+              )}
+              {!isWaiter && (
+                <button
+                  onClick={() => navigate(tp("/pos/end-of-day"))}
+                  className="w-full text-left px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-[#10B981] hover:bg-[#10B981]/5 rounded-xl transition-colors"
+                >
+                  End of Day
+                </button>
+              )}
             </div>
-            {user?.role_name?.toLowerCase() === 'cashier' && (
+            {(user?.role_name?.toLowerCase() === 'cashier' || isWaiter) && (
               <div className="p-4 border-t border-gray-100 dark:border-gray-700/50">
                 <button
                   onClick={() => {
@@ -1625,7 +1637,7 @@ export default function POSMain() {
       </div>
 
       {/* Payment Modal */}
-      {showPaymentModal && (
+      {showPaymentModal && !isWaiter && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full sm:w-[480px] max-h-[90vh] overflow-y-auto flex flex-col">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
@@ -1962,7 +1974,7 @@ export default function POSMain() {
                               <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Available</p>
                             )}
                           </button>
-                          {occupied && (
+                          {occupied && !isWaiter && (
                             <button
                               onClick={() => payTableNow(sale)}
                               className="mt-2 w-full text-[11px] font-bold text-[#10B981] hover:text-[#0ea472] transition-colors"
@@ -2026,7 +2038,7 @@ export default function POSMain() {
                         </p>
                       </div>
 
-                      {isConfirming ? (
+                      {isConfirming && !isWaiter ? (
                         <div className="space-y-3 bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3">
                           <label className="block text-xs font-bold text-gray-700 dark:text-gray-200">Payment Method</label>
                           <select
@@ -2057,13 +2069,15 @@ export default function POSMain() {
                         </div>
                       ) : (
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => resumeHeldSaleForEdit(sale)}
-                            disabled={processingHold}
-                            className="flex-1 py-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all disabled:opacity-50"
-                          >
-                            Confirm Payment
-                          </button>
+                          {!isWaiter && (
+                            <button
+                              onClick={() => resumeHeldSaleForEdit(sale)}
+                              disabled={processingHold}
+                              className="flex-1 py-2 bg-[#10B981] hover:bg-[#059669] text-white font-bold rounded-lg transition-all disabled:opacity-50"
+                            >
+                              Confirm Payment
+                            </button>
+                          )}
                           <button
                             onClick={() => handleCancelHeldSale(sale)}
                             disabled={processingHold}
