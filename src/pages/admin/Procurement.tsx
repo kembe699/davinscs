@@ -1657,7 +1657,10 @@ export default function ProcurementEnhanced() {
                     const billSymbol = bill.currency_symbol || baseCurrency?.symbol || 'UGX';
                     const rate = Number(bill.exchange_rate) || 1;
                     const isForeign = rate !== 1 && !!bill.currency_code && bill.currency_code !== baseCurrency?.code;
-                    const toBase = (amount: number) => Math.round(amount / rate);
+                    // Precise, not rounded to a whole unit — a rounded "$24" next to the
+                    // Payments tab's exact "$23.72" for the very same bill read as if the
+                    // two screens disagreed about the amount.
+                    const toBase = (amount: number) => amount / rate;
                     return (
                     <tr key={bill.id} className="hover:bg-chassis/50 transition-colors">
                       <td className="px-4 py-3 font-mono-tech text-foreground">{bill.bill_number}</td>
@@ -1667,7 +1670,7 @@ export default function ProcurementEnhanced() {
                         <div>{billSymbol}{Number(bill.total_amount).toLocaleString()}</div>
                         {isForeign && (
                           <div className="text-[10px] text-muted-foreground font-normal">
-                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.total_amount)).toLocaleString()} posted
+                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.total_amount)).toLocaleString(undefined, { maximumFractionDigits: 2 })} posted
                           </div>
                         )}
                       </td>
@@ -1675,7 +1678,7 @@ export default function ProcurementEnhanced() {
                         <div>{billSymbol}{Number(bill.paid_amount).toLocaleString()}</div>
                         {isForeign && Number(bill.paid_amount) > 0 && (
                           <div className="text-[10px] text-muted-foreground font-normal">
-                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.paid_amount)).toLocaleString()}
+                            ≈ {baseCurrency?.symbol}{toBase(Number(bill.paid_amount)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </div>
                         )}
                       </td>
