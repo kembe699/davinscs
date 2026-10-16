@@ -25,15 +25,18 @@ router.get("/", requireAuth, async (req, res) => {
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     
     const { rows } = await pool.query(`
-      SELECT 
+      SELECT
         sp.*,
         s.name as supplier_name,
         sb.bill_number,
         sb.total_amount as bill_total,
-        sb.paid_amount as bill_paid
+        sb.paid_amount as bill_paid,
+        po.currency_code,
+        po.currency_symbol
       FROM supplier_payments sp
       LEFT JOIN suppliers s ON sp.supplier_id = s.id
       LEFT JOIN supplier_bills sb ON sp.bill_id = sb.id
+      LEFT JOIN purchase_orders po ON sb.po_id = po.id
       ${where}
       ORDER BY sp.payment_date DESC, sp.created_at DESC
     `, params);

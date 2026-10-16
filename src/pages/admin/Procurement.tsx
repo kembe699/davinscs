@@ -1844,16 +1844,28 @@ export default function ProcurementEnhanced() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
-                  {payments.map((payment) => (
+                  {payments.map((payment) => {
+                    const baseCurrency = currencies.find(c => c.is_base);
+                    const paySymbol = payment.currency_symbol || payment.currency_code || baseCurrency?.symbol || 'UGX';
+                    const isForeign = !!baseCurrency && payment.currency_code != null && payment.currency_code !== baseCurrency.code;
+                    return (
                     <tr key={payment.id} className="hover:bg-chassis/50 transition-colors">
                       <td className="px-4 py-3 font-mono-tech text-foreground">{payment.payment_number}</td>
                       <td className="px-4 py-3 text-foreground">{payment.supplier_name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{payment.bill_number || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(payment.payment_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right font-mono-tech text-green-500">${Number(payment.amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono-tech text-green-500">
+                        <div>{paySymbol}{Number(payment.amount).toLocaleString()}</div>
+                        {isForeign && payment.base_amount != null && (
+                          <div className="text-[10px] text-muted-foreground font-normal">
+                            ≈ {baseCurrency?.symbol}{Number(payment.base_amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground capitalize">{payment.payment_method.replace('_', ' ')}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

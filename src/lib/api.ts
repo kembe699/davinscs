@@ -249,6 +249,8 @@ export type ApiSupplierPayment = {
   bill_number?: string;
   payment_date: string;
   amount: number;
+  currency_code?: string;
+  currency_symbol?: string;
   exchange_rate?: number;
   base_amount?: number;
   payment_method: string;
