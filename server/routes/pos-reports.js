@@ -339,7 +339,7 @@ router.get("/end-of-day", requireAuth, async (req, res) => {
          c.is_base,
          COUNT(s.id) as transaction_count,
          COALESCE(SUM(s.total_amount), 0) as base_total,
-         COALESCE(SUM(ROUND(s.total_amount * COALESCE(s.exchange_rate_used, 1))), 0) as display_total,
+         COALESCE(SUM(s.total_amount * COALESCE(s.exchange_rate_used, 1)), 0) as display_total,
          MIN(s.exchange_rate_used) as rate_min,
          MAX(s.exchange_rate_used) as rate_max
        FROM pos_sales s

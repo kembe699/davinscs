@@ -253,7 +253,7 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
           a.code,
           a.name as category_name,
           COUNT(t.id)::int as transaction_count,
-          COALESCE(SUM(ABS(t.amount)), 0)::bigint as total_amount
+          COALESCE(SUM(ABS(t.amount)), 0) as total_amount
          FROM accounts a
          LEFT JOIN transactions t ON a.id = t.account_id
            AND DATE(t.transaction_date) BETWEEN $1 AND $2
@@ -273,7 +273,7 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
           'PROC' as code,
           COALESCE(s.name, 'Unknown Supplier') as category_name,
           COUNT(sp.id)::int as transaction_count,
-          COALESCE(SUM(COALESCE(sp.base_amount, sp.amount)), 0)::bigint as total_amount
+          COALESCE(SUM(COALESCE(sp.base_amount, sp.amount)), 0) as total_amount
          FROM supplier_payments sp
          LEFT JOIN suppliers s ON sp.supplier_id = s.id
          WHERE DATE(sp.payment_date) BETWEEN $1 AND $2
@@ -291,7 +291,7 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
           'CASH-OUT' as code,
           COALESCE(reason, 'Cash Expense') as category_name,
           COUNT(id)::int as transaction_count,
-          COALESCE(SUM(amount), 0)::bigint as total_amount
+          COALESCE(SUM(amount), 0) as total_amount
          FROM cash_drawer_transactions
          WHERE type = 'cash_out'
            AND DATE(created_at) BETWEEN $1 AND $2
@@ -540,9 +540,9 @@ router.get("/invoices/overview", requireAuth, async (req, res) => {
       `SELECT
          status,
          COUNT(*)::int                              AS invoice_count,
-         COALESCE(SUM(total_amount), 0)::bigint     AS total_billed,
-         COALESCE(SUM(paid_amount), 0)::bigint      AS total_paid,
-         COALESCE(SUM(total_amount - paid_amount), 0)::bigint AS total_outstanding
+         COALESCE(SUM(total_amount), 0)     AS total_billed,
+         COALESCE(SUM(paid_amount), 0)      AS total_paid,
+         COALESCE(SUM(total_amount - paid_amount), 0) AS total_outstanding
        FROM invoices
        WHERE DATE(created_at) BETWEEN $1 AND $2
        GROUP BY status
@@ -553,11 +553,11 @@ router.get("/invoices/overview", requireAuth, async (req, res) => {
     const { rows: totals } = await pool.query(
       `SELECT
          COUNT(*)::int                              AS total_invoices,
-         COALESCE(SUM(total_amount), 0)::bigint     AS total_billed,
-         COALESCE(SUM(paid_amount), 0)::bigint      AS total_collected,
+         COALESCE(SUM(total_amount), 0)     AS total_billed,
+         COALESCE(SUM(paid_amount), 0)      AS total_collected,
          -- A voided invoice was written off, not just uncollected — it
          -- shouldn't still count as money the business expects to collect.
-         COALESCE(SUM(total_amount - paid_amount) FILTER (WHERE status != 'voided'), 0)::bigint AS total_outstanding,
+         COALESCE(SUM(total_amount - paid_amount) FILTER (WHERE status != 'voided'), 0) AS total_outstanding,
          COUNT(*) FILTER (WHERE status = 'paid')::int    AS paid_count,
          COUNT(*) FILTER (WHERE status = 'unpaid')::int  AS unpaid_count,
          COUNT(*) FILTER (WHERE status = 'partial')::int AS partial_count,
@@ -706,7 +706,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
 
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(total_amount),0)::bigint as total FROM pos_sales
+        `SELECT COALESCE(SUM(total_amount),0) as total FROM pos_sales
          WHERE DATE(created_at) BETWEEN $1 AND $2 AND voided = false AND status != 'held'`,
         [startDate, endDate]
       );
@@ -715,7 +715,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
 
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM invoice_payments
+        `SELECT COALESCE(SUM(amount),0) as total FROM invoice_payments
          WHERE DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
@@ -726,7 +726,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
     let cogsAmount = 0;
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(psi.quantity * COALESCE(p.cost_price,0)),0)::bigint as total
+        `SELECT COALESCE(SUM(psi.quantity * COALESCE(p.cost_price,0)),0) as total
          FROM pos_sale_items psi
          JOIN pos_sales ps ON psi.sale_id = ps.id
          JOIN products p   ON psi.product_id = p.id
@@ -744,7 +744,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       // the originating PO's exchange rate) — falls back to amount for base-currency
       // POs and for payments made before this conversion existed.
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(COALESCE(base_amount, amount)),0)::bigint as total FROM supplier_payments
+        `SELECT COALESCE(SUM(COALESCE(base_amount, amount)),0) as total FROM supplier_payments
          WHERE DATE(payment_date) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
@@ -753,7 +753,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
 
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(amount),0)::bigint as total FROM cash_movements
+        `SELECT COALESCE(SUM(amount),0) as total FROM cash_movements
          WHERE type = 'out' AND DATE(created_at) BETWEEN $1 AND $2`,
         [startDate, endDate]
       );
@@ -763,7 +763,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
     // Other accounting expenses (exclude COGS account 5000)
     try {
       const { rows } = await pool.query(
-        `SELECT COALESCE(SUM(tl.debit),0)::bigint as total
+        `SELECT COALESCE(SUM(tl.debit),0) as total
          FROM transaction_lines tl
          JOIN transactions t  ON tl.transaction_id = t.id
          JOIN accounts a      ON tl.account_id = a.id
