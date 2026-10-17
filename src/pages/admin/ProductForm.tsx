@@ -7,6 +7,7 @@ import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { roundToCents } from "@/utils/currency";
+import { parseBarcodes, formatBarcodes } from "@/utils/barcode";
 
 type Spec = { label: string; value: string };
 
@@ -128,7 +129,11 @@ export default function ProductForm() {
     setError("");
     setLoading(true);
     try {
-      const payload = { ...form, description: form.description?.trim() || "" };
+      const payload = {
+        ...form,
+        description: form.description?.trim() || "",
+        barcode: formatBarcodes(parseBarcodes((form as any).barcode)),
+      };
       if (isEdit) {
         await api.products.update(Number(id), payload as Partial<ApiProduct>);
         toast("Product updated successfully!", "success", "Saved");
@@ -332,18 +337,22 @@ export default function ProductForm() {
                       <input
                         type="text" value={(form as any).barcode}
                         onChange={(e) => set("barcode", e.target.value)}
-                        placeholder="Optional"
+                        onBlur={(e) => set("barcode", formatBarcodes(parseBarcodes(e.target.value)))}
+                        placeholder="Optional — separate multiple codes with a comma, e.g. 123456789, 987654321"
                         className="field-input flex-1"
                       />
                       <button
                         type="button"
-                        onClick={() => set("barcode", generateBarcode())}
+                        onClick={() => set("barcode", formatBarcodes([...parseBarcodes((form as any).barcode), generateBarcode()]))}
                         className="px-3 py-2 bg-primary text-background hover:bg-primary/90 transition-colors"
-                        title="Generate Barcode"
+                        title="Add a generated barcode"
                       >
                         <Sparkles size={16} />
                       </button>
                     </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      This item can be scanned by any of these codes — useful when the same product arrives with different printed barcodes.
+                    </p>
                   </div>
                   <div>
                     <label className="field-label">Expiry date</label>

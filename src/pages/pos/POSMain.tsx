@@ -7,6 +7,7 @@ import { useTenantPath } from "@/contexts/TenantContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync, roundToCents, formatConvertedCurrency } from "@/utils/currency";
+import { matchesBarcode } from "@/utils/barcode";
 import { printDocument, printThermal } from "@/utils/printUtils";
 import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -86,7 +87,10 @@ export default function POSMain() {
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      const exactMatch = products.find(p => p.barcode?.toLowerCase() === q || p.sku?.toLowerCase() === q);
+      // A product's barcode field can hold several comma-separated codes —
+      // matchesBarcode checks the scanned text against each one, not just
+      // the field as a single whole string.
+      const exactMatch = products.find(p => matchesBarcode(p.barcode, searchQuery) || p.sku?.toLowerCase() === q);
       if (exactMatch) {
         addToCart(exactMatch);
         setSearchQuery("");
