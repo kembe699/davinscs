@@ -293,6 +293,24 @@ export default function POSMain() {
     }
   }, [searchQuery, products]);
 
+  // Primary scan-to-cart path — fires the instant the search box's text
+  // exactly matches a barcode, independent of whether/when the scanner's
+  // trailing Enter keystroke actually arrives. handleSearchKeyDown's Enter
+  // handler below is a fallback for scanners that are slow to send it (or
+  // for someone typing a code by hand); by the time Enter fires here this
+  // effect has usually already added the item and cleared the box, so the
+  // keydown handler finds nothing left to do and never double-adds.
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    const exactMatch = products.find(p => matchesBarcode(p.barcode, q));
+    if (exactMatch) {
+      addToCart(exactMatch);
+      setSearchQuery("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, products]);
+
   const loadData = async () => {
     try {
       const [productsData, paymentTypesData, taxData, catsData] = await Promise.all([
