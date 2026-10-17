@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -12,8 +13,7 @@ router.get("/suppliers", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -29,8 +29,7 @@ router.post("/suppliers", requireAuth, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -49,8 +48,7 @@ router.put("/suppliers/:id", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Supplier not found" });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -63,8 +61,7 @@ router.delete("/suppliers/:id", requireAuth, async (req, res) => {
     if (rowCount === 0) return res.status(404).json({ error: "Supplier not found" });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -83,8 +80,7 @@ router.get("/purchase-orders", requireAuth, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -115,8 +111,7 @@ router.get("/purchase-orders/:id", requireAuth, async (req, res) => {
       items: itemsResult.rows
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -211,8 +206,7 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     res.status(201).json(poResult.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -231,8 +225,7 @@ router.put("/purchase-orders/:id", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Purchase order not found" });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -264,8 +257,7 @@ router.get("/purchase-orders/:id/pdf", requireAuth, async (req, res) => {
       items: itemsResult.rows
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 
@@ -335,8 +327,7 @@ router.post("/purchase-orders/:id/receive", requireAuth, async (req, res) => {
     res.json({ success: true, status: newStatus });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   } finally {
     client.release();
   }

@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 const router = express.Router();
 
 // Generate next invoice number
@@ -50,8 +51,7 @@ router.get("/", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -79,8 +79,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     );
     res.json({ ...inv[0], items, payments });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -130,8 +129,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(invoice);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -148,7 +146,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     );
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -201,8 +199,7 @@ router.post("/:id/payments", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -217,7 +214,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     );
     res.json({ message: "Invoice voided" });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

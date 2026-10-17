@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -31,8 +32,7 @@ router.get("/", requireAuth, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -74,8 +74,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       items: itemsResult.rows
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -264,8 +263,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json({ ...grnResult.rows[0], bill });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -310,8 +308,7 @@ router.get("/:id/print", requireAuth, async (req, res) => {
       items: itemsResult.rows
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

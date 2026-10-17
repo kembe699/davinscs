@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -21,8 +22,7 @@ router.get("/accounts", requireAuth, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -44,8 +44,7 @@ router.post("/accounts", requireAuth, async (req, res) => {
     if (err.code === '23505') {
       return res.status(409).json({ error: "Account code already exists" });
     }
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -84,8 +83,7 @@ router.get("/transactions", requireAuth, async (req, res) => {
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -116,8 +114,7 @@ router.get("/transactions/:id", requireAuth, async (req, res) => {
       lines: linesResult.rows
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -159,8 +156,7 @@ router.post("/transactions", requireAuth, async (req, res) => {
     res.status(201).json(txResult.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -200,8 +196,7 @@ router.get("/trial-balance", requireAuth, async (req, res) => {
     
     res.json({ accounts: rows, total_debit: totalDebit, total_credit: totalCredit });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -249,8 +244,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
       net_income:     netIncome
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -294,8 +288,7 @@ router.get("/balance-sheet", requireAuth, async (req, res) => {
       total_equity: totalEquity
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

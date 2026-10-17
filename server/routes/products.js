@@ -2,6 +2,7 @@ import express from "express";
 import pool from "../db.js";
 import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -30,8 +31,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -47,8 +47,7 @@ router.get("/:slug", optionalTenantContext, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Product not found" });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -78,7 +77,7 @@ router.post("/", requireAuth, async (req, res) => {
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
     console.error("[products POST]", err.code, err.message, err.detail);
-    res.status(500).json({ error: "Server error", detail: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -107,7 +106,7 @@ router.put("/:id", requireAuth, async (req, res) => {
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
     console.error("[products PUT]", err.code, err.message, err.detail);
-    res.status(500).json({ error: "Server error", detail: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -126,7 +125,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
         error: "Cannot delete product: it is referenced in sales, orders, or other records. Please remove those references first." 
       });
     }
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

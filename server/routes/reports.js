@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get("/sales/daily", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in daily sales report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -62,7 +63,7 @@ router.get("/sales/by-user", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in sales by user report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -91,7 +92,7 @@ router.get("/sales/by-customer", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in sales by customer report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -122,7 +123,7 @@ router.get("/sales/by-product", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in sales by product report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -170,7 +171,7 @@ router.get("/sales/by-scheme", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in sales by scheme report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -233,7 +234,7 @@ router.get("/expenses/summary", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Error in expenses summary:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -305,7 +306,7 @@ router.get("/expenses/by-category", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in expenses by category:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -339,7 +340,7 @@ router.get("/expenses/cash-drawer", requireAuth, async (req, res) => {
     }
   } catch (err) {
     console.error("Error in cash drawer expenses:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -383,7 +384,7 @@ router.get("/inventory/stock-movement", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in stock movement report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -413,7 +414,7 @@ router.get("/inventory/expiring", requireAuth, async (req, res) => {
     }
   } catch (err) {
     console.error("Error in expiring products report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -442,7 +443,7 @@ router.get("/inventory/expired", requireAuth, async (req, res) => {
     }
   } catch (err) {
     console.error("Error in expired products report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -467,7 +468,7 @@ router.get("/inventory/low-stock", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in low stock report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -491,7 +492,7 @@ router.get("/inventory/out-of-stock", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in out of stock report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -523,7 +524,7 @@ router.get("/trending/products", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error in trending products report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -570,8 +571,7 @@ router.get("/invoices/overview", requireAuth, async (req, res) => {
 
     res.json({ byStatus: byStatus, totals: totals[0] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -600,8 +600,7 @@ router.get("/invoices/all", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -628,8 +627,7 @@ router.get("/invoices/overdue", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -660,8 +658,7 @@ router.get("/invoices/partial", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -688,8 +685,7 @@ router.get("/invoices/collections", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -800,7 +796,7 @@ router.get("/income-statement", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Error in income statement:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -900,7 +896,7 @@ router.get("/cashflow", requireAuth, async (req, res) => {
     res.json({ start_date: startDate, end_date: endDate, summary: totals, daily, sessions: sessions.rows });
   } catch (err) {
     console.error("Error in cashflow report:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

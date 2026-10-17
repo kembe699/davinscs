@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -27,8 +28,7 @@ router.get("/", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -69,8 +69,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
     res.json({ customer: cRows[0], posOrders, invoices, creditSales });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -87,8 +86,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -105,8 +103,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Customer not found" });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -118,8 +115,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     if (err.code === "23503") return res.status(409).json({ error: "Cannot delete: customer has linked records" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -219,8 +215,7 @@ router.post("/:id/settle", requireAuth, async (req, res) => {
     res.json({ customer: updatedCustomer[0], applied, amountApplied: totalApplied, unapplied: remaining });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }

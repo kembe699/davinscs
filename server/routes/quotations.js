@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { roundToCents } from "../utils/money.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -36,7 +37,7 @@ router.get("/", requireAuth, async (req, res) => {
       params
     );
     res.json(rows);
-  } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
+  } catch (err) { return sendError(res, err); }
 });
 
 // Get single quotation with items
@@ -49,7 +50,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       [req.params.id]
     );
     res.json({ ...qRows[0], items });
-  } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
+  } catch (err) { return sendError(res, err); }
 });
 
 // Create quotation
@@ -93,7 +94,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(quot);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err); res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally { client.release(); }
 });
 
@@ -138,7 +139,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err); res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally { client.release(); }
 });
 
@@ -152,7 +153,7 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: "Not found" });
     res.json(rows[0]);
-  } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
+  } catch (err) { return sendError(res, err); }
 });
 
 // Convert quotation to invoice
@@ -207,7 +208,7 @@ router.post("/:id/convert", requireAuth, async (req, res) => {
     res.json({ invoice: inv, invoice_id: inv.id });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err); res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally { client.release(); }
 });
 
@@ -217,7 +218,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     const { rowCount } = await pool.query("DELETE FROM quotations WHERE id = $1", [req.params.id]);
     if (!rowCount) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
+  } catch (err) { return sendError(res, err); }
 });
 
 export default router;

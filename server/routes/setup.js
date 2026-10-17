@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import pool from "../db.js";
 import { tenantStorage } from "../tenantStorage.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get("/status", async (req, res) => {
     res.json({ needs_setup: needsSetup, business_name: businessName, email });
   } catch (err) {
     console.error("Setup status error:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -266,7 +267,7 @@ router.post("/complete", async (req, res) => {
     res.json({ success: true, user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {
     console.error("Setup complete error:", err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 

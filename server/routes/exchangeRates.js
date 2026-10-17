@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get("/", requireAuth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error fetching exchange rates:", err);
-    res.status(500).json({ error: "Failed to fetch exchange rates" });
+    return sendError(res, err, "Failed to fetch exchange rates");
   }
 });
 
@@ -56,7 +57,7 @@ router.get("/active/:fromId/:toId", requireAuth, async (req, res) => {
     res.json(rows[0] || null);
   } catch (err) {
     console.error("Error fetching active rate:", err);
-    res.status(500).json({ error: "Failed to fetch active rate" });
+    return sendError(res, err, "Failed to fetch active rate");
   }
 });
 
@@ -97,7 +98,7 @@ router.post("/convert", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Error converting currency:", err);
-    res.status(500).json({ error: "Failed to convert currency" });
+    return sendError(res, err, "Failed to convert currency");
   }
 });
 
@@ -152,7 +153,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("Error creating exchange rate:", err);
-    res.status(500).json({ error: "Failed to create exchange rate" });
+    return sendError(res, err, "Failed to create exchange rate");
   }
 });
 
@@ -190,7 +191,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     console.error("Error updating exchange rate:", err);
-    res.status(500).json({ error: "Failed to update exchange rate" });
+    return sendError(res, err, "Failed to update exchange rate");
   }
 });
 
@@ -211,7 +212,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting exchange rate:", err);
-    res.status(500).json({ error: "Failed to delete exchange rate" });
+    return sendError(res, err, "Failed to delete exchange rate");
   }
 });
 

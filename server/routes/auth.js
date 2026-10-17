@@ -9,6 +9,7 @@ import { sendPasswordResetEmail } from "../utils/email.js";
 
 import { tenantStorage } from "../tenantStorage.js";
 import { requireAuth, requireAuthAllowSuspended } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 const router = express.Router();
 
 router.post("/login", async (req, res) => {
@@ -114,8 +115,7 @@ router.post("/login", async (req, res) => {
       });
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -168,8 +168,7 @@ router.post("/pin-login", async (req, res) => {
       });
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -212,7 +211,7 @@ router.post("/forgot-password", async (req, res) => {
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch (err) {
     console.error("[forgot-password] error:", err.message);
-    res.status(500).json({ error: "Failed to send reset email" });
+    return sendError(res, err, "Failed to send reset email");
   }
 });
 
@@ -237,8 +236,7 @@ router.post("/reset-password", async (req, res) => {
     if (!updated) return res.status(400).json({ error: "Invalid or expired reset token" });
     res.json({ message: "Password updated successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -270,7 +268,7 @@ router.get("/me", requireAuthAllowSuspended, async (req, res) => {
     res.json({ user: dbUser, tenant: tenantInfo });
   } catch (err) {
     console.error("[GET /auth/me] Error:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

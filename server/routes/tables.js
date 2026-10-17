@@ -1,6 +1,7 @@
 import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get("/", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -58,7 +59,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(created);
   } catch (err) {
     await client.query("ROLLBACK");
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -80,7 +81,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Table not found" });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -37,7 +38,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "A category with this slug already exists in your store." });
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -57,7 +58,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Slug already exists" });
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -70,7 +71,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: "Category not found" });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

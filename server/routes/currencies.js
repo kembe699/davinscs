@@ -1,6 +1,7 @@
 import { Router } from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = Router();
 
@@ -12,8 +13,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -28,8 +28,7 @@ router.get("/base", optionalTenantContext, async (req, res) => {
     }
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -56,8 +55,7 @@ router.post("/", requireAuth, async (req, res) => {
     if (err.code === "23505") {
       return res.status(409).json({ error: "Currency code already exists" });
     }
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -87,8 +85,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -118,8 +115,7 @@ router.put("/:id/set-base", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -159,7 +155,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
         error: "Cannot delete this currency — it is still referenced by existing sales or transactions. Archive it instead.",
       });
     }
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

@@ -3,6 +3,7 @@ import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 import { notifyAdmins } from "../utils/notifications.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -19,8 +20,7 @@ router.get("/current", requireAuth, async (req, res) => {
     );
     res.json(rows[0] || null);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -71,8 +71,7 @@ router.get("/expected", requireAuth, async (req, res) => {
     // whole-day total sitting right next to a math result it doesn't add up to.
     res.json({ opening_cash, session_sales, net_movements, expected_cash });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -114,8 +113,7 @@ router.post("/open", requireAuth, async (req, res) => {
 
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -208,8 +206,7 @@ router.post("/close", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -244,8 +241,7 @@ router.post("/cash-in", requireAuth, async (req, res) => {
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_IN', entityType: 'cash_movement', entityId: rows[0].id, details: { amount, reason }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -278,8 +274,7 @@ router.post("/cash-out", requireAuth, async (req, res) => {
     await logAudit({ userId: user_id, userEmail: req.user.email, action: 'CASH_OUT', entityType: 'cash_movement', entityId: rows[0].id, details: { amount, reason }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -316,8 +311,7 @@ router.post("/sessions/:id/resolve-difference", requireAuth, async (req, res) =>
 
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -355,8 +349,7 @@ router.get("/sessions", requireAuth, async (req, res) => {
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -382,8 +375,7 @@ router.get("/sessions/:id/movements", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

@@ -2,6 +2,7 @@ import express from "express";
 import pool, { getSchemaClient } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { roundToCents } from "../utils/money.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -43,8 +44,7 @@ router.get("/", requireAuth, async (req, res) => {
     
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -64,8 +64,7 @@ router.get("/supplier/:supplierId", requireAuth, async (req, res) => {
     
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -92,8 +91,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -174,8 +172,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(paymentResult.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -229,8 +226,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }

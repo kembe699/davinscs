@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -41,8 +42,7 @@ router.get("/", requireAuth, async (req, res) => {
 
     res.json({ total, page: parseInt(page), limit: parseInt(limit), rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -54,7 +54,7 @@ router.get("/actions", requireAuth, async (req, res) => {
     );
     res.json(rows.map(r => r.action));
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -66,7 +66,7 @@ router.get("/users", requireAuth, async (req, res) => {
     );
     res.json(rows.map(r => r.user_email));
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

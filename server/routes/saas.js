@@ -9,6 +9,7 @@ import { tenantStorage } from '../tenantStorage.js';
 import { clearTenantCache, requireAuthAllowSuspended } from '../middleware/auth.js';
 import { sendWelcomeEmail, sendInvoiceCreatedEmail, sendInvoicePaidEmail, sendExpiryReminderEmail, sendAccountExpiredEmail, sendContactEnquiryEmail, sendPasswordResetEmail } from '../utils/email.js';
 import { submitOrder, getTransactionStatus, registerIPN } from '../pesapal.js';
+import { sendError } from "../utils/errorResponse.js";
 
 // Generate a human-readable, unique customer code  e.g. FP-A3BX-9K2M
 function generateCustomerCode() {
@@ -117,7 +118,7 @@ router.post('/register', async (req, res) => {
     res.status(201).json({ message: 'Instance created successfully', schemaName, customerCode, tenantSlug });
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ error: 'Failed to provision instance' });
+    return sendError(res, err, 'Failed to provision instance');
   }
 });
 
@@ -146,7 +147,7 @@ router.post('/offline/sync-tenant', async (req, res) => {
     res.json({ tenant, users });
   } catch (err) {
     console.error('Offline sync-tenant error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -268,7 +269,7 @@ router.post('/lookup', async (req, res) => {
     });
   } catch (err) {
     console.error('Portal lookup error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -303,7 +304,7 @@ router.get('/tenant/:slug', async (req, res) => {
     });
   } catch (err) {
     console.error('Tenant slug lookup error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -330,7 +331,7 @@ router.post('/reprovision', async (req, res) => {
     res.json({ ok: true, message: `Schema ${tenant.schema_name} re-provisioned successfully` });
   } catch (err) {
     console.error('Reprovision error:', err);
-    res.status(500).json({ error: 'Reprovision failed', detail: err.message });
+    return sendError(res, err, 'Reprovision failed');
   }
 });
 
@@ -359,7 +360,7 @@ router.post('/auth/login', async (req, res) => {
     res.json({ token, admin: { id: admin.id, email: admin.email, name: admin.name } });
   } catch (err) {
     console.error('SaaS Login Error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -393,7 +394,7 @@ router.get('/tenants', requireSaasAdmin, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('List tenants error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -406,7 +407,7 @@ router.get('/pricing', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Get pricing error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -425,7 +426,7 @@ router.post('/pricing', requireSaasAdmin, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error('Create pricing plan error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -444,7 +445,7 @@ router.put('/pricing/:id', requireSaasAdmin, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     console.error('Update pricing error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -458,7 +459,7 @@ router.delete('/pricing/:id', requireSaasAdmin, async (req, res) => {
     res.json({ ok: true, deleted: rows[0].id });
   } catch (err) {
     console.error('Delete pricing plan error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -475,7 +476,7 @@ router.put('/pricing-reorder', requireSaasAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Reorder pricing error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -499,7 +500,7 @@ router.get('/tenants/stats', requireSaasAdmin, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Tenant stats error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -519,7 +520,7 @@ router.put('/tenants/:id/status', requireSaasAdmin, async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Update tenant status error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -547,7 +548,7 @@ router.delete('/tenants/:id', requireSaasAdmin, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Delete tenant error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -573,7 +574,7 @@ router.get('/billing', requireSaasAdmin, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('List billing error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -609,7 +610,7 @@ router.post('/billing', requireSaasAdmin, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error('Create invoice error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -679,7 +680,7 @@ router.put('/billing/:id/pay', requireSaasAdmin, async (req, res) => {
     res.json(inv);
   } catch (err) {
     console.error('Pay invoice error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -690,7 +691,7 @@ router.get('/admins', requireSaasAdmin, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Get admins error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -708,7 +709,7 @@ router.post('/admins', requireSaasAdmin, async (req, res) => {
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Email already exists' });
     console.error('Create admin error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -722,7 +723,7 @@ router.delete('/admins/:id', requireSaasAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Delete admin error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -742,7 +743,7 @@ router.get('/tenants/:id/details', requireSaasAdmin, async (req, res) => {
     res.json({ users: usersRes.rows, history: historyRes.rows });
   } catch (err) {
     console.error('Tenant details error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -763,7 +764,7 @@ router.get('/tenants/db-history-global', requireSaasAdmin, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Global DB history error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -829,7 +830,7 @@ router.post('/customer/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Customer login error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -863,7 +864,7 @@ router.post('/customer/forgot-password', async (req, res) => {
     res.json({ message: 'If that email exists, a reset link has been sent.' });
   } catch (err) {
     console.error('Customer forgot-password error:', err);
-    res.status(500).json({ error: 'Failed to send reset email' });
+    return sendError(res, err, 'Failed to send reset email');
   }
 });
 
@@ -887,7 +888,7 @@ router.post('/customer/reset-password', async (req, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     console.error('Customer reset-password error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -905,7 +906,7 @@ router.get('/customer/db-history', requireCustomer, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('DB history error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -947,7 +948,7 @@ router.get('/customer/me', requireCustomer, async (req, res) => {
     });
   } catch (err) {
     console.error('Customer me error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -976,7 +977,7 @@ router.post('/customer/cancel-invoice', requireCustomer, async (req, res) => {
     res.json(cancelled);
   } catch (err) {
     console.error('Cancel invoice error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1021,7 +1022,7 @@ router.post('/customer/pay-invoice', requireCustomer, async (req, res) => {
     res.json({ redirect_url: orderData.redirect_url });
   } catch (err) {
     console.error('Pay invoice error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1103,7 +1104,7 @@ router.post('/customer/pay-subscribe', requireCustomer, async (req, res) => {
     res.json({ redirect_url: orderData.redirect_url });
   } catch (err) {
     console.error('Pay subscribe error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1188,7 +1189,7 @@ router.post('/staff/pay-subscribe', requireAuthAllowSuspended, async (req, res) 
     res.json({ redirect_url: orderData.redirect_url, order_tracking_id: orderData.order_tracking_id });
   } catch (err) {
     console.error('Staff pay-subscribe error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1209,7 +1210,7 @@ router.get('/staff/invoices', requireAuthAllowSuspended, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Staff invoices error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1253,7 +1254,7 @@ router.post('/staff/pay-invoice', requireAuthAllowSuspended, async (req, res) =>
     res.json({ redirect_url: orderData.redirect_url, order_tracking_id: orderData.order_tracking_id });
   } catch (err) {
     console.error('Staff pay-invoice error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1271,7 +1272,7 @@ router.post('/staff/cancel-invoice', requireAuthAllowSuspended, async (req, res)
     res.json(cancelled);
   } catch (err) {
     console.error('Staff cancel invoice error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1309,7 +1310,7 @@ router.get('/pesapal/callback', async (req, res) => {
     return res.json({ status: 'pending' });
   } catch (err) {
     console.error('PesaPal callback error:', err);
-    res.status(500).json({ error: 'Server error' });
+    return sendError(res, err);
   }
 });
 
@@ -1338,7 +1339,7 @@ const handleIpn = async (req, res) => {
     res.status(200).json({ status: 200, message: 'IPN processed successfully' });
   } catch (err) {
     console.error('IPN processing error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return sendError(res, err);
   }
 };
 
@@ -1358,7 +1359,7 @@ router.post('/contact', async (req, res) => {
     res.json({ ok: true, message: 'Your message has been sent. We\'ll be in touch soon!' });
   } catch (err) {
     console.error('Contact email error:', err);
-    res.status(500).json({ error: 'Failed to send email. Please try again.' });
+    return sendError(res, err, 'Failed to send email. Please try again.');
   }
 });
 

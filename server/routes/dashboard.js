@@ -1,6 +1,7 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = Router();
 
@@ -35,8 +36,7 @@ router.get("/monthly-sales", requireAuth, async (req, res) => {
     
     res.json(monthlyData);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -68,8 +68,7 @@ router.get("/top-products", requireAuth, async (req, res) => {
       total: parseFloat(r.total)
     })));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -106,8 +105,7 @@ router.get("/sales-summary", requireAuth, async (req, res) => {
       topMonthAmount: monthRows[0] ? parseFloat(monthRows[0].amount) : 0
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -137,8 +135,7 @@ router.get("/hourly-sales", requireAuth, async (req, res) => {
     
     res.json(hourlyData);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

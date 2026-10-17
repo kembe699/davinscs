@@ -3,6 +3,7 @@ import pool, { getSchemaClient } from "../db.js";
 import { tenantStorage } from "../tenantStorage.js";
 import { notifyAdmins } from "../utils/notifications.js";
 import { roundToCents } from "../utils/money.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -66,7 +67,7 @@ router.get("/:tenantSlug", async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error("Public menu error:", err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

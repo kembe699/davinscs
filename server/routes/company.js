@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth, optionalTenantContext } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -46,7 +47,7 @@ router.get("/", optionalTenantContext, async (req, res) => {
     }
   } catch (err) {
     console.error('GET company error:', err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -124,7 +125,7 @@ router.post("/", requireAuth, async (req, res) => {
     }
   } catch (err) {
     console.error('Error saving company settings:', err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    return sendError(res, err);
   }
 });
 

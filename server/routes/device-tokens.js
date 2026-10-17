@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -21,8 +22,7 @@ router.post("/", requireAuth, async (req, res) => {
     );
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -35,8 +35,7 @@ router.delete("/", requireAuth, async (req, res) => {
     await pool.query("DELETE FROM device_tokens WHERE token = $1 AND user_id = $2", [token, req.user.id]);
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

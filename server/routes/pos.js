@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
 import { notifyAdmins } from "../utils/notifications.js";
 import { roundToCents } from "../utils/money.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ router.get("/verify/:sale_number", async (req, res) => {
     });
   } catch (error) {
     console.error("Error verifying sale:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return sendError(res, error);
   }
 });
 
@@ -485,7 +486,7 @@ router.post("/sales", requireAuth, async (req, res) => {
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("SALE_ERROR_DUMP:", err.stack || err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -516,8 +517,7 @@ router.get("/sales/held", requireAuth, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -692,8 +692,7 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     res.json(completeSale.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -746,8 +745,7 @@ router.put("/sales/:id/cancel-hold", requireAuth, async (req, res) => {
     res.json({ message: "Held sale cancelled" });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -823,8 +821,7 @@ router.get("/sales", requireAuth, async (req, res) => {
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -864,8 +861,7 @@ router.get("/sales/:id", requireAuth, async (req, res) => {
     
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -969,8 +965,7 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
     res.json({ message: "Sale voided successfully" });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -1072,8 +1067,7 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
     res.json({ message: "Sale permanently deleted" });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: err.message || "Server error" });
+    return sendError(res, err);
   } finally {
     client.release();
   }
@@ -1289,7 +1283,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     await client.query("ROLLBACK");
     require('fs').appendFileSync('/tmp/pos_error.log', new Date().toISOString() + ' ERROR: ' + (error.stack || error) + '\n');
     console.error("Sale error:", error);
-    res.status(500).json({ error: "Failed to process sale" });
+    return sendError(res, error, "Failed to process sale");
   } finally {
     client.release();
   }

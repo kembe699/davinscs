@@ -4,6 +4,7 @@ import crypto from "crypto";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/audit.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -17,8 +18,7 @@ router.get("/", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -72,8 +72,7 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -108,8 +107,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     res.json(rows[0]);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ error: "Email already exists" });
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -134,8 +132,7 @@ router.put("/:id/role", requireAuth, async (req, res) => {
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_ROLE_CHANGED', entityType: 'user', entityId: id, details: { role_id: role_id || null }, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -158,8 +155,7 @@ router.put("/:id/status", requireAuth, async (req, res) => {
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: is_active ? 'USER_REACTIVATED' : 'USER_SUSPENDED', entityType: 'user', entityId: id, details: null, ip: req.ip });
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -178,8 +174,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await logAudit({ userId: req.user.id, userEmail: req.user.email, action: 'USER_DELETED', entityType: 'user', entityId: id, details: null, ip: req.ip });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 

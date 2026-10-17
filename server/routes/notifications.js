@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
@@ -22,8 +23,7 @@ router.get("/", requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -35,8 +35,7 @@ router.put("/:id/read", requireAuth, async (req, res) => {
     );
     res.json(rows[0] || { success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
@@ -45,8 +44,7 @@ router.put("/read-all", requireAuth, async (req, res) => {
     await pool.query("UPDATE notifications SET read_at = NOW() WHERE read_at IS NULL");
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    return sendError(res, err);
   }
 });
 
