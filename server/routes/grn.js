@@ -152,27 +152,43 @@ router.post("/", requireAuth, async (req, res) => {
       if (!product_id && item_name) {
         const slug = item_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-        let defaultCategory = (await client.query(
-          `SELECT slug FROM categories ORDER BY sort_order ASC, name ASC LIMIT 1`
-        )).rows[0]?.slug;
-        if (!defaultCategory) {
-          defaultCategory = 'uncategorized';
-          await client.query(
-            `INSERT INTO categories (slug, name, sort_order, image_url) VALUES ($1,$2,$3,$4) ON CONFLICT (slug) DO NOTHING`,
-            [defaultCategory, 'Uncategorized', 999, '']
-          );
+        // The PO item was added by typing a name rather than picking from
+        // the catalog, so it may well match a product that already
+        // exists — e.g. "Lemon" was typed again even though a Lemon
+        // product is already in Products. Reuse it instead of trying to
+        // insert a second row with the same slug, which trips
+        // products_slug_key and fails the whole GRN with no indication
+        // of why.
+        const existingProduct = (await client.query(
+          `SELECT id FROM products WHERE slug = $1`,
+          [slug]
+        )).rows[0];
+
+        if (existingProduct) {
+          finalProductId = existingProduct.id;
+        } else {
+          let defaultCategory = (await client.query(
+            `SELECT slug FROM categories ORDER BY sort_order ASC, name ASC LIMIT 1`
+          )).rows[0]?.slug;
+          if (!defaultCategory) {
+            defaultCategory = 'uncategorized';
+            await client.query(
+              `INSERT INTO categories (slug, name, sort_order, image_url) VALUES ($1,$2,$3,$4) ON CONFLICT (slug) DO NOTHING`,
+              [defaultCategory, 'Uncategorized', 999, '']
+            );
+          }
+
+          const productResult = await client.query(`
+            INSERT INTO products
+            (slug, name, brand, price, category, in_stock, quantity_on_hand, product_type, uom, storage_location_id, show_in_pos)
+            VALUES ($1, $2, $3, $4, $5, true, 0, 'product', $6, $7, $8)
+            RETURNING id
+          `, [slug, item_name, '', unit_price, defaultCategory, uom || 'pcs', storage_location_id, showInPos]);
+
+          finalProductId = productResult.rows[0].id;
         }
 
-        const productResult = await client.query(`
-          INSERT INTO products
-          (slug, name, brand, price, category, in_stock, quantity_on_hand, product_type, uom, storage_location_id, show_in_pos)
-          VALUES ($1, $2, $3, $4, $5, true, 0, 'product', $6, $7, $8)
-          RETURNING id
-        `, [slug, item_name, '', unit_price, defaultCategory, uom || 'pcs', storage_location_id, showInPos]);
-
-        finalProductId = productResult.rows[0].id;
-
-        // Update PO item with new product_id
+        // Update PO item with the resolved product_id either way
         await client.query(
           "UPDATE purchase_order_items SET product_id = $1 WHERE id = $2",
           [finalProductId, po_item_id]
