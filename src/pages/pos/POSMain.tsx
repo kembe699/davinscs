@@ -444,26 +444,35 @@ export default function POSMain() {
   };
 
   const addToCart = (product: ApiProduct) => {
-    const existing = cart.find(item => item.product.id === product.id);
-    const currentQtyInCart = existing ? existing.quantity : 0;
+    // Functional update, not `cart.map`/`[...cart, ...]` off the closed-over
+    // `cart` variable — a barcode scanner fires its "Enter" keydown for the
+    // next item well inside one React render cycle of the previous scan's
+    // setCart call. Reading `cart` directly here meant the second scan's
+    // update was computed from the pre-first-scan cart and then clobbered
+    // it when both updates flushed, so only the first scanned item ever
+    // actually landed — every scan after it just cleared the search box.
     const isService = (product as any).product_type === 'service';
     const availableStock = (product.quantity_on_hand ?? 0) - (product.quantity_reserved ?? 0);
-
-    if (!isService && currentQtyInCart >= availableStock) {
-      toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
-      return;
-    }
-
     const effectivePrice = getEffectivePrice(product);
-    if (existing) {
-      setCart(cart.map(item =>
-        item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1, unit_price: effectivePrice }
-          : item
-      ));
-    } else {
-      setCart([...cart, { product, quantity: 1, discount: 0, unit_price: effectivePrice }]);
-    }
+
+    setCart(prevCart => {
+      const existing = prevCart.find(item => item.product.id === product.id);
+      const currentQtyInCart = existing ? existing.quantity : 0;
+
+      if (!isService && currentQtyInCart >= availableStock) {
+        toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
+        return prevCart;
+      }
+
+      if (existing) {
+        return prevCart.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1, unit_price: effectivePrice }
+            : item
+        );
+      }
+      return [...prevCart, { product, quantity: 1, discount: 0, unit_price: effectivePrice }];
+    });
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
@@ -472,18 +481,19 @@ export default function POSMain() {
       return;
     }
 
-    const cartItem = cart.find(item => item.product.id === productId);
-    if (cartItem) {
-      const availableStock = (cartItem.product.quantity_on_hand ?? 0) - (cartItem.product.quantity_reserved ?? 0);
-      if (quantity > availableStock) {
-        toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
-        return;
+    setCart(prevCart => {
+      const cartItem = prevCart.find(item => item.product.id === productId);
+      if (cartItem) {
+        const availableStock = (cartItem.product.quantity_on_hand ?? 0) - (cartItem.product.quantity_reserved ?? 0);
+        if (quantity > availableStock) {
+          toast(`Only ${availableStock} units available in stock`, "warning", "Stock Limit");
+          return prevCart;
+        }
       }
-    }
-
-    setCart(cart.map(item =>
-      item.product.id === productId ? { ...item, quantity } : item
-    ));
+      return prevCart.map(item =>
+        item.product.id === productId ? { ...item, quantity } : item
+      );
+    });
   };
 
   const startEditingQty = (productId: number, currentQty: number) => {
@@ -510,7 +520,7 @@ export default function POSMain() {
   };
 
   const removeFromCart = (productId: number) => {
-    setCart(cart.filter(item => item.product.id !== productId));
+    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
   };
 
   const startEditingPrice = (productId: number, currentPrice: number) => {
