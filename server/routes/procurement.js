@@ -122,9 +122,9 @@ router.get("/purchase-orders/:id", requireAuth, async (req, res) => {
 
 router.post("/purchase-orders", requireAuth, async (req, res) => {
   const { supplier_id, order_date, items, notes } = req.body;
-  const currency_id     = req.body.currency_id     || null;
-  const currency_code   = req.body.currency_code   || 'UGX';
-  const currency_symbol = req.body.currency_symbol || 'UGX';
+  let currency_id     = req.body.currency_id     || null;
+  let currency_code   = req.body.currency_code   || null;
+  let currency_symbol = req.body.currency_symbol || null;
 
   if (!supplier_id || !order_date || !items || items.length === 0) {
     return res.status(400).json({ error: "Supplier, date, and items required" });
@@ -147,31 +147,45 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
     const poNumber = `PO-${Date.now()}`;
     const totalAmount = parsedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
+    // Resolve this tenant's real base currency once — used both as the
+    // fallback when the request didn't include a currency (never a hardcoded
+    // guess like 'UGX', which is how a PO for a South-Sudan-based tenant on
+    // SSP previously ended up permanently mislabeled UGX: the old fallback
+    // had nothing to do with this tenant's actual currency) and as the "from"
+    // side of the exchange-rate lookup below.
+    const baseCurrResult = await client.query(
+      "SELECT id, code, symbol FROM currencies WHERE is_base = TRUE LIMIT 1"
+    );
+    const baseCurrency = baseCurrResult.rows[0] || null;
+
+    if (!currency_id) {
+      if (!baseCurrency) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "No currency was specified and this store has no base currency configured yet — set one up under Company settings first." });
+      }
+      currency_id = baseCurrency.id;
+      currency_code = baseCurrency.code;
+      currency_symbol = baseCurrency.symbol;
+    }
+
     // Snapshot the currency's rate now — payments against this PO's bill convert
     // using this locked-in rate, not whatever the rate happens to be by the
     // time payment is actually made. Pulled from exchange_rates (base -> PO
     // currency), the same table POS sales use — not the stale, unmanaged
     // currencies.exchange_rate column, which sits at its 1.0 default forever.
     let exchangeRate = 1;
-    if (currency_id) {
-      const baseCurrResult = await client.query(
-        "SELECT id FROM currencies WHERE is_base = TRUE LIMIT 1"
+    if (baseCurrency && currency_id !== baseCurrency.id) {
+      const rateResult = await client.query(
+        `SELECT rate FROM exchange_rates
+         WHERE from_currency_id = $1 AND to_currency_id = $2
+           AND is_active = TRUE
+           AND effective_date <= $3
+           AND (expiry_date IS NULL OR expiry_date >= $3)
+         ORDER BY effective_date DESC LIMIT 1`,
+        [baseCurrency.id, currency_id, order_date]
       );
-      const baseCurrId = baseCurrResult.rows[0]?.id || null;
-
-      if (baseCurrId && currency_id !== baseCurrId) {
-        const rateResult = await client.query(
-          `SELECT rate FROM exchange_rates
-           WHERE from_currency_id = $1 AND to_currency_id = $2
-             AND is_active = TRUE
-             AND effective_date <= $3
-             AND (expiry_date IS NULL OR expiry_date >= $3)
-           ORDER BY effective_date DESC LIMIT 1`,
-          [baseCurrId, currency_id, order_date]
-        );
-        if (rateResult.rows[0]?.rate) {
-          exchangeRate = Number(rateResult.rows[0].rate) || 1;
-        }
+      if (rateResult.rows[0]?.rate) {
+        exchangeRate = Number(rateResult.rows[0].rate) || 1;
       }
     }
 

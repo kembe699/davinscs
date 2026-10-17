@@ -50,13 +50,18 @@ export default function ProcurementEnhanced() {
   
   // PO form
   const [creatingPO, setCreatingPO] = useState(false);
+  // No hardcoded currency fallback here on purpose — a PO created before the
+  // base-currency effect below has resolved (or before this tenant has any
+  // currency configured at all) must never silently go out as some other
+  // tenant's currency. currency_id stays 0 (falsy) until the real base
+  // currency loads, and handleCreatePO refuses to submit while it's still 0.
   const [poForm, setPoForm] = useState({
     supplier_id: 0,
     order_date: new Date().toISOString().split('T')[0],
     notes: "",
     currency_id: 0 as number | 0,
-    currency_code: "UGX",
-    currency_symbol: "UGX",
+    currency_code: "",
+    currency_symbol: "",
     items: [] as { product_id?: number; item_name?: string; quantity: number; unit_price: number; uom?: string }[]
   });
 
@@ -471,6 +476,14 @@ export default function ProcurementEnhanced() {
       setError("Supplier and at least one item required");
       return;
     }
+    // currency_id stays 0 only when no currency has resolved yet (base
+    // currency still loading, or none configured for this tenant) — refuse
+    // rather than let the PO go out in whatever the form's last currency
+    // happened to be, which is exactly how a PO ends up silently mislabeled.
+    if (!poForm.currency_id || !poForm.currency_code) {
+      setError("No currency is set for this purchase order — reopen the form or set up a base currency under Company settings first.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -478,10 +491,14 @@ export default function ProcurementEnhanced() {
       toast("Purchase Order created successfully.", "success", "Created");
       await loadPOs();
       setCreatingPO(false);
+      const base = currencies.find(c => c.is_base) || currencies[0];
       setPoForm({
         supplier_id: 0,
         order_date: new Date().toISOString().split('T')[0],
         notes: "",
+        currency_id: base?.id || 0,
+        currency_code: base?.code || "",
+        currency_symbol: base?.symbol || "",
         items: []
       });
     } catch (err) {
@@ -1418,7 +1435,8 @@ export default function ProcurementEnhanced() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreatePO}
-                    disabled={saving}
+                    disabled={saving || !poForm.currency_id}
+                    title={!poForm.currency_id ? "Waiting for a base currency to load..." : undefined}
                     className="px-4 py-2 bg-primary text-background text-xs font-bold uppercase tracking-widest hover:bg-primary/90 disabled:opacity-50"
                   >
                     {saving ? "Creating..." : "Create PO"}
