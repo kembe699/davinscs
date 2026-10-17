@@ -338,7 +338,23 @@ export default function ProductForm() {
                         type="text" value={(form as any).barcode}
                         onChange={(e) => set("barcode", e.target.value)}
                         onBlur={(e) => set("barcode", formatBarcodes(parseBarcodes(e.target.value)))}
-                        placeholder="Optional — separate multiple codes with a comma, e.g. 123456789, 987654321"
+                        onKeyDown={(e) => {
+                          // A barcode scanner ends each code with an Enter (or
+                          // Tab) keystroke, same as the POS search box — but
+                          // this field never loses focus between scans, so
+                          // without this the next code's characters just land
+                          // right after the previous one with nothing between
+                          // them, e.g. "123456789987654321". On Enter, close
+                          // off whatever's been typed as a confirmed code and
+                          // leave a ", " at the end so the next scan's
+                          // characters append after it instead of into it.
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const codes = parseBarcodes((e.target as HTMLInputElement).value);
+                            if (codes.length > 0) set("barcode", formatBarcodes(codes) + ", ");
+                          }
+                        }}
+                        placeholder="Optional — scan or type one code, press Enter, then scan the next"
                         className="field-input flex-1"
                       />
                       <button

@@ -94,6 +94,11 @@ export default function POSMain() {
       if (exactMatch) {
         addToCart(exactMatch);
         setSearchQuery("");
+      } else {
+        // Previously silent — a scanned code that matches nothing left the
+        // text sitting in the search box with no sign anything was wrong,
+        // which reads identically to "the scan didn't register at all."
+        toast(`No product found for "${searchQuery.trim()}" — check it has this barcode saved under Products.`, "warning", "Not Found");
       }
     }
   };
