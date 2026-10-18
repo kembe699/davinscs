@@ -392,15 +392,28 @@ router.get("/inventory/stock-movement", requireAuth, async (req, res) => {
 router.get("/inventory/expiring", requireAuth, async (req, res) => {
   try {
     try {
+      // One row per product normally, but a product tracked by batch
+      // (product_batches has rows for it) contributes one row per batch
+      // instead, using that batch's own quantity/expiry/barcode rather
+      // than the product's — the same biscuit can have one batch expiring
+      // next week and another fine for months, which a single
+      // products.expiry_date could never represent.
       const { rows } = await pool.query(
-        `SELECT 
-          id,
-          name,
-          barcode,
-          quantity_on_hand,
-          expiry_date,
-          (expiry_date - CURRENT_DATE) as days_until_expiry
-         FROM products
+        `SELECT id, name, barcode, batch_number, quantity_on_hand, expiry_date,
+                (expiry_date - CURRENT_DATE) as days_until_expiry
+         FROM (
+           SELECT p.id, p.name, p.barcode, NULL::varchar as batch_number,
+                  p.quantity_on_hand, p.expiry_date
+           FROM products p
+           WHERE NOT EXISTS (SELECT 1 FROM product_batches pb WHERE pb.product_id = p.id)
+
+           UNION ALL
+
+           SELECT p.id, p.name, pb.barcode, pb.batch_number,
+                  pb.quantity_on_hand, pb.expiry_date
+           FROM product_batches pb
+           JOIN products p ON p.id = pb.product_id
+         ) combined
          WHERE expiry_date IS NOT NULL
            AND expiry_date > CURRENT_DATE
            AND expiry_date <= CURRENT_DATE + INTERVAL '30 days'
@@ -423,14 +436,21 @@ router.get("/inventory/expired", requireAuth, async (req, res) => {
   try {
     try {
       const { rows } = await pool.query(
-        `SELECT 
-          id,
-          name,
-          barcode,
-          quantity_on_hand,
-          expiry_date,
-          (CURRENT_DATE - expiry_date) as days_expired
-         FROM products
+        `SELECT id, name, barcode, batch_number, quantity_on_hand, expiry_date,
+                (CURRENT_DATE - expiry_date) as days_expired
+         FROM (
+           SELECT p.id, p.name, p.barcode, NULL::varchar as batch_number,
+                  p.quantity_on_hand, p.expiry_date
+           FROM products p
+           WHERE NOT EXISTS (SELECT 1 FROM product_batches pb WHERE pb.product_id = p.id)
+
+           UNION ALL
+
+           SELECT p.id, p.name, pb.barcode, pb.batch_number,
+                  pb.quantity_on_hand, pb.expiry_date
+           FROM product_batches pb
+           JOIN products p ON p.id = pb.product_id
+         ) combined
          WHERE expiry_date IS NOT NULL
            AND expiry_date < CURRENT_DATE
            AND quantity_on_hand > 0

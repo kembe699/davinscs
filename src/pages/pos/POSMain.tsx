@@ -27,6 +27,11 @@ export default function POSMain() {
   
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ApiProduct[]>([]);
+  // Batches can carry their own barcode (e.g. a specific lot's printed
+  // label) distinct from the product's general one — this is every such
+  // barcode across every product, so scanning one still finds the right
+  // product even though product.barcode never matches it.
+  const [batchBarcodes, setBatchBarcodes] = useState<{ id: number; product_id: number; batch_number: string; barcode: string }[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<Array<{ product: ApiProduct; quantity: number; discount: number; unit_price: number }>>([]);
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
@@ -90,7 +95,9 @@ export default function POSMain() {
       // A product's barcode field can hold several comma-separated codes —
       // matchesBarcode checks the scanned text against each one, not just
       // the field as a single whole string.
-      const exactMatch = products.find(p => matchesBarcode(p.barcode, searchQuery) || p.sku?.toLowerCase() === q);
+      const batchMatch = batchBarcodes.find(b => matchesBarcode(b.barcode, searchQuery));
+      const exactMatch = products.find(p => matchesBarcode(p.barcode, searchQuery) || p.sku?.toLowerCase() === q)
+        || (batchMatch ? products.find(p => p.id === batchMatch.product_id) : undefined);
       if (exactMatch) {
         addToCart(exactMatch);
         setSearchQuery("");
@@ -303,23 +310,27 @@ export default function POSMain() {
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q) return;
-    const exactMatch = products.find(p => matchesBarcode(p.barcode, q));
+    const batchMatch = batchBarcodes.find(b => matchesBarcode(b.barcode, q));
+    const exactMatch = products.find(p => matchesBarcode(p.barcode, q))
+      || (batchMatch ? products.find(p => p.id === batchMatch.product_id) : undefined);
     if (exactMatch) {
       addToCart(exactMatch);
       setSearchQuery("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, products]);
+  }, [searchQuery, products, batchBarcodes]);
 
   const loadData = async () => {
     try {
-      const [productsData, paymentTypesData, taxData, catsData] = await Promise.all([
+      const [productsData, paymentTypesData, taxData, catsData, batchBarcodesData] = await Promise.all([
         api.products.list(undefined, undefined, true),
         api.paymentTypes.active(),
         api.taxRates.default(),
         api.categories.list(),
+        api.inventory.batches.barcodes().catch(() => []),
       ]);
       setProducts(productsData);
+      setBatchBarcodes(batchBarcodesData);
       setFilteredProducts(productsData);
       setPaymentTypes(paymentTypesData);
       setDefaultTax(taxData);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, ApiProduct, ApiCategory, ApiStorageLocation } from "@/lib/api";
+import { api, ApiProduct, ApiCategory, ApiStorageLocation, ApiProductBatch } from "@/lib/api";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
 import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
@@ -60,6 +60,76 @@ export default function ProductForm() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
+
+  // Batch/lot tracking — opt-in, only meaningful once a product actually
+  // exists (needs a real product_id), so this only loads in edit mode.
+  const [batches, setBatches] = useState<ApiProductBatch[]>([]);
+  const [newBatch, setNewBatch] = useState({ batch_number: "", quantity: "", expiry_date: "", barcode: "" });
+  const [savingBatch, setSavingBatch] = useState(false);
+  const [adjustingBatchId, setAdjustingBatchId] = useState<number | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState("");
+
+  const loadBatches = () => {
+    if (!isEdit) return;
+    api.inventory.batches.list(Number(id)).then(setBatches).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadBatches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit]);
+
+  const addBatch = async () => {
+    const quantity = Number(newBatch.quantity);
+    if (!newBatch.batch_number.trim() || !quantity || quantity <= 0) {
+      toast("Batch number and a quantity greater than zero are required.", "error", "Missing info");
+      return;
+    }
+    setSavingBatch(true);
+    try {
+      await api.inventory.batches.create({
+        product_id: Number(id),
+        batch_number: newBatch.batch_number.trim(),
+        quantity,
+        expiry_date: newBatch.expiry_date || undefined,
+        barcode: newBatch.barcode.trim() || undefined,
+      });
+      setNewBatch({ batch_number: "", quantity: "", expiry_date: "", barcode: "" });
+      loadBatches();
+      toast("Batch added.", "success", "Saved");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not add batch", "error", "Error");
+    } finally {
+      setSavingBatch(false);
+    }
+  };
+
+  const submitAdjust = async (batchId: number) => {
+    const delta = Number(adjustAmount);
+    if (!delta) return;
+    try {
+      await api.inventory.batches.adjust(batchId, delta);
+      setAdjustingBatchId(null);
+      setAdjustAmount("");
+      loadBatches();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not adjust batch", "error", "Error");
+    }
+  };
+
+  const deleteBatch = async (batch: ApiProductBatch) => {
+    if (batch.quantity_on_hand > 0) {
+      toast("This batch still has stock — adjust it to zero first.", "error", "Not empty");
+      return;
+    }
+    if (!window.confirm(`Remove batch ${batch.batch_number}?`)) return;
+    try {
+      await api.inventory.batches.delete(batch.id);
+      loadBatches();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not remove batch", "error", "Error");
+    }
+  };
 
   useEffect(() => {
     api.categories.list().then(setCategories).catch(() => {});
@@ -493,6 +563,112 @@ export default function ProductForm() {
                       </button>
                     </div>
                   </div>
+                </section>
+              )}
+
+              {/* Batches — opt-in lot tracking, only once the product exists */}
+              {(form as any).product_type !== 'service' && isEdit && (
+                <section className="border border-border-subtle p-6 bg-chassis space-y-5">
+                  <div>
+                    <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Batches</h2>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Optional — track this product in separate batches/lots, each with its own quantity,
+                      expiry date, and (if printed) its own barcode. Leave empty to keep a single stock total
+                      with no batch breakdown.
+                    </p>
+                  </div>
+
+                  {batches.length > 0 && (
+                    <div className="space-y-2">
+                      {batches.map((b) => (
+                        <div key={b.id} className="flex flex-wrap items-center gap-3 border border-border-subtle px-3 py-2 text-sm">
+                          <span className="font-mono-tech text-xs text-foreground">{b.batch_number}</span>
+                          <span className="text-muted-foreground">Qty: {b.quantity_on_hand}</span>
+                          {b.expiry_date && (
+                            <span className="text-muted-foreground">
+                              Expires {new Date(b.expiry_date).toLocaleDateString()}
+                            </span>
+                          )}
+                          {b.barcode && <span className="text-muted-foreground font-mono-tech text-xs">{b.barcode}</span>}
+                          <div className="ml-auto flex items-center gap-2">
+                            {adjustingBatchId === b.id ? (
+                              <>
+                                <input
+                                  type="number"
+                                  autoFocus
+                                  value={adjustAmount}
+                                  onChange={(e) => setAdjustAmount(e.target.value)}
+                                  placeholder="+/- qty"
+                                  className="field-input w-24 py-1"
+                                />
+                                <button type="button" onClick={() => submitAdjust(b.id)} className="text-primary text-xs font-mono-tech uppercase">
+                                  Apply
+                                </button>
+                                <button type="button" onClick={() => { setAdjustingBatchId(null); setAdjustAmount(""); }} className="text-muted-foreground text-xs">
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button type="button" onClick={() => setAdjustingBatchId(b.id)} className="text-muted-foreground hover:text-foreground text-xs font-mono-tech uppercase tracking-widest">
+                                  Adjust
+                                </button>
+                                <button type="button" onClick={() => deleteBatch(b)} className="text-muted-foreground hover:text-red-400">
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                    <div>
+                      <label className="field-label">Batch number</label>
+                      <input
+                        type="text" value={newBatch.batch_number}
+                        onChange={(e) => setNewBatch((v) => ({ ...v, batch_number: e.target.value }))}
+                        placeholder="e.g. B2026-10"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">Quantity</label>
+                      <input
+                        type="number" min={1} value={newBatch.quantity}
+                        onChange={(e) => setNewBatch((v) => ({ ...v, quantity: e.target.value }))}
+                        placeholder="0"
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">Expiry date</label>
+                      <input
+                        type="date" value={newBatch.expiry_date}
+                        onChange={(e) => setNewBatch((v) => ({ ...v, expiry_date: e.target.value }))}
+                        className="field-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="field-label">Barcode (optional)</label>
+                      <input
+                        type="text" value={newBatch.barcode}
+                        onChange={(e) => setNewBatch((v) => ({ ...v, barcode: e.target.value }))}
+                        placeholder="Scan or type"
+                        className="field-input"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addBatch}
+                    disabled={savingBatch}
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-mono-tech uppercase tracking-widest disabled:opacity-50"
+                  >
+                    <Plus size={12} /> {savingBatch ? "Adding…" : "Add Batch"}
+                  </button>
                 </section>
               )}
 

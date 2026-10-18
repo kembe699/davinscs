@@ -277,7 +277,38 @@ export async function migrateTenant(schemaName = "public") {
     -- product itself (last-received-location wins), but kept here too as a
     -- per-receipt record.
     ALTER TABLE grn_items ADD COLUMN IF NOT EXISTS storage_location_id INTEGER REFERENCES storage_locations(id);
-    
+    -- What was entered on this specific receipt line, if the item was
+    -- received as a tracked batch — a record of what was keyed in at
+    -- receiving time, independent of product_batches' current live state.
+    ALTER TABLE grn_items ADD COLUMN IF NOT EXISTS batch_number VARCHAR(100);
+    ALTER TABLE grn_items ADD COLUMN IF NOT EXISTS expiry_date DATE;
+
+    -- Batch/lot tracking is opt-in per product: a product with no rows here
+    -- behaves exactly as before (a single quantity_on_hand with no lot
+    -- breakdown). products.quantity_on_hand remains the authoritative total
+    -- stock figure every existing query already reads — every batch mutation
+    -- keeps it in sync as a rollup, rather than replacing it, so nothing
+    -- that already reads quantity_on_hand (POS, reports, valuation, low
+    -- stock, manual adjust) needs to change.
+    CREATE TABLE IF NOT EXISTS product_batches (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      batch_number VARCHAR(100) NOT NULL,
+      barcode VARCHAR(255) DEFAULT '',
+      quantity_on_hand INTEGER NOT NULL DEFAULT 0,
+      expiry_date DATE,
+      storage_location_id INTEGER REFERENCES storage_locations(id),
+      cost_price NUMERIC(15,2),
+      grn_item_id INTEGER REFERENCES grn_items(id),
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (product_id, batch_number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_product_batches_product ON product_batches(product_id);
+    CREATE INDEX IF NOT EXISTS idx_product_batches_expiry ON product_batches(expiry_date);
+    CREATE INDEX IF NOT EXISTS idx_product_batches_barcode ON product_batches(barcode) WHERE barcode <> '';
+
     CREATE TABLE IF NOT EXISTS supplier_bills (
       id SERIAL PRIMARY KEY,
       bill_number VARCHAR(50) UNIQUE NOT NULL,
@@ -633,7 +664,21 @@ export async function migrateTenant(schemaName = "public") {
       subtotal INTEGER NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
-    
+
+    -- Which batch(es) a sold line actually drew from (FEFO — nearest expiry
+    -- first), so voiding/refunding that line can restore stock to the same
+    -- batch(es) instead of an ambiguous bucket. batch_id is nullable and
+    -- ON DELETE SET NULL since a batch could in principle be removed later
+    -- without destroying the sale's own history.
+    CREATE TABLE IF NOT EXISTS pos_sale_item_batches (
+      id SERIAL PRIMARY KEY,
+      sale_item_id INTEGER NOT NULL REFERENCES pos_sale_items(id) ON DELETE CASCADE,
+      batch_id INTEGER REFERENCES product_batches(id) ON DELETE SET NULL,
+      quantity INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_pos_sale_item_batches_sale_item ON pos_sale_item_batches(sale_item_id);
+
     -- Restaurant tables (only used by Food & Beverage tenants, but harmless
     -- to always have — a table's "current order" is just the held, non-voided
     -- pos_sales row whose table_id points here, so no status column to track.

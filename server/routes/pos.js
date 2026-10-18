@@ -8,6 +8,96 @@ import { sendError } from "../utils/errorResponse.js";
 
 const router = express.Router();
 
+// Consumes `quantity` of a product from its batches, nearest expiry first
+// (FEFO), for products that have any batch rows at all — most products
+// don't, and for those this is a no-op. Returns the breakdown consumed so
+// the caller can record it against the sale item once it has an id, which
+// is what lets a later void/refund give stock back to the right batch(es)
+// instead of an ambiguous bucket. If the batches on hand don't fully cover
+// the quantity (e.g. some stock predates batch tracking), the remainder is
+// just left unattributed — the product's own quantity_on_hand rollup is
+// still correct either way.
+// preferredBatchId: when the cart line was added by scanning a specific
+// batch's own barcode (rather than the product's general barcode), that
+// exact batch is drained first — up to what it actually has — before
+// falling back to FEFO for anything still needed beyond it.
+async function consumeBatchesFEFO(client, productId, quantity, preferredBatchId) {
+  const consumed = [];
+  let remaining = quantity;
+
+  if (preferredBatchId) {
+    const { rows } = await client.query(
+      "SELECT id, quantity_on_hand FROM product_batches WHERE id = $1 AND product_id = $2 AND quantity_on_hand > 0",
+      [preferredBatchId, productId]
+    );
+    if (rows[0]) {
+      const take = Math.min(rows[0].quantity_on_hand, remaining);
+      if (take > 0) {
+        await client.query(
+          "UPDATE product_batches SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
+          [take, rows[0].id]
+        );
+        consumed.push({ batch_id: rows[0].id, quantity: take });
+        remaining -= take;
+      }
+    }
+  }
+
+  if (remaining > 0) {
+    const { rows: batches } = await client.query(
+      `SELECT id, quantity_on_hand FROM product_batches
+       WHERE product_id = $1 AND quantity_on_hand > 0 ${preferredBatchId ? "AND id <> $2" : ""}
+       ORDER BY expiry_date ASC NULLS LAST, created_at ASC`,
+      preferredBatchId ? [productId, preferredBatchId] : [productId]
+    );
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const take = Math.min(batch.quantity_on_hand, remaining);
+      await client.query(
+        "UPDATE product_batches SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
+        [take, batch.id]
+      );
+      consumed.push({ batch_id: batch.id, quantity: take });
+      remaining -= take;
+    }
+  }
+
+  return consumed;
+}
+
+async function recordSaleItemBatches(client, saleItemId, consumed) {
+  for (const c of consumed) {
+    await client.query(
+      "INSERT INTO pos_sale_item_batches (sale_item_id, batch_id, quantity) VALUES ($1, $2, $3)",
+      [saleItemId, c.batch_id, c.quantity]
+    );
+  }
+}
+
+// Gives back up to `quantity` units to whichever batch(es) a sale item's
+// recorded consumption came from, in the same order they were drawn from —
+// used by void/delete/refund. Units beyond what's on record (or for a
+// product never batch-tracked) simply aren't attributed to any batch,
+// matching how they were never subtracted from one either.
+async function restoreToBatches(client, saleItemId, quantity) {
+  const { rows } = await client.query(
+    "SELECT batch_id, quantity FROM pos_sale_item_batches WHERE sale_item_id = $1 ORDER BY id ASC",
+    [saleItemId]
+  );
+  let remaining = quantity;
+  for (const row of rows) {
+    if (remaining <= 0) break;
+    const give = Math.min(row.quantity, remaining);
+    if (row.batch_id) {
+      await client.query(
+        "UPDATE product_batches SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
+        [give, row.batch_id]
+      );
+    }
+    remaining -= give;
+  }
+}
+
 // PUBLIC VERIFY ENDPOINT (No Auth Required)
 router.get("/verify/:sale_number", async (req, res) => {
   let schema = req.headers["x-schema-name"] || req.query.schema;
@@ -224,7 +314,7 @@ router.post("/sales", requireAuth, async (req, res) => {
       subtotal += item_subtotal;
       tax_amount += item_tax;
       
-      processedItems.push({
+      const processedItem = {
         product_id: product.id,
         product_name: product.name,
         quantity: item.quantity,
@@ -233,12 +323,15 @@ router.post("/sales", requireAuth, async (req, res) => {
         tax_amount: item_tax,
         subtotal: item_subtotal,
         cogs: roundToCents((product.cost_price || 0) * item.quantity),
-      });
-      
+        batchConsumption: [],
+      };
+      processedItems.push(processedItem);
+
       if (!isService) {
         if (status === 'held') {
           // Hold — reserve the stock so it can't be sold elsewhere, but don't
-          // deduct it yet. Deduction happens when the hold is confirmed/paid.
+          // deduct it yet (or consume any batch) — that happens when the
+          // hold is confirmed/paid, via PUT /sales/:id/complete.
           await client.query(
             "UPDATE products SET quantity_reserved = quantity_reserved + $1, updated_at = NOW() WHERE id = $2",
             [item.quantity, product.id]
@@ -254,6 +347,7 @@ router.post("/sales", requireAuth, async (req, res) => {
             "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, updated_at = NOW() WHERE id = $2",
             [item.quantity, product.id]
           );
+          processedItem.batchConsumption = await consumeBatchesFEFO(client, product.id, item.quantity, item.batch_id);
 
           // Track low-stock crossings (only the moment it crosses, not every
           // sale after it's already low) to notify admins once, not per-item.
@@ -335,13 +429,14 @@ router.post("/sales", requireAuth, async (req, res) => {
     
     // Create sale items
     for (const item of processedItems) {
-      await client.query(
-        `INSERT INTO pos_sale_items (sale_id, product_id, product_name, quantity, unit_price, 
+      const saleItemResult = await client.query(
+        `INSERT INTO pos_sale_items (sale_id, product_id, product_name, quantity, unit_price,
                                       discount_amount, tax_amount, subtotal)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [sale.id, item.product_id, item.product_name, item.quantity, item.unit_price, 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        [sale.id, item.product_id, item.product_name, item.quantity, item.unit_price,
          item.discount_amount, item.tax_amount, item.subtotal]
       );
+      await recordSaleItemBatches(client, saleItemResult.rows[0].id, item.batchConsumption);
     }
     
     // ── Accounting journal entries ─────────────────────────────────────
@@ -575,6 +670,8 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
           "UPDATE products SET quantity_on_hand = quantity_on_hand - $1, quantity_reserved = quantity_reserved - $1, updated_at = NOW() WHERE id = $2",
           [item.quantity, item.product_id]
         );
+        const consumed = await consumeBatchesFEFO(client, item.product_id, item.quantity);
+        await recordSaleItemBatches(client, item.id, consumed);
         await client.query(
           `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
            VALUES ($1, 'sale', $2, 'pos_sale', $3, $4, 'Held sale completed')`,
@@ -907,7 +1004,8 @@ router.post("/sales/:id/void", requireAuth, async (req, res) => {
           "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
           [item.quantity, item.product_id]
         );
-        
+        await restoreToBatches(client, item.id, item.quantity);
+
         // Record stock movement
         await client.query(
           `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
@@ -1013,6 +1111,7 @@ router.delete("/sales/:id", requireAuth, async (req, res) => {
             "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
             [item.quantity, item.product_id]
           );
+          await restoreToBatches(client, item.id, item.quantity);
         }
       }
       if (sale.sale_type === 'credit' && sale.customer_id) {
@@ -1143,6 +1242,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
           "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
           [refundItem.quantity, refundItem.product_id]
         );
+        await restoreToBatches(client, item.id, refundItem.quantity);
         // Stock movement
         await client.query(
           `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, user_id, notes)
@@ -1281,8 +1381,7 @@ router.post("/sales/:id/refund", requireAuth, async (req, res) => {
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    require('fs').appendFileSync('/tmp/pos_error.log', new Date().toISOString() + ' ERROR: ' + (error.stack || error) + '\n');
-    console.error("Sale error:", error);
+    console.error("Refund error:", error);
     return sendError(res, error, "Failed to process sale");
   } finally {
     client.release();

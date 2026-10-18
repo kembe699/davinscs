@@ -117,7 +117,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     // Process each item
     for (const item of items) {
-      const { po_item_id, received_quantity, notes: itemNotes, storage_location_id, show_in_pos } = item;
+      const { po_item_id, received_quantity, notes: itemNotes, storage_location_id, show_in_pos, batch_number, expiry_date, batch_barcode } = item;
       // Receiving stock doesn't mean it's ready to sell — staff decide that
       // explicitly per item, and silence defaults to "not yet".
       const showInPos = show_in_pos === true;
@@ -195,11 +195,12 @@ router.post("/", requireAuth, async (req, res) => {
       }
 
       // Create GRN item
-      await client.query(`
+      const grnItemResult = await client.query(`
         INSERT INTO grn_items
-        (grn_id, po_item_id, product_id, ordered_quantity, received_quantity, unit_price, notes, storage_location_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [grnId, po_item_id, finalProductId, quantity, received_quantity, unit_price, itemNotes, storage_location_id]);
+        (grn_id, po_item_id, product_id, ordered_quantity, received_quantity, unit_price, notes, storage_location_id, batch_number, expiry_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING id
+      `, [grnId, po_item_id, finalProductId, quantity, received_quantity, unit_price, itemNotes, storage_location_id, batch_number?.trim() || null, expiry_date || null]);
 
       // Update PO item received quantity
       await client.query(
@@ -217,6 +218,25 @@ router.post("/", requireAuth, async (req, res) => {
         "UPDATE products SET quantity_on_hand = quantity_on_hand + $1, storage_location_id = $2, show_in_pos = $3 WHERE id = $4",
         [received_quantity, storage_location_id, showInPos, finalProductId]
       );
+
+      // Entering a batch number on this line is entirely optional — a
+      // product never tracked by batch keeps working exactly as before.
+      // Receiving the same batch number again (a second shipment of the
+      // same lot) adds to the existing batch row instead of duplicating it.
+      if (batch_number && batch_number.trim()) {
+        await client.query(
+          `INSERT INTO product_batches (product_id, batch_number, quantity_on_hand, expiry_date, barcode, storage_location_id, cost_price, grn_item_id, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (product_id, batch_number) DO UPDATE SET
+             quantity_on_hand = product_batches.quantity_on_hand + EXCLUDED.quantity_on_hand,
+             expiry_date = EXCLUDED.expiry_date,
+             barcode = CASE WHEN EXCLUDED.barcode <> '' THEN EXCLUDED.barcode ELSE product_batches.barcode END,
+             storage_location_id = EXCLUDED.storage_location_id,
+             grn_item_id = EXCLUDED.grn_item_id,
+             updated_at = NOW()`,
+          [finalProductId, batch_number.trim(), received_quantity, expiry_date || null, batch_barcode?.trim() || '', storage_location_id, unit_price, grnItemResult.rows[0].id, req.user.id]
+        );
+      }
 
       // Create stock movement
       await client.query(`

@@ -72,7 +72,7 @@ export default function ProcurementEnhanced() {
     po_id: 0,
     received_date: new Date().toISOString().split('T')[0],
     notes: "",
-    items: [] as { po_item_id: number; received_quantity: number; notes?: string; storage_location_id?: number; show_in_pos?: boolean }[]
+    items: [] as { po_item_id: number; received_quantity: number; notes?: string; storage_location_id?: number; show_in_pos?: boolean; batch_number?: string; expiry_date?: string }[]
   });
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
   
@@ -1589,6 +1589,8 @@ export default function ProcurementEnhanced() {
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Receive Qty</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Storage Location</th>
                             <th className="text-center px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Show in POS</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Batch # (optional)</th>
+                            <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Expiry</th>
                             <th className="text-left px-3 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Notes</th>
                           </tr>
                         </thead>
@@ -1645,6 +1647,31 @@ export default function ProcurementEnhanced() {
                                 >
                                   <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-background transition-transform ${grnForm.items[idx]?.show_in_pos ? "translate-x-4" : ""}`} />
                                 </button>
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  placeholder="e.g. B2026-10"
+                                  value={grnForm.items[idx]?.batch_number || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].batch_number = e.target.value;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  className="w-28 px-2 py-1 bg-background border border-border-subtle text-xs"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="date"
+                                  value={grnForm.items[idx]?.expiry_date || ""}
+                                  onChange={(e) => {
+                                    const newItems = [...grnForm.items];
+                                    newItems[idx].expiry_date = e.target.value;
+                                    setGRNForm({ ...grnForm, items: newItems });
+                                  }}
+                                  className="w-32 px-2 py-1 bg-background border border-border-subtle text-xs"
+                                />
                               </td>
                               <td className="px-3 py-2">
                                 <input

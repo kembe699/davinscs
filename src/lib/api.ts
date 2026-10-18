@@ -233,6 +233,26 @@ export type ApiGRNItem = {
   unit_price: number;
   notes?: string;
   storage_location_id?: number | null;
+  batch_number?: string | null;
+  expiry_date?: string | null;
+};
+
+// A batch/lot of a product — e.g. "Biscuit" received across several
+// shipments, each with its own batch number, quantity, expiry date, and
+// optionally its own barcode. Opt-in: a product with no batches just uses
+// its plain quantity_on_hand, exactly as before this existed.
+export type ApiProductBatch = {
+  id: number;
+  product_id: number;
+  batch_number: string;
+  barcode: string;
+  quantity_on_hand: number;
+  expiry_date: string | null;
+  storage_location_id: number | null;
+  storage_location_name?: string | null;
+  cost_price: number | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ApiSupplierBill = {
@@ -495,6 +515,10 @@ export type ExpiringProductReport = {
   id: number;
   name: string;
   barcode: string;
+  // Set when this row is a specific batch of the product rather than the
+  // product as a whole — a batch-tracked product contributes one row per
+  // batch here instead of a single row.
+  batch_number: string | null;
   quantity_on_hand: number;
   expiry_date: string;
   days_until_expiry: number;
@@ -504,6 +528,7 @@ export type ExpiredProductReport = {
   id: number;
   name: string;
   barcode: string;
+  batch_number: string | null;
   quantity_on_hand: number;
   expiry_date: string;
   days_expired: number;
@@ -724,6 +749,27 @@ export const api = {
       delete: (id: number) =>
         request<{ success: boolean }>(`/api/inventory/storage-locations/${id}`, { method: "DELETE" }),
     },
+    batches: {
+      list: (product_id: number) => request<ApiProductBatch[]>(`/api/inventory/batches?product_id=${product_id}`),
+      barcodes: () => request<{ id: number; product_id: number; batch_number: string; barcode: string }[]>("/api/inventory/batches/barcodes"),
+      create: (data: {
+        product_id: number;
+        batch_number: string;
+        quantity: number;
+        expiry_date?: string;
+        barcode?: string;
+        storage_location_id?: number;
+        cost_price?: number;
+      }) => request<ApiProductBatch>("/api/inventory/batches", { method: "POST", body: JSON.stringify(data) }),
+      update: (id: number, data: { batch_number?: string; expiry_date?: string | null; barcode?: string; storage_location_id?: number | null; cost_price?: number }) =>
+        request<ApiProductBatch>(`/api/inventory/batches/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+      adjust: (id: number, quantity: number, notes?: string) =>
+        request<{ success: boolean; new_quantity: number }>(`/api/inventory/batches/${id}/adjust`, {
+          method: "POST",
+          body: JSON.stringify({ quantity, notes }),
+        }),
+      delete: (id: number) => request<{ success: boolean }>(`/api/inventory/batches/${id}`, { method: "DELETE" }),
+    },
   },
   procurement: {
     suppliers: {
@@ -752,8 +798,23 @@ export const api = {
     grn: {
       list: () => request<ApiGRN[]>("/api/procurement/grn"),
       get: (id: number) => request<ApiGRN & { items: ApiGRNItem[] }>(`/api/procurement/grn/${id}`),
-      create: (data: { po_id: number; received_date: string; items: { po_item_id: number; received_quantity: number; notes?: string }[]; notes?: string }) =>
-        request<ApiGRN & { bill?: ApiSupplierBill }>("/api/procurement/grn", { method: "POST", body: JSON.stringify(data) }),
+      create: (data: {
+        po_id: number;
+        received_date: string;
+        items: {
+          po_item_id: number;
+          received_quantity: number;
+          notes?: string;
+          storage_location_id?: number;
+          show_in_pos?: boolean;
+          // Entering a batch number here is optional — leave it blank for a
+          // product that isn't tracked by batch/lot.
+          batch_number?: string;
+          expiry_date?: string;
+          batch_barcode?: string;
+        }[];
+        notes?: string;
+      }) => request<ApiGRN & { bill?: ApiSupplierBill }>("/api/procurement/grn", { method: "POST", body: JSON.stringify(data) }),
       print: (id: number) => request<any>(`/api/procurement/grn/${id}/print`),
     },
     bills: {
