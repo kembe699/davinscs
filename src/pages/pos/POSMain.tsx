@@ -89,9 +89,27 @@ export default function POSMain() {
   const [activeTable, setActiveTable] = useState<RestaurantTable | null>(null);
   const [resumingHeldSaleId, setResumingHeldSaleId] = useState<number | null>(null);
 
+  // Guards against the scan-to-cart effect below and this Enter handler
+  // both firing for the same scan — a scanner's trailing Enter can reach
+  // this handler before React has committed the effect's setSearchQuery(""),
+  // so checking searchQuery alone isn't reliable. Whichever path runs first
+  // marks the value as handled (a ref write is synchronous, unlike state);
+  // the other then finds it already marked and skips, instead of adding
+  // the same scan to the cart twice. Reset once the box is actually empty
+  // so scanning the same barcode again right after still counts as new.
+  const lastHandledScanRef = useRef("");
+  useEffect(() => {
+    if (searchQuery === "") lastHandledScanRef.current = "";
+  }, [searchQuery]);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+      const trimmed = searchQuery.trim();
+      if (lastHandledScanRef.current === trimmed) {
+        setSearchQuery("");
+        return;
+      }
+      const q = trimmed.toLowerCase();
       // A product's barcode field can hold several comma-separated codes —
       // matchesBarcode checks the scanned text against each one, not just
       // the field as a single whole string.
@@ -99,6 +117,7 @@ export default function POSMain() {
       const exactMatch = products.find(p => matchesBarcode(p.barcode, searchQuery) || p.sku?.toLowerCase() === q)
         || (batchMatch ? products.find(p => p.id === batchMatch.product_id) : undefined);
       if (exactMatch) {
+        lastHandledScanRef.current = trimmed;
         addToCart(exactMatch);
         setSearchQuery("");
       } else {
@@ -309,11 +328,12 @@ export default function POSMain() {
   // keydown handler finds nothing left to do and never double-adds.
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q) return;
+    if (!q || lastHandledScanRef.current === q) return;
     const batchMatch = batchBarcodes.find(b => matchesBarcode(b.barcode, q));
     const exactMatch = products.find(p => matchesBarcode(p.barcode, q))
       || (batchMatch ? products.find(p => p.id === batchMatch.product_id) : undefined);
     if (exactMatch) {
+      lastHandledScanRef.current = q;
       addToCart(exactMatch);
       setSearchQuery("");
     }
