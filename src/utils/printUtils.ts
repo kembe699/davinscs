@@ -260,3 +260,34 @@ export function printThermal(title: string, bodyHTML: string): void {
 export function openPrintWindow(title: string, bodyHTML: string): void {
   printDocument(title, bodyHTML);
 }
+
+export type BarcodeLabel = { code: string; name: string; price?: string };
+
+/** Prints one small shelf/product label per barcode (name, price, scannable
+ *  Code128 image, human-readable code underneath). Uses the same hosted
+ *  barcode renderer already relied on for receipt barcodes, and
+ *  printThermal() so it goes through the OS print dialog like every other
+ *  printed document in the app rather than a plain data: export. */
+export function printBarcodeLabels(labels: BarcodeLabel[]): void {
+  const css = `
+    @page { size: 50mm 30mm; margin: 2mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+    .label { width: 46mm; height: 26mm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; text-align: center; page-break-after: always; }
+    .label:last-child { page-break-after: auto; }
+    .label .name { font-size: 9px; font-weight: 600; max-width: 44mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .label .price { font-size: 9px; font-weight: 700; }
+    .label img { height: 30px; margin: 2px 0; }
+    .label .code { font-size: 9px; letter-spacing: 1px; font-family: 'Courier New', monospace; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  `;
+  const body = labels.map(l => `
+    <div class="label">
+      <div class="name">${l.name}</div>
+      ${l.price ? `<div class="price">${l.price}</div>` : ''}
+      <img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(l.code)}&code=Code128&dpi=96" />
+      <div class="code">${l.code}</div>
+    </div>
+  `).join('');
+  printThermal('Barcode label', `<style>${css}</style>${body}`);
+}

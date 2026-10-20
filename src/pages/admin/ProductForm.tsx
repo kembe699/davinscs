@@ -5,10 +5,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiProduct, ApiCategory, ApiStorageLocation, ApiProductBatch } from "@/lib/api";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
-import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Sparkles, Printer } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { roundToCents } from "@/utils/currency";
 import { parseBarcodes, formatBarcodes } from "@/utils/barcode";
+import { printBarcodeLabels } from "@/utils/printUtils";
 import { DateField } from "@/components/ui/date-field";
 
 type Spec = { label: string; value: string };
@@ -194,6 +195,16 @@ export default function ProductForm() {
 
   const generateBarcode = () => {
     return 'SKU-' + Date.now().toString(36).toUpperCase();
+  };
+
+  const handlePrintBarcode = () => {
+    const codes = parseBarcodes((form as any).barcode);
+    if (codes.length === 0) {
+      toast("Add a barcode first, then print its label.", "warning", "No barcode");
+      return;
+    }
+    const price = form.price !== "" ? `${baseCurrency?.code || 'UGX'} ${Number(form.price).toLocaleString()}` : undefined;
+    printBarcodeLabels(codes.map((code) => ({ code, name: form.name || "Product", price })));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -436,6 +447,14 @@ export default function ProductForm() {
                         title="Add a generated barcode"
                       >
                         <Sparkles size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePrintBarcode}
+                        className="px-3 py-2 border border-border-subtle text-foreground hover:border-primary/60 transition-colors"
+                        title="Print barcode label"
+                      >
+                        <Printer size={16} />
                       </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1">
