@@ -457,9 +457,6 @@ export default function ProductForm() {
                         <Printer size={16} />
                       </button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      This item can be scanned by any of these codes — useful when the same product arrives with different printed barcodes.
-                    </p>
                   </div>
                   <div>
                     <label className="field-label">Expiry date</label>
