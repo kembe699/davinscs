@@ -329,3 +329,14 @@ a.hover\:bg-primary:hover {
 textarea.field-input {
   @apply h-auto py-3;
 }
+
+/* Hides the native up/down steppers on number inputs — used where those
+   arrows don't make sense (prices, etc.) and only get in the way. */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}

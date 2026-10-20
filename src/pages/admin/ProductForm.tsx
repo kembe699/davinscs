@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { useTenantPath } from "@/contexts/TenantContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiProduct, ApiCategory, ApiStorageLocation, ApiProductBatch } from "@/lib/api";
@@ -8,6 +9,7 @@ import { Plus, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { roundToCents } from "@/utils/currency";
 import { parseBarcodes, formatBarcodes } from "@/utils/barcode";
+import { DateField } from "@/components/ui/date-field";
 
 type Spec = { label: string; value: string };
 
@@ -353,7 +355,7 @@ export default function ProductForm() {
                         }
                       }}
                       placeholder="Insert selling price"
-                      className="field-input"
+                      className="field-input no-spinner"
                     />
                   </div>
                   <div>
@@ -369,7 +371,7 @@ export default function ProductForm() {
                         }
                       }}
                       placeholder="Cost (optional)"
-                      className="field-input"
+                      className="field-input no-spinner"
                     />
                   </div>
                   <div>
@@ -442,10 +444,9 @@ export default function ProductForm() {
                   </div>
                   <div>
                     <label className="field-label">Expiry date</label>
-                    <input
-                      type="date" value={(form as any).expiry_date}
-                      onChange={(e) => set("expiry_date", e.target.value)}
-                      className="field-input"
+                    <DateField
+                      value={(form as any).expiry_date}
+                      onChange={(v) => set("expiry_date", v)}
                     />
                   </div>
                   {accounts.length > 0 && (
@@ -586,7 +587,7 @@ export default function ProductForm() {
                           <span className="text-muted-foreground">Qty: {b.quantity_on_hand}</span>
                           {b.expiry_date && (
                             <span className="text-muted-foreground">
-                              Expires {new Date(b.expiry_date).toLocaleDateString()}
+                              Expires {format(new Date(b.expiry_date), "dd/MM/yyyy")}
                             </span>
                           )}
                           {b.barcode && <span className="text-muted-foreground font-mono-tech text-xs">{b.barcode}</span>}
@@ -645,10 +646,9 @@ export default function ProductForm() {
                     </div>
                     <div>
                       <label className="field-label">Expiry date</label>
-                      <input
-                        type="date" value={newBatch.expiry_date}
-                        onChange={(e) => setNewBatch((v) => ({ ...v, expiry_date: e.target.value }))}
-                        className="field-input"
+                      <DateField
+                        value={newBatch.expiry_date}
+                        onChange={(v) => setNewBatch((prev) => ({ ...prev, expiry_date: v }))}
                       />
                     </div>
                     <div>
