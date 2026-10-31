@@ -59,7 +59,8 @@ export function TenantRoot() {
             if (payload.schema_name && payload.schema_name !== d.schemaName) {
               localStorage.removeItem("cms_token");
               localStorage.removeItem("cms_user");
-              window.location.replace(window.location.pathname);
+              // Keep the query string: a table's QR code carries ?table=<id>.
+              window.location.replace(window.location.pathname + window.location.search);
               return;
             }
           } catch {
@@ -107,12 +108,12 @@ export function TenantRoot() {
       if (target) {
         setRedirectTried(true);
         setWillRedirect(true);
-        window.location.replace(`/${target}${location.pathname}`);
+        window.location.replace(`/${target}${location.pathname}${location.search}`);
       }
     } catch {
       // ignore
     }
-  }, [loading, error, tenantSlug, redirectTried, location.pathname]);
+  }, [loading, error, tenantSlug, redirectTried, location.pathname, location.search]);
 
   // Clear stored schema if we navigated away from a tenant route.
   useEffect(() => {

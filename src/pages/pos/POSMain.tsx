@@ -391,6 +391,50 @@ export default function POSMain() {
     }
   };
 
+  // ── Orders from the QR menu ──────────────────────────────────────────────
+  // A diner's order arrives as a held sale with no staff member on it
+  // (server/routes/menu.js). Each new one pops up in the middle of the screen
+  // until someone opens or dismisses it; which ones have been seen is kept per
+  // shop in this browser, so a reload doesn't bring them all back.
+  const seenQrOrdersKey = `pos_seen_qr_orders_${window.location.pathname.split("/")[1] || ""}`;
+  const [seenQrOrders, setSeenQrOrders] = useState<number[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(seenQrOrdersKey) || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const incomingQrOrders = heldSales.filter((s: any) => !s.user_id && !seenQrOrders.includes(s.id));
+  const incomingQrOrder = incomingQrOrders[incomingQrOrders.length - 1] ?? null;
+
+  const markQrOrderSeen = (saleId: number) => {
+    setSeenQrOrders((prev) => {
+      // Only ids still held are worth remembering; the list stays short.
+      const next = [...prev.filter((id) => heldSales.some((s: any) => s.id === id)), saleId];
+      try { localStorage.setItem(seenQrOrdersKey, JSON.stringify(next)); } catch { /* storage unavailable */ }
+      return next;
+    });
+  };
+
+  const incomingQrOrderId = incomingQrOrder?.id;
+  useEffect(() => {
+    if (!incomingQrOrderId) return;
+    // A short two-note chime so a busy counter notices.
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      [880, 1175].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.18);
+        osc.stop(ctx.currentTime + i * 0.18 + 0.32);
+      });
+    } catch { /* no audio, the popup still shows */ }
+  }, [incomingQrOrderId]);
+
   const loadTables = async () => {
     try {
       setTables(await api.tables.list());
@@ -2297,6 +2341,64 @@ export default function POSMain() {
           </div>
         </div>
       )}
+
+      {incomingQrOrder && (() => {
+        const table = tables.find((t) => t.id === incomingQrOrder.table_id);
+        const tableName = table ? `${table.location} · ${table.label}` : "a table";
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-[#10B981]/15 flex items-center justify-center shrink-0">
+                  <Bell size={22} className="text-[#10B981]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#10B981]">New QR order{incomingQrOrders.length > 1 ? ` · ${incomingQrOrders.length} waiting` : ""}</p>
+                  <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100">{tableName}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                    {incomingQrOrder.customer_name || "QR menu order"}
+                    {incomingQrOrder.notes ? ` · ${incomingQrOrder.notes}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto border-y border-gray-100 dark:border-gray-700 py-2 mb-3">
+                {(incomingQrOrder.items || []).filter((item: any) => item && item.product_name).map((item: any) => (
+                  <div key={item.id} className="flex justify-between py-1 text-sm text-[#1A1A2E] dark:text-gray-100">
+                    <span>
+                      <span className="font-bold">{item.quantity}×</span> {item.product_name}
+                    </span>
+                    <span>{formatCurrencySync(item.subtotal, baseCurrency?.symbol || 'UGX', true)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center mb-5">
+                <span className="font-bold text-gray-500 dark:text-gray-400">Total</span>
+                <span className="text-2xl font-bold text-[#10B981]">{formatCurrencySync(incomingQrOrder.total_amount, baseCurrency?.symbol || 'UGX', true)}</span>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => markQrOrderSeen(incomingQrOrder.id)}
+                  className="flex-1 py-3 border border-gray-200 dark:border-gray-700 rounded-xl font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => {
+                    markQrOrderSeen(incomingQrOrder.id);
+                    if (table) selectTable(table);
+                  }}
+                  className="flex-1 py-3 bg-[#10B981] text-white rounded-xl font-semibold hover:opacity-90"
+                >
+                  {table ? "Open order" : "OK"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

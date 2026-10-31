@@ -50,8 +50,20 @@ const ALL_CATEGORY = "All";
 export default function PublicMenu() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   // A table's own QR code (Sales → QR Menu) carries ?table=<id>, so the diner
-  // doesn't have to pick it.
+  // doesn't have to pick it. Remembered for the visit, so it survives a reload
+  // or a redirect that loses the query string.
   const [searchParams] = useSearchParams();
+  const tableStorageKey = `qr_menu_table_${tenantSlug}`;
+  const [tableFromCode] = useState<number | null>(() => {
+    const fromUrl = Number(searchParams.get("table"));
+    try {
+      if (fromUrl) sessionStorage.setItem(tableStorageKey, String(fromUrl));
+      return fromUrl || Number(sessionStorage.getItem(tableStorageKey)) || null;
+    } catch {
+      return fromUrl || null;
+    }
+  });
+  const [changingTable, setChangingTable] = useState(false);
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -74,8 +86,7 @@ export default function PublicMenu() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Could not load the menu");
         setData(json);
-        const fromCode = Number(searchParams.get("table"));
-        if (fromCode && json.tables?.some((t: MenuTable) => t.id === fromCode)) setTableId(fromCode);
+        if (tableFromCode && json.tables?.some((t: MenuTable) => Number(t.id) === tableFromCode)) setTableId(tableFromCode);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load the menu");
       } finally {
@@ -96,6 +107,7 @@ export default function PublicMenu() {
   }, [data]);
 
   const selectedTable = data?.tables.find((t) => t.id === tableId) || null;
+  const tableIsFromCode = !!selectedTable && Number(selectedTable.id) === tableFromCode;
   const tableLocations = useMemo(() => {
     if (!data) return [];
     return Array.from(new Set(data.tables.map((t) => t.location)));
@@ -196,6 +208,11 @@ export default function PublicMenu() {
       <div className="px-4 pt-6 pb-4 text-center">
         {data.company.logo && <img src={data.company.logo} alt="" className="h-14 mx-auto mb-2 object-contain" />}
         <h1 className="font-extrabold text-gray-900 text-xl">{data.company.name || "Menu"}</h1>
+        {tableIsFromCode && (
+          <p className="mt-2 inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
+            Ordering for {selectedTable!.location} · {selectedTable!.label}
+          </p>
+        )}
       </div>
 
       <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3">
@@ -327,16 +344,26 @@ export default function PublicMenu() {
             </div>
 
             <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">Your table</label>
-            <button
-              type="button"
-              onClick={() => setTablePickerOpen(true)}
-              className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-sm mb-3 flex items-center justify-between"
-            >
-              <span className={selectedTable ? "text-gray-900 font-semibold" : "text-gray-400"}>
-                {selectedTable ? `${selectedTable.location} · ${selectedTable.label}` : "Choose a table…"}
-              </span>
-              <span className="text-gray-400">▾</span>
-            </button>
+            {tableIsFromCode && !changingTable ? (
+              // Came from the table's own QR code: the table is already known.
+              <div className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm mb-3 flex items-center justify-between">
+                <span className="text-gray-900 font-semibold">{selectedTable!.location} · {selectedTable!.label}</span>
+                <button type="button" onClick={() => { setChangingTable(true); setTablePickerOpen(true); }} className="text-xs text-gray-400 underline">
+                  change
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setTablePickerOpen(true)}
+                className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-sm mb-3 flex items-center justify-between"
+              >
+                <span className={selectedTable ? "text-gray-900 font-semibold" : "text-gray-400"}>
+                  {selectedTable ? `${selectedTable.location} · ${selectedTable.label}` : "Choose a table…"}
+                </span>
+                <span className="text-gray-400">▾</span>
+              </button>
+            )}
 
             <input
               value={customerName}
