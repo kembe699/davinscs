@@ -9,7 +9,7 @@ import {
   DollarSign, FileText, CreditCard, Percent, Tag, Globe, Building, Monitor,
   ShoppingBag, Receipt, Shield, Activity, UserCheck, ClipboardList,
   ChevronDown, ChevronRight, BarChart2, Wallet, Moon, Sun, Menu, X, ExternalLink,
-  CalendarClock, AlertTriangle, UtensilsCrossed, Warehouse, QrCode,
+  CalendarClock, AlertTriangle, UtensilsCrossed, Warehouse, QrCode, BedDouble,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
@@ -33,6 +33,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Invoices",    path: "/admin/invoices",    icon: Receipt,      permission: "invoices.view" },
       { label: "Receipts",    path: "/admin/receipts",    icon: Receipt,      permission: "reports.view" },
       { label: "Tables",      path: "/admin/tables",      icon: UtensilsCrossed, permission: "products.view", foodOnly: true },
+      { label: "Rooms",       path: "/admin/rooms",       icon: BedDouble,    permission: "products.view", foodOnly: true },
       { label: "QR Menu",     path: "/admin/qr-menu",     icon: QrCode,       permission: "products.view", foodOnly: true },
     ],
   },
@@ -238,7 +239,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="my-2 border-t border-admin-border/50" />
 
         {NAV_GROUPS.map(group => {
-          const visibleItems = group.items.filter(i => hasPermission(i.permission) && (!i.foodOnly || businessType === "food"));
+          const visibleItems = group.items.filter(i => hasPermission(i.permission) && (!i.foodOnly || businessType === "food" || businessType === "hotel"));
           if (visibleItems.length === 0) return null;
           const isOpen = !!openGroups[group.label];
           const hasActive = groupHasActive(group);

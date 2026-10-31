@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useTenant } from "../contexts/TenantContext.tsx";
 import {
   Building2, User, Palette, Rocket, ChevronRight, ChevronLeft,
-  Upload, Eye, EyeOff, Check, Store, ShoppingBag, Utensils,
+  Upload, Eye, EyeOff, Check, Store, ShoppingBag, Utensils, BedDouble,
   Stethoscope, BookOpen, Wrench, MoreHorizontal, Camera,
   Trash2, Globe, Phone, Mail, MapPin, FileText, Hash,
 } from "lucide-react";
@@ -68,6 +68,7 @@ const BUSINESS_TYPES = [
   { id: "electronics", label: "Electronics", icon: Camera },
   { id: "fashion", label: "Fashion & Apparel", icon: ShoppingBag },
   { id: "food", label: "Food & Beverage", icon: Utensils },
+  { id: "hotel", label: "Hotel & Hospitality", icon: BedDouble },
   { id: "pharmacy", label: "Pharmacy / Health", icon: Stethoscope },
   { id: "education", label: "Education", icon: BookOpen },
   { id: "services", label: "Services / Repairs", icon: Wrench },

@@ -41,14 +41,17 @@ export default function QrMenu() {
       .then((images) => setCodes(Object.fromEntries(urls.map((url, i) => [url, images[i]]))));
   }, [menuUrl, tables]);
 
+  // Tables, then hotel rooms, each grouped by location (floor).
   const groups = useMemo(() => {
     const byLocation = new Map<string, RestaurantTable[]>();
     for (const t of tables) {
-      if (!byLocation.has(t.location)) byLocation.set(t.location, []);
-      byLocation.get(t.location)!.push(t);
+      const key = `${t.kind === "room" ? "Rooms · " : ""}${t.location}`;
+      if (!byLocation.has(key)) byLocation.set(key, []);
+      byLocation.get(key)!.push(t);
     }
     return Array.from(byLocation.entries());
   }, [tables]);
+  const hasRooms = tables.some((t) => t.kind === "room");
 
   const copyLink = async (url: string) => {
     try {
@@ -104,8 +107,8 @@ export default function QrMenu() {
             <p className="font-mono-tech text-[10px] text-primary tracking-[0.4em] uppercase mb-1">Restaurant</p>
             <h1 className="text-2xl font-bold text-foreground">QR Menu</h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-              Put these codes on your tables. Customers scan with their phone, browse the menu and send their order. It appears in the POS as a held
-              order on that table, ready to serve and take payment.
+              Put these codes on your tables{hasRooms ? " and in your rooms" : ""}. Customers scan with their phone, browse the menu and send their
+              order. It appears in the POS as a held order on that table{hasRooms ? " or room" : ""}, ready to serve and take payment.
             </p>
           </div>
           <button
@@ -137,8 +140,10 @@ export default function QrMenu() {
         </div>
 
         {/* One code per table */}
-        <h2 className="text-sm font-bold text-foreground mb-1">Table codes</h2>
-        <p className="text-sm text-muted-foreground mb-4">Each opens the menu with its table already chosen.</p>
+        <h2 className="text-sm font-bold text-foreground mb-1">{hasRooms ? "Table & room codes" : "Table codes"}</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Each opens the menu with its {hasRooms ? "table or room" : "table"} already chosen{hasRooms ? "; a room's code also shows the guest the room's details" : ""}.
+        </p>
 
         {loading ? (
           <p className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">Loading…</p>
@@ -146,7 +151,8 @@ export default function QrMenu() {
           <div className="border border-dashed border-border-subtle p-12 text-center">
             <UtensilsCrossed className="mx-auto mb-3 text-muted-foreground" size={28} />
             <p className="text-sm text-muted-foreground">
-              No tables yet. Add them under Sales → Tables and their codes will appear here. The menu code above works without them.
+              No tables or rooms yet. Add them under Sales → Tables or Sales → Rooms and their codes will appear here. The menu code above works
+              without them.
             </p>
           </div>
         ) : (

@@ -82,8 +82,8 @@ export default function POSMain() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
 
-  // ── Restaurant tables (only meaningful when company.business_type === 'food') ──
-  const isFoodBusiness = companyData?.business_type === 'food';
+  // ── Restaurant tables and hotel rooms (business_type 'food' or 'hotel') ──
+  const isFoodBusiness = companyData?.business_type === 'food' || companyData?.business_type === 'hotel';
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [showTablePicker, setShowTablePicker] = useState(false);
   const [activeTable, setActiveTable] = useState<RestaurantTable | null>(null);
@@ -396,27 +396,31 @@ export default function POSMain() {
   // (server/routes/menu.js). Each new one pops up in the middle of the screen
   // until someone opens or dismisses it; which ones have been seen is kept per
   // shop in this browser, so a reload doesn't bring them all back.
-  const seenQrOrdersKey = `pos_seen_qr_orders_${window.location.pathname.split("/")[1] || ""}`;
-  const [seenQrOrders, setSeenQrOrders] = useState<number[]>(() => {
+  // Seen as "saleId:itemCount": a hotel room's further orders are added to its
+  // open sale (server/routes/menu.js), and those new items pop up again.
+  const seenQrOrdersKey = `pos_seen_qr_orders_v2_${window.location.pathname.split("/")[1] || ""}`;
+  const qrOrderKey = (sale: any) => `${sale.id}:${(sale.items || []).filter((item: any) => item && item.product_name).length}`;
+  const [seenQrOrders, setSeenQrOrders] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem(seenQrOrdersKey) || "[]");
     } catch {
       return [];
     }
   });
-  const incomingQrOrders = heldSales.filter((s: any) => !s.user_id && !seenQrOrders.includes(s.id));
+  const incomingQrOrders = heldSales.filter((s: any) => !s.user_id && !seenQrOrders.includes(qrOrderKey(s)));
   const incomingQrOrder = incomingQrOrders[incomingQrOrders.length - 1] ?? null;
+  const incomingIsAddition = !!incomingQrOrder && seenQrOrders.some((key) => key.startsWith(`${incomingQrOrder.id}:`));
 
-  const markQrOrderSeen = (saleId: number) => {
+  const markQrOrderSeen = (sale: any) => {
     setSeenQrOrders((prev) => {
-      // Only ids still held are worth remembering; the list stays short.
-      const next = [...prev.filter((id) => heldSales.some((s: any) => s.id === id)), saleId];
+      // Only sales still held are worth remembering; the list stays short.
+      const next = [...prev.filter((key) => heldSales.some((s: any) => key.startsWith(`${s.id}:`))), qrOrderKey(sale)];
       try { localStorage.setItem(seenQrOrdersKey, JSON.stringify(next)); } catch { /* storage unavailable */ }
       return next;
     });
   };
 
-  const incomingQrOrderId = incomingQrOrder?.id;
+  const incomingQrOrderId = incomingQrOrder ? qrOrderKey(incomingQrOrder) : undefined;
   useEffect(() => {
     if (!incomingQrOrderId) return;
     // A short two-note chime so a busy counter notices.
@@ -2051,7 +2055,7 @@ export default function POSMain() {
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-5xl max-h-[80vh] overflow-y-auto flex flex-col">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700/50">
-              <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">Tables</h2>
+              <h2 className="text-2xl font-bold text-[#1A1A2E] dark:text-gray-100">{tables.some(t => t.kind === 'room') ? 'Tables & Rooms' : 'Tables'}</h2>
               <button onClick={() => setShowTablePicker(false)} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-100 rounded-full"><X size={20} /></button>
             </div>
 
@@ -2061,11 +2065,14 @@ export default function POSMain() {
                 <p>No tables set up yet — add some from Admin → Tables.</p>
               </div>
             ) : (
-              Array.from(new Set(tables.map(t => t.location))).map(loc => (
-                <div key={loc} className="mb-5">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{loc}</p>
+              // Tables first, then rooms, each grouped by location (floor).
+              Array.from(new Set(tables.map(t => `${t.kind}|${t.location}`))).map(group => {
+                const [kind, loc] = [group.slice(0, group.indexOf('|')), group.slice(group.indexOf('|') + 1)];
+                return (
+                <div key={group} className="mb-5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{kind === 'room' ? `Rooms · ${loc}` : loc}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {tables.filter(t => t.location === loc).map(t => {
+                    {tables.filter(t => t.kind === kind && t.location === loc).map(t => {
                       const sale = heldSaleForTable(t.id);
                       const occupied = !!sale;
                       const itemCount = sale ? (sale.items || []).reduce((n: number, it: any) => n + it.quantity, 0) : 0;
@@ -2099,7 +2106,8 @@ export default function POSMain() {
                     })}
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>
@@ -2344,7 +2352,7 @@ export default function POSMain() {
 
       {incomingQrOrder && (() => {
         const table = tables.find((t) => t.id === incomingQrOrder.table_id);
-        const tableName = table ? `${table.location} · ${table.label}` : "a table";
+        const tableName = table ? (table.kind === 'room' ? `${table.label} · ${table.location}` : `${table.location} · ${table.label}`) : "a table";
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
@@ -2353,7 +2361,7 @@ export default function POSMain() {
                   <Bell size={22} className="text-[#10B981]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#10B981]">New QR order{incomingQrOrders.length > 1 ? ` · ${incomingQrOrders.length} waiting` : ""}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#10B981]">{incomingIsAddition ? "More items ordered" : "New QR order"}{incomingQrOrders.length > 1 ? ` · ${incomingQrOrders.length} waiting` : ""}</p>
                   <h2 className="text-xl font-bold text-[#1A1A2E] dark:text-gray-100">{tableName}</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                     {incomingQrOrder.customer_name || "QR menu order"}
@@ -2380,14 +2388,14 @@ export default function POSMain() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => markQrOrderSeen(incomingQrOrder.id)}
+                  onClick={() => markQrOrderSeen(incomingQrOrder)}
                   className="flex-1 py-3 border border-gray-200 dark:border-gray-700 rounded-xl font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
                   Dismiss
                 </button>
                 <button
                   onClick={() => {
-                    markQrOrderSeen(incomingQrOrder.id);
+                    markQrOrderSeen(incomingQrOrder);
                     if (table) selectTable(table);
                   }}
                   className="flex-1 py-3 bg-[#10B981] text-white rounded-xl font-semibold hover:opacity-90"

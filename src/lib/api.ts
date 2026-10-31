@@ -603,8 +603,14 @@ export type RestaurantTable = {
   id: number;
   location: string;
   label: string;
+  /** A restaurant table, or a hotel room (with amenities and a description). */
+  kind: "table" | "room";
+  amenities: string[];
+  description: string | null;
   created_at: string;
 };
+
+export type RoomInput = { label: string; location: string; amenities: string[]; description?: string };
 
 export type POSSale = {
   id: number;
@@ -950,6 +956,10 @@ export const api = {
       request<RestaurantTable[]>("/api/tables", { method: "POST", body: JSON.stringify(data) }),
     delete: (id: number) =>
       request<{ success: boolean }>(`/api/tables/${id}`, { method: "DELETE" }),
+    createRoom: (data: RoomInput) =>
+      request<RestaurantTable>("/api/tables/rooms", { method: "POST", body: JSON.stringify(data) }),
+    updateRoom: (id: number, data: RoomInput) =>
+      request<RestaurantTable>(`/api/tables/rooms/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   },
   pos: {
     createSale: (data: {

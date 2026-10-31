@@ -689,6 +689,12 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS table_id INTEGER REFERENCES restaurant_tables(id) ON DELETE SET NULL;
+    -- Hotel rooms live alongside tables (kind = 'room'), so a room's QR-menu
+    -- order is a held sale on it exactly like a table's. Amenities and a
+    -- description are shown to the guest on the menu opened from the room.
+    ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS kind VARCHAR(10) NOT NULL DEFAULT 'table';
+    ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS amenities JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS description TEXT;
 
     CREATE TABLE IF NOT EXISTS credit_sales (
       id SERIAL PRIMARY KEY,

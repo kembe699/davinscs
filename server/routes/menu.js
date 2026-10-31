@@ -50,7 +50,7 @@ router.get("/:tenantSlug", async (req, res) => {
       );
 
       const { rows: tables } = await pool.query(
-        "SELECT id, location, label FROM restaurant_tables ORDER BY location ASC, label ASC"
+        "SELECT id, location, label, kind, amenities, description FROM restaurant_tables ORDER BY kind DESC, location ASC, label ASC"
       );
 
       payload = {
@@ -92,13 +92,24 @@ router.post("/:tenantSlug/order", async (req, res) => {
       try {
         await client.query("BEGIN");
 
+        const { rows: placeRows } = await client.query("SELECT kind FROM restaurant_tables WHERE id = $1", [table_id]);
+        if (!placeRows[0]) {
+          await client.query("ROLLBACK");
+          response = { status: 400, body: { error: "Please choose a table" } };
+          return;
+        }
+        const isRoom = placeRows[0].kind === "room";
+
         // A table can only have one running order at a time — same guard
-        // POST /api/pos/sales uses for a cashier-started hold.
+        // POST /api/pos/sales uses for a cashier-started hold. A hotel room is
+        // different: a guest orders room service more than once and pays for
+        // it all together, so a further order is added to the room's open one.
         const clash = await client.query(
           "SELECT id FROM pos_sales WHERE table_id = $1 AND status = 'held' AND voided = false",
           [table_id]
         );
-        if (clash.rows.length > 0) {
+        const addToSaleId = isRoom && clash.rows.length > 0 ? clash.rows[0].id : null;
+        if (clash.rows.length > 0 && !addToSaleId) {
           await client.query("ROLLBACK");
           response = { status: 409, body: { error: "This table already has an order in progress — please ask a member of staff." } };
           return;
@@ -159,7 +170,13 @@ router.post("/:tenantSlug/order", async (req, res) => {
         // No payment_type_id yet (it's unpaid until a cashier completes it)
         // and no user_id/session_id — nobody on staff has rung this up.
         const { rows: cashCode } = await client.query("SELECT id FROM payment_types WHERE code ILIKE 'cash%' OR name ILIKE '%cash%' LIMIT 1");
-        const saleResult = await client.query(
+        const saleResult = addToSaleId
+          ? await client.query(
+              `UPDATE pos_sales SET subtotal = subtotal + $1, tax_amount = tax_amount + $2, total_amount = total_amount + $3
+               WHERE id = $4 RETURNING *`,
+              [subtotal, tax_amount, total_amount, addToSaleId]
+            )
+          : await client.query(
           `INSERT INTO pos_sales
              (sale_number, customer_name, subtotal, tax_amount, discount_amount, total_amount,
               payment_type_id, payment_status, sale_type, status, notes, table_id)
@@ -192,7 +209,7 @@ router.post("/:tenantSlug/order", async (req, res) => {
         const tableLabel = tableRows[0] ? `${tableRows[0].location} · ${tableRows[0].label}` : `table #${table_id}`;
         notifyPayload = {
           type: "online_order",
-          title: `New order — ${tableLabel}`,
+          title: `${addToSaleId ? "More items" : "New order"} — ${tableLabel}`,
           body: `${processedItems.length} item(s) · ${total_amount.toLocaleString()}`,
           referenceType: "pos_sale",
           referenceId: sale.id,

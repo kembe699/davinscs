@@ -25,7 +25,7 @@ export default function Tables() {
   const load = () => {
     setLoading(true);
     Promise.all([api.tables.list(), api.pos.getHeldSales()])
-      .then(([t, s]) => { setTables(t); setHeldSales(s); })
+      .then(([t, s]) => { setTables(t.filter((x) => x.kind !== "room")); setHeldSales(s); })
       .catch(() => setError("Failed to load tables"))
       .finally(() => setLoading(false));
   };

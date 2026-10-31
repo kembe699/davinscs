@@ -18,6 +18,10 @@ interface MenuTable {
   id: number;
   location: string;
   label: string;
+  /** A restaurant table, or a hotel room with its details for the guest. */
+  kind?: "table" | "room";
+  amenities?: string[];
+  description?: string | null;
 }
 
 interface MenuData {
@@ -108,9 +112,12 @@ export default function PublicMenu() {
 
   const selectedTable = data?.tables.find((t) => t.id === tableId) || null;
   const tableIsFromCode = !!selectedTable && Number(selectedTable.id) === tableFromCode;
+  const hasRooms = !!data?.tables.some((t) => t.kind === "room");
+  const placeWord = hasRooms ? "table or room" : "table";
   const tableLocations = useMemo(() => {
     if (!data) return [];
-    return Array.from(new Set(data.tables.map((t) => t.location)));
+    // Tables, then rooms, each grouped by location: "table|Ground Floor".
+    return Array.from(new Set(data.tables.map((t) => `${t.kind || "table"}|${t.location}`)));
   }, [data]);
 
   const sym = data?.company.currency || "UGX";
@@ -210,8 +217,25 @@ export default function PublicMenu() {
         <h1 className="font-extrabold text-gray-900 text-xl">{data.company.name || "Menu"}</h1>
         {tableIsFromCode && (
           <p className="mt-2 inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
-            Ordering for {selectedTable!.location} · {selectedTable!.label}
+            Ordering for {selectedTable!.kind === "room" ? selectedTable!.label : `${selectedTable!.location} · ${selectedTable!.label}`}
           </p>
+        )}
+        {/* A room's code: show the guest their room's details. */}
+        {tableIsFromCode && selectedTable!.kind === "room" && (selectedTable!.description || (selectedTable!.amenities?.length ?? 0) > 0) && (
+          <div className="mx-auto mt-4 max-w-md rounded-2xl border border-gray-100 p-4 text-left">
+            <p className="font-extrabold text-gray-900">{selectedTable!.label}</p>
+            <p className="text-xs text-gray-400">{selectedTable!.location}</p>
+            {selectedTable!.description && <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{selectedTable!.description}</p>}
+            {(selectedTable!.amenities?.length ?? 0) > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {selectedTable!.amenities!.map((amenity) => (
+                  <span key={amenity} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -343,7 +367,7 @@ export default function PublicMenu() {
               <span>{formatCurrencySync(cartTotal, sym, true)}</span>
             </div>
 
-            <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">Your table</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1 mt-3">{selectedTable?.kind === "room" ? "Your room" : `Your ${placeWord}`}</label>
             {tableIsFromCode && !changingTable ? (
               // Came from the table's own QR code: the table is already known.
               <div className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-gray-50 text-sm mb-3 flex items-center justify-between">
@@ -359,7 +383,7 @@ export default function PublicMenu() {
                 className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white text-sm mb-3 flex items-center justify-between"
               >
                 <span className={selectedTable ? "text-gray-900 font-semibold" : "text-gray-400"}>
-                  {selectedTable ? `${selectedTable.location} · ${selectedTable.label}` : "Choose a table…"}
+                  {selectedTable ? `${selectedTable.location} · ${selectedTable.label}` : `Choose a ${placeWord}…`}
                 </span>
                 <span className="text-gray-400">▾</span>
               </button>
@@ -389,7 +413,7 @@ export default function PublicMenu() {
               {sending
                 ? "Sending…"
                 : !tableId
-                  ? "Choose a table to continue"
+                  ? `Choose a ${placeWord} to continue`
                   : `Send order — ${formatCurrencySync(cartTotal, sym, true)}`}
             </button>
           </div>
@@ -403,18 +427,21 @@ export default function PublicMenu() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-gray-900 text-lg">Choose your table</h2>
+              <h2 className="font-extrabold text-gray-900 text-lg">Choose your {placeWord}</h2>
               <button onClick={() => setTablePickerOpen(false)} className="text-gray-400 text-sm font-semibold">
                 Close
               </button>
             </div>
 
-            {tableLocations.map((location) => (
-              <div key={location} className="mb-4">
-                {location && <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{location}</p>}
+            {tableLocations.map((group) => {
+              const kind = group.slice(0, group.indexOf("|"));
+              const location = group.slice(group.indexOf("|") + 1);
+              return (
+              <div key={group} className="mb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{kind === "room" ? `Rooms${location ? ` · ${location}` : ""}` : location}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {data.tables
-                    .filter((t) => t.location === location)
+                    .filter((t) => (t.kind || "table") === kind && t.location === location)
                     .map((t) => {
                       const selected = tableId === t.id;
                       return (
@@ -437,7 +464,8 @@ export default function PublicMenu() {
                     })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

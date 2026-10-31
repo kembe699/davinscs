@@ -42,7 +42,7 @@ const resources = {
         groups: { sales: 'Sales', inventory: 'Inventory', finance: 'Finance', reports: 'Reports', settings: 'Settings' },
         nav: {
           dashboard: 'Dashboard', pos: 'POS', customers: 'Customers', quotations: 'Quotations', invoices: 'Invoices',
-          receipts: 'Receipts', tables: 'Tables', qr_menu: 'QR Menu', storage: 'Storage',
+          receipts: 'Receipts', tables: 'Tables', qr_menu: 'QR Menu', storage: 'Storage', rooms: 'Rooms',
           orders: 'Orders', products: 'Products', categories: 'Categories', stock: 'Stock', procurement: 'Procurement',
           accounting: 'Accounting', cashflow: 'Cashflow', currencies: 'Currencies', payment_types: 'Payment Types',
           tax_rates: 'Tax Rates', price_lists: 'Price Lists', promotions: 'Promotions', reports: 'Reports',
@@ -94,7 +94,7 @@ const resources = {
         groups: { sales: 'المبيعات', inventory: 'المخزون', finance: 'المالية', reports: 'التقارير', settings: 'الإعدادات' },
         nav: {
           dashboard: 'لوحة القيادة', pos: 'نقطة البيع', customers: 'العملاء', quotations: 'عروض الأسعار', invoices: 'الفواتير',
-          receipts: 'الإيصالات', tables: 'الطاولات', qr_menu: 'قائمة QR', storage: 'المخازن',
+          receipts: 'الإيصالات', tables: 'الطاولات', qr_menu: 'قائمة QR', storage: 'المخازن', rooms: 'الغرف',
           orders: 'الطلبات', products: 'المنتجات', categories: 'الفئات', stock: 'المخزون', procurement: 'المشتريات',
           accounting: 'المحاسبة', cashflow: 'التدفق النقدي', currencies: 'العملات', payment_types: 'أنواع الدفع',
           tax_rates: 'معدلات الضريبة', price_lists: 'قوائم الأسعار', promotions: 'العروض', reports: 'التقارير',
@@ -146,7 +146,7 @@ const resources = {
         groups: { sales: 'Ventes', inventory: 'Inventaire', finance: 'Finance', reports: 'Rapports', settings: 'Paramètres' },
         nav: {
           dashboard: 'Tableau de bord', pos: 'Caisse', customers: 'Clients', quotations: 'Devis', invoices: 'Factures',
-          receipts: 'Reçus', tables: 'Tables', qr_menu: 'Menu QR', storage: 'Stockage',
+          receipts: 'Reçus', tables: 'Tables', qr_menu: 'Menu QR', storage: 'Stockage', rooms: 'Chambres',
           orders: 'Commandes', products: 'Produits', categories: 'Catégories', stock: 'Stock', procurement: 'Achats',
           accounting: 'Comptabilité', cashflow: 'Trésorerie', currencies: 'Devises', payment_types: 'Moyens de Paiement',
           tax_rates: 'Taux de Taxes', price_lists: 'Listes de Prix', promotions: 'Promotions', reports: 'Rapports',

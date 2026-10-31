@@ -15,6 +15,7 @@ import ProductForm from "./pages/admin/ProductForm.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
 import Tables from "./pages/admin/Tables.tsx";
 import QrMenu from "./pages/admin/QrMenu.tsx";
+import Rooms from "./pages/admin/Rooms.tsx";
 import AdminUsers from "./pages/admin/Users.tsx";
 import ResetPassword from "./pages/admin/ResetPassword.tsx";
 import Inventory from "./pages/admin/Inventory.tsx";
@@ -135,6 +136,7 @@ const App = () => (
               <Route path="admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
               <Route path="admin/tables" element={<ProtectedRoute><Tables /></ProtectedRoute>} />
               <Route path="admin/qr-menu" element={<ProtectedRoute><QrMenu /></ProtectedRoute>} />
+              <Route path="admin/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
               <Route path="admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="admin/storage-locations" element={<ProtectedRoute><StorageLocations /></ProtectedRoute>} />
               <Route path="admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
