@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { formatCurrencySync } from "@/utils/currency";
 
 interface MenuProduct {
@@ -49,6 +49,9 @@ const ALL_CATEGORY = "All";
  */
 export default function PublicMenu() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  // A table's own QR code (Sales → QR Menu) carries ?table=<id>, so the diner
+  // doesn't have to pick it.
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState<MenuData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,6 +74,8 @@ export default function PublicMenu() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Could not load the menu");
         setData(json);
+        const fromCode = Number(searchParams.get("table"));
+        if (fromCode && json.tables?.some((t: MenuTable) => t.id === fromCode)) setTableId(fromCode);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load the menu");
       } finally {
