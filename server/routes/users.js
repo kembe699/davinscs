@@ -29,8 +29,8 @@ router.get("/waiters", requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT u.id, COALESCE(NULLIF(u.name, ''), u.email) AS name
        FROM users u
-       JOIN roles r ON r.id = u.role_id
-       WHERE LOWER(r.name) = 'waiter' AND COALESCE(u.is_active, true)
+       LEFT JOIN roles r ON r.id = u.role_id
+       WHERE (LOWER(r.name) LIKE '%waiter%' OR LOWER(u.role) = 'waiter') AND COALESCE(u.is_active, true)
        ORDER BY 2`
     );
     res.json(rows);

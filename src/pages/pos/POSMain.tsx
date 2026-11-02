@@ -1501,21 +1501,19 @@ export default function POSMain() {
               <span className="text-gray-400 dark:text-gray-500 text-xs">Edit</span>
             </button>
 
-            {waiters.length > 0 && (
-              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center gap-2">
-                <UtensilsCrossed size={16} className="text-[#10B981] shrink-0" />
-                <select
-                  value={waiterId ?? ""}
-                  onChange={(e) => setWaiterId(e.target.value ? Number(e.target.value) : null)}
-                  className="flex-1 bg-transparent text-sm font-medium text-[#1A1A2E] dark:text-gray-100 outline-none cursor-pointer"
-                >
-                  <option value="">Select Waiter</option>
-                  {waiters.map(w => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center gap-2">
+              <UtensilsCrossed size={16} className="text-[#10B981] shrink-0" />
+              <select
+                value={waiterId ?? ""}
+                onChange={(e) => setWaiterId(e.target.value ? Number(e.target.value) : null)}
+                className="flex-1 bg-transparent text-sm font-medium text-[#1A1A2E] dark:text-gray-100 outline-none cursor-pointer"
+              >
+                <option value="">{waiters.length ? "Select Waiter" : "No waiters — give a user the Waiter role"}</option>
+                {waiters.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Cart Items */}
