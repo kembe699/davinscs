@@ -22,6 +22,23 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+// Waiters for the POS "Served by" picker — names only, so any till user can
+// load it without seeing the rest of the user records.
+router.get("/waiters", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, COALESCE(NULLIF(u.name, ''), u.email) AS name
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       WHERE LOWER(r.name) = 'waiter' AND COALESCE(u.is_active, true)
+       ORDER BY 2`
+    );
+    res.json(rows);
+  } catch (err) {
+    return sendError(res, err);
+  }
+});
+
 router.post("/", requireAuth, async (req, res) => {
   const { email, password, name, pin, role_id } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required" });

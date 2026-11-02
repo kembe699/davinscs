@@ -34,6 +34,8 @@ export interface ReceiptSale {
   created_at: string;
   customerName?: string;
   customer_name?: string;
+  waiterName?: string | null;
+  waiter_name?: string | null;
   subtotal: number;
   taxAmount?: number;
   tax_amount?: number;
@@ -102,6 +104,7 @@ export function buildThermalReceipt(opts: ReceiptOptions): string {
   const discAmount   = sale.discountAmount ?? sale.discount_amount ?? 0;
   const total        = sale.total ?? sale.total_amount ?? 0;
   const customerName = sale.customerName ?? sale.customer_name ?? 'Cash Customer';
+  const waiterName   = sale.waiterName ?? sale.waiter_name ?? '';
   const paymentName  = sale.paymentTypeName ?? 'Cash';
   const saleDate     = new Date(sale.created_at).toLocaleString();
   const runDate      = new Date().toLocaleDateString();
@@ -190,6 +193,7 @@ ${co?.tax_id  ? `<div class="center" style="margin-bottom: 4px;">TIN : ${co.tax_
 <div class="row"><span>Run Date : ${runDate}</span></div>
 
 <div style="margin: 6px 0;">Customer Name : ${customerName}</div>
+${waiterName ? `<div style="margin: 0 0 6px;">Waiter : ${waiterName}</div>` : ''}
 
 <div class="dash">${dash}</div>
 <table>

@@ -689,6 +689,8 @@ export async function migrateTenant(schemaName = "public") {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS table_id INTEGER REFERENCES restaurant_tables(id) ON DELETE SET NULL;
+    -- The waiter who served the order (chosen on the POS), printed on the receipt.
+    ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS waiter_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
     -- Hotel rooms live alongside tables (kind = 'room'), so a room's QR-menu
     -- order is a held sale on it exactly like a table's. Amenities and a
     -- description are shown to the guest on the menu opened from the room.

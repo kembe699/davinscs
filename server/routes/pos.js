@@ -230,7 +230,7 @@ async function reverseSaleAccounting(client, sale, userId, amounts = null) {
 
 // Create new sale
 router.post("/sales", requireAuth, async (req, res) => {
-  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id, table_id } = req.body;
+  const { customer_id, customer_name, items, payment_type_id, discount_amount, sale_type, notes, status, price_list_id, promotion_id, sale_currency_id, table_id, waiter_id } = req.body;
   const user_id = req.user.id;
 
   if (!items || items.length === 0) {
@@ -418,11 +418,11 @@ router.post("/sales", requireAuth, async (req, res) => {
     const saleResult = await client.query(
       `INSERT INTO pos_sales (sale_number, customer_id, customer_name, user_id, session_id, price_list_id, subtotal, tax_amount,
                               discount_amount, total_amount, payment_type_id, payment_status, sale_type, status, notes,
-                              promotion_id, promotion_name, sale_currency_id, exchange_rate_used, table_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
+                              promotion_id, promotion_name, sale_currency_id, exchange_rate_used, table_id, waiter_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING *`,
       [sale_number, customer_id, customer_name, user_id, session_id, price_list_id || null, subtotal, tax_amount, total_discount,
        total_amount, payment_type_id, payment_status, sale_type || 'regular', status || 'completed', notes,
-       resolved_promotion_id, promo_name, resolved_currency_id, resolved_exchange_rate, table_id || null]
+       resolved_promotion_id, promo_name, resolved_currency_id, resolved_exchange_rate, table_id || null, waiter_id || null]
     );
     
     const sale = saleResult.rows[0];
@@ -526,7 +526,7 @@ router.post("/sales", requireAuth, async (req, res) => {
     const completeSale = await pool.query(
       `SELECT s.*,
               COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email,
-              u.email as user_email, u.name as user_name,
+              u.email as user_email, u.name as user_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name,
               pt.name as payment_type_name,
               json_agg(json_build_object(
                 'id', si.id,
@@ -591,7 +591,7 @@ router.post("/sales", requireAuth, async (req, res) => {
 router.get("/sales/held", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name,
+      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name,
              json_agg(json_build_object(
                'id', si.id,
                'product_id', si.product_id,
@@ -742,7 +742,7 @@ router.put("/sales/:id/complete", requireAuth, async (req, res) => {
     const completeSale = await pool.query(
       `SELECT s.*,
               COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email,
-              u.email as user_email, u.name as user_name,
+              u.email as user_email, u.name as user_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name,
               pt.name as payment_type_name,
               json_agg(json_build_object(
           'id', si.id, 'product_id', si.product_id, 'product_name', si.product_name,
@@ -858,7 +858,7 @@ router.get("/sales", requireAuth, async (req, res) => {
 
   try {
     let query = `
-      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name, pt.name as payment_type_name
+      SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name, pt.name as payment_type_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name
       FROM pos_sales s
       LEFT JOIN customers c ON s.customer_id = c.id
       LEFT JOIN users u ON s.user_id = u.id
@@ -930,7 +930,7 @@ router.get("/sales/:id", requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT s.*, 
               COALESCE(c.name, s.customer_name) as customer_name, c.email as customer_email, c.phone as customer_phone,
-              u.email as user_email, u.name as user_name,
+              u.email as user_email, u.name as user_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name,
               pt.name as payment_type_name,
               json_agg(json_build_object(
                 'id', si.id,

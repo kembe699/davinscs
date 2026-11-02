@@ -48,6 +48,11 @@ export default function POSMain() {
   const [showMenu, setShowMenu] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  // The waiter who served the order — a Waiter signed in on the till serves
+  // their own orders, so it starts as them.
+  const defaultWaiterId = isWaiter ? user?.id ?? null : null;
+  const [waiterId, setWaiterId] = useState<number | null>(defaultWaiterId);
+  const [waiters, setWaiters] = useState<{ id: number; name: string }[]>([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountType, setDiscountType] = useState<"percentage" | "amount">("percentage");
   const [discountValue, setDiscountValue] = useState(0);
@@ -156,6 +161,7 @@ export default function POSMain() {
     loadPromotions();
     loadHeldSales();
     loadTables();
+    api.users.waiters().then(setWaiters).catch(err => console.error("Failed to load waiters:", err));
 
     const intervalId = setInterval(() => {
       loadData();
@@ -468,11 +474,13 @@ export default function POSMain() {
         discount: item.discount_amount || 0,
       })));
       setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+      setWaiterId(sale.waiter_id ?? defaultWaiterId);
     } else {
       setResumingHeldSaleId(null);
       setCart([]);
       setCartDiscount(0);
       setCustomerName("");
+      setWaiterId(defaultWaiterId);
     }
     setShowTablePicker(false);
   };
@@ -495,6 +503,7 @@ export default function POSMain() {
       discount: item.discount_amount || 0,
     })));
     setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+    setWaiterId(sale.waiter_id ?? defaultWaiterId);
     setShowHeldSales(false);
     setConfirmingHeldSaleId(null);
   };
@@ -506,6 +515,7 @@ export default function POSMain() {
       setCart([]);
       setCartDiscount(0);
       setCustomerName("");
+      setWaiterId(defaultWaiterId);
       setActiveTable(null);
       setResumingHeldSaleId(null);
     }
@@ -521,6 +531,7 @@ export default function POSMain() {
     setCart([]);
     setCartDiscount(0);
     setCustomerName("");
+    setWaiterId(defaultWaiterId);
   };
 
   const clearTable = async () => {
@@ -717,6 +728,7 @@ export default function POSMain() {
         sale_type: "regular",
         status: "held",
         table_id: activeTable?.id || undefined,
+        waiter_id: waiterId || undefined,
       };
 
       const sale = await api.pos.createSale(saleData);
@@ -730,6 +742,7 @@ export default function POSMain() {
         sale_number: sale.sale_number,
         created_at: sale.created_at || new Date().toISOString(),
         customerName: customerName || 'Walk-in Customer',
+        waiterName: waiters.find(w => w.id === waiterId)?.name ?? sale.waiter_name ?? null,
         items: cart.map(item => ({
           product: { name: item.product.name },
           quantity: item.quantity,
@@ -746,6 +759,7 @@ export default function POSMain() {
       setCart([]);
       setCartDiscount(0);
       setCustomerName("");
+      setWaiterId(defaultWaiterId);
       setActiveTable(null);
       setResumingHeldSaleId(null);
 
@@ -882,6 +896,7 @@ export default function POSMain() {
       setCart([]);
       setCartDiscount(0);
       setCustomerName('');
+      setWaiterId(defaultWaiterId);
       setCreditCustomerName('');
       setCreditCustomerEmail('');
       setCreditCustomerPhone('');
@@ -935,6 +950,7 @@ export default function POSMain() {
         sale_type: "regular",
         status: "completed",
         table_id: activeTable?.id || undefined,
+        waiter_id: waiterId || undefined,
       };
 
       const sale = await api.pos.createSale(saleData);
@@ -949,6 +965,7 @@ export default function POSMain() {
         promotionName: appliedPromotion?.name || null,
         paymentTypeName: paymentTypes.find(pt => pt.id === selectedPaymentType)?.name || 'Cash',
         customerName: customerName || 'Walk-in Customer',
+        waiterName: waiters.find(w => w.id === waiterId)?.name ?? sale.waiter_name ?? null,
       };
 
       // Fetch currency data fresh for print (avoids any stale-state issue)
@@ -1011,6 +1028,7 @@ export default function POSMain() {
       setAppliedPromotion(null);
       setDiscountValue(0);
       setCustomerName('');
+      setWaiterId(defaultWaiterId);
       setShowPaymentModal(false);
       setActiveTable(null);
       setResumingHeldSaleId(null);
@@ -1448,7 +1466,7 @@ export default function POSMain() {
             <div className="flex justify-between items-center pr-10 lg:pr-0">
               <h2 className="font-bold text-lg text-[#1A1A2E] dark:text-gray-100">Current Order</h2>
               <button
-                onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); }}
+                onClick={() => { setCart([]); setCartDiscount(0); setCustomerName(""); setWaiterId(defaultWaiterId); }}
                 className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors px-2 py-1 rounded"
               >
                 Clear All
@@ -1482,6 +1500,22 @@ export default function POSMain() {
               </div>
               <span className="text-gray-400 dark:text-gray-500 text-xs">Edit</span>
             </button>
+
+            {waiters.length > 0 && (
+              <div className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center gap-2">
+                <UtensilsCrossed size={16} className="text-[#10B981] shrink-0" />
+                <select
+                  value={waiterId ?? ""}
+                  onChange={(e) => setWaiterId(e.target.value ? Number(e.target.value) : null)}
+                  className="flex-1 bg-transparent text-sm font-medium text-[#1A1A2E] dark:text-gray-100 outline-none cursor-pointer"
+                >
+                  <option value="">Select Waiter</option>
+                  {waiters.map(w => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Cart Items */}

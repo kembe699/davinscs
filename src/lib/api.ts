@@ -634,6 +634,8 @@ export type POSSale = {
   customer_name?: string;
   payment_type_name?: string;
   table_id?: number | null;
+  waiter_id?: number | null;
+  waiter_name?: string | null;
 };
 
 export type POSSaleItem = {
@@ -702,6 +704,7 @@ export const api = {
   },
   users: {
     list: () => request<ApiUser[]>("/api/users"),
+    waiters: () => request<{ id: number; name: string }[]>("/api/users/waiters"),
     create: (email: string, password: string, role_id?: number | null, name?: string, pin?: string) =>
       request<ApiUser>("/api/users", { method: "POST", body: JSON.stringify({ email, password, role_id, name, pin }) }),
     update: (id: number, email: string, password?: string, name?: string, pin?: string) =>
@@ -974,6 +977,7 @@ export const api = {
       promotion_id?: number;
       status?: string;
       table_id?: number;
+      waiter_id?: number;
     }) => request<POSSale>("/api/pos/sales", { method: "POST", body: JSON.stringify(data) }),
     getSales: (params?: {
       start_date?: string;
