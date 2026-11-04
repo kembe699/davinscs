@@ -455,6 +455,15 @@ export default function POSMain() {
 
   // A table's running order, if any — derived from the held sales list rather
   // than any stored "occupied" flag, so it can never drift out of sync.
+  // QR orders placed without a name used to be saved as "QR menu order";
+  // show (and print) the table's name for those instead.
+  const saleCustomerName = (sale: any): string => {
+    const name = (sale?.customer_name || '').trim();
+    if (name && name !== 'QR menu order') return name;
+    const table = sale?.table_label ?? (sale?.table_id ? tables.find(t => t.id === sale.table_id)?.label : undefined);
+    return table || name || 'Walk-in Customer';
+  };
+
   const heldSaleForTable = (tableId: number) =>
     heldSales.find((s: any) => s.table_id === tableId);
 
@@ -473,7 +482,7 @@ export default function POSMain() {
         unit_price: item.unit_price,
         discount: item.discount_amount || 0,
       })));
-      setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+      setCustomerName(saleCustomerName(sale) !== 'Walk-in Customer' ? saleCustomerName(sale) : "");
       setWaiterId(sale.waiter_id ?? defaultWaiterId);
     } else {
       setResumingHeldSaleId(null);
@@ -505,7 +514,7 @@ export default function POSMain() {
       unit_price: item.unit_price,
       discount: item.discount_amount || 0,
     })));
-    setCustomerName(sale.customer_name && sale.customer_name !== 'Walk-in Customer' ? sale.customer_name : "");
+    setCustomerName(saleCustomerName(sale) !== 'Walk-in Customer' ? saleCustomerName(sale) : "");
     setWaiterId(sale.waiter_id ?? defaultWaiterId);
     setShowHeldSales(false);
     setConfirmingHeldSaleId(null);
@@ -848,7 +857,7 @@ export default function POSMain() {
           unit_price: item.unit_price,
           discount: item.discount_amount,
         })),
-        customerName: completed.customer_name || 'Walk-in Customer',
+        customerName: saleCustomerName({ ...sale, ...completed, table_label: sale.table_label }),
         subtotal: completed.subtotal,
         taxAmount: completed.tax_amount,
         total: completed.total_amount,
@@ -2201,7 +2210,7 @@ export default function POSMain() {
                           <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1">{sale.sale_number}</p>
                           <p className="font-bold text-[#1A1A2E] dark:text-gray-100 flex items-center gap-2">
                             <User size={16} className="text-gray-400 dark:text-gray-500" />
-                            {sale.customer_name || 'Walk-in Customer'}
+                            {saleCustomerName(sale)}
                           </p>
                           {(() => {
                             const t = sale.table_id ? tables.find(x => x.id === sale.table_id) : null;

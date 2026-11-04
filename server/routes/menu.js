@@ -92,7 +92,7 @@ router.post("/:tenantSlug/order", async (req, res) => {
       try {
         await client.query("BEGIN");
 
-        const { rows: placeRows } = await client.query("SELECT kind FROM restaurant_tables WHERE id = $1", [table_id]);
+        const { rows: placeRows } = await client.query("SELECT kind, label FROM restaurant_tables WHERE id = $1", [table_id]);
         if (!placeRows[0]) {
           await client.query("ROLLBACK");
           response = { status: 400, body: { error: "Please choose a table" } };
@@ -184,7 +184,8 @@ router.post("/:tenantSlug/order", async (req, res) => {
            RETURNING *`,
           [
             sale_number,
-            customer_name && customer_name.trim() ? customer_name.trim() : "QR menu order",
+            // No name given: the receipt shows the table instead.
+            customer_name && customer_name.trim() ? customer_name.trim() : (placeRows[0].label || "QR menu order"),
             subtotal,
             tax_amount,
             total_amount,
