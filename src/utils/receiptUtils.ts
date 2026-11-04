@@ -265,13 +265,15 @@ export interface KitchenTicketOptions {
   waiterName?: string | null;
   /** e.g. "Table 4" or "Room 12" */
   tableLabel?: string | null;
+  /** Heading on the slip; defaults to "KITCHEN ORDER". */
+  title?: string;
 }
 
 /** Kitchen order ticket (80mm): only what the kitchen has to prepare — big
  *  quantities and names, no prices, no totals. Printed alongside the unpaid
  *  order ticket for items marked "Kitchen item" on the product. */
 export function buildKitchenTicket(opts: KitchenTicketOptions): string {
-  const { saleNumber, createdAt, items, customerName, waiterName, tableLabel } = opts;
+  const { saleNumber, createdAt, items, customerName, waiterName, tableLabel, title = 'KITCHEN ORDER' } = opts;
   const dash = '-'.repeat(42);
   const rows = items.map((it) => `
     <tr>
@@ -288,13 +290,13 @@ export function buildKitchenTicket(opts: KitchenTicketOptions): string {
     .kt-dash { white-space: pre; overflow: hidden; margin: 4px 0; }
     .kt table { width: 100%; border-collapse: collapse; }
     .kt td { font-size: 15px; font-weight: bold; padding: 3px 1px; vertical-align: top; }
-    .kt-qty { width: 22%; white-space: nowrap; }
+    .kt-qty { width: 22%; white-space: nowrap; padding-right: 6px; }
     .kt-name { text-align: left; word-break: break-word; }
   `;
   return `
 <style>${css}</style>
 <div class="kt">
-  <div class="kt-center kt-title">KITCHEN ORDER</div>
+  <div class="kt-center kt-title">${escapeHtml(title)}</div>
   <div class="kt-center">${escapeHtml(saleNumber)}</div>
   ${tableLabel ? `<div class="kt-center kt-big" style="margin-top:4px;">${escapeHtml(tableLabel)}</div>` : ''}
   <div class="kt-dash">${dash}</div>

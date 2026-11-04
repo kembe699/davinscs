@@ -813,24 +813,33 @@ export default function POSMain() {
     if (!pendingUnpaidReceipt) return;
     setPrintingUnpaidReceipt(true);
     try {
-      let html = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
-      // Restaurants: items marked "Kitchen item" also go on their own kitchen
-      // ticket. Both slips go in one print job with a page break between
-      // them, so the printer cuts them apart — one dialog, two receipts.
-      const kitchenItems = isFoodBusiness
-        ? (pendingUnpaidReceipt.items || []).filter((i: any) => i.is_kitchen_item)
-        : [];
-      if (kitchenItems.length > 0) {
-        const kitchenHtml = buildKitchenTicket({
-          saleNumber: pendingUnpaidReceipt.sale_number,
-          createdAt: pendingUnpaidReceipt.created_at,
-          items: kitchenItems.map((i: any) => ({ name: i.product?.name || '', quantity: i.quantity })),
-          customerName: pendingUnpaidReceipt.customerName,
-          waiterName: pendingUnpaidReceipt.waiterName,
-          tableLabel: pendingUnpaidReceipt.tableLabel,
-        });
-        html = `${kitchenHtml}<div style="break-after:page;page-break-after:always;"></div>${html}`;
+      const unpaidHtml = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
+      // Restaurants: the order is split into its own slips before the unpaid
+      // receipt — items marked "Kitchen item" on a KITCHEN ORDER slip, every
+      // other item on an OTHER ORDER slip (e.g. for the bar). All slips go in
+      // one print job with page breaks, so the printer cuts them apart.
+      const slips: string[] = [];
+      if (isFoodBusiness) {
+        const allItems = pendingUnpaidReceipt.items || [];
+        const groups: Array<[string, any[]]> = [
+          ['KITCHEN ORDER', allItems.filter((i: any) => i.is_kitchen_item)],
+          ['OTHER ORDER', allItems.filter((i: any) => !i.is_kitchen_item)],
+        ];
+        for (const [title, items] of groups) {
+          if (items.length === 0) continue;
+          slips.push(buildKitchenTicket({
+            title,
+            saleNumber: pendingUnpaidReceipt.sale_number,
+            createdAt: pendingUnpaidReceipt.created_at,
+            items: items.map((i: any) => ({ name: i.product?.name || '', quantity: i.quantity })),
+            customerName: pendingUnpaidReceipt.customerName,
+            waiterName: pendingUnpaidReceipt.waiterName,
+            tableLabel: pendingUnpaidReceipt.tableLabel,
+          }));
+        }
       }
+      slips.push(unpaidHtml);
+      const html = slips.join('<div style="break-after:page;page-break-after:always;"></div>');
       printThermal(`Receipt_${pendingUnpaidReceipt.sale_number}`, html);
       setPendingUnpaidReceipt(null);
     } catch {
