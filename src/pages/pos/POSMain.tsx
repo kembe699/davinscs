@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync, roundToCents, formatConvertedCurrency } from "@/utils/currency";
 import { matchesBarcode } from "@/utils/barcode";
 import { printDocument, printThermal } from "@/utils/printUtils";
-import { buildThermalReceipt, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
+import { buildThermalReceipt, buildKitchenTicket, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 import IdleWarningModal from "@/components/IdleWarningModal";
@@ -743,8 +743,10 @@ export default function POSMain() {
         created_at: sale.created_at || new Date().toISOString(),
         customerName: customerName || 'Walk-in Customer',
         waiterName: waiters.find(w => w.id === waiterId)?.name ?? sale.waiter_name ?? null,
+        tableLabel: activeTable?.label ?? null,
         items: cart.map(item => ({
           product: { name: item.product.name },
+          is_kitchen_item: !!item.product.is_kitchen_item,
           quantity: item.quantity,
           unit_price: item.unit_price,
           discount: item.discount,
@@ -796,7 +798,24 @@ export default function POSMain() {
     if (!pendingUnpaidReceipt) return;
     setPrintingUnpaidReceipt(true);
     try {
-      const html = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
+      let html = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
+      // Restaurants: items marked "Kitchen item" also go on their own kitchen
+      // ticket. Both slips go in one print job with a page break between
+      // them, so the printer cuts them apart — one dialog, two receipts.
+      const kitchenItems = isFoodBusiness
+        ? (pendingUnpaidReceipt.items || []).filter((i: any) => i.is_kitchen_item)
+        : [];
+      if (kitchenItems.length > 0) {
+        const kitchenHtml = buildKitchenTicket({
+          saleNumber: pendingUnpaidReceipt.sale_number,
+          createdAt: pendingUnpaidReceipt.created_at,
+          items: kitchenItems.map((i: any) => ({ name: i.product?.name || '', quantity: i.quantity })),
+          customerName: pendingUnpaidReceipt.customerName,
+          waiterName: pendingUnpaidReceipt.waiterName,
+          tableLabel: pendingUnpaidReceipt.tableLabel,
+        });
+        html = `${kitchenHtml}<div style="break-after:page;page-break-after:always;"></div>${html}`;
+      }
       printThermal(`Receipt_${pendingUnpaidReceipt.sale_number}`, html);
       setPendingUnpaidReceipt(null);
     } catch {

@@ -42,7 +42,7 @@ const empty = {
   slug: "", name: "", brand: "", price: "" as number | "", cost_price: "" as number | "", tag: "", description: "",
   specs: [] as Spec[], image_url: "", in_stock: true, is_featured: false, category: "",
   barcode: "", expiry_date: "", product_type: "product", quantity_on_hand: "" as number | "", reorder_level: "" as number | "",
-  expense_account_id: 0, uom: "pcs", storage_location_id: 0, show_in_pos: true,
+  expense_account_id: 0, uom: "pcs", storage_location_id: 0, show_in_pos: true, is_kitchen_item: false,
 };
 
 type Account = { id: number; code: string; name: string; account_type: string };
@@ -63,6 +63,14 @@ export default function ProductForm() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
+  // Restaurants (and hotels with a kitchen) can mark items that go to the
+  // kitchen; the POS then prints a separate kitchen ticket for them.
+  const [isFoodBusiness, setIsFoodBusiness] = useState(false);
+  useEffect(() => {
+    api.company.get()
+      .then((c: any) => setIsFoodBusiness(c?.business_type === "food" || c?.business_type === "hotel"))
+      .catch(() => {});
+  }, []);
 
   // Batch/lot tracking — opt-in, only meaningful once a product actually
   // exists (needs a real product_id), so this only loads in edit mode.
@@ -172,6 +180,7 @@ export default function ProductForm() {
           uom: (p as any).uom || "pcs",
           storage_location_id: (p as any).storage_location_id || 0,
           show_in_pos: (p as any).show_in_pos ?? true,
+          is_kitchen_item: (p as any).is_kitchen_item ?? false,
         });
         if (cp > 0 && sp > 0) setMargin(Math.round((sp - cp) / cp * 100));
       })
@@ -514,6 +523,30 @@ export default function ProductForm() {
                   </div>
                 ))}
               </section>
+
+              {/* Kitchen — restaurant / hotel only, for products and services alike */}
+              {isFoodBusiness && (
+                <section className="border border-border-subtle p-6 bg-chassis">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Kitchen item</h2>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Turn on for food the kitchen prepares (e.g. pizza). When an unpaid order is printed
+                        at the POS, these items also print on a separate kitchen ticket.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Kitchen item"
+                      aria-pressed={!!(form as any).is_kitchen_item}
+                      onClick={() => set("is_kitchen_item", !(form as any).is_kitchen_item)}
+                      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${(form as any).is_kitchen_item ? "bg-primary" : "bg-border-subtle"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-background transition-transform ${(form as any).is_kitchen_item ? "translate-x-5" : ""}`} />
+                    </button>
+                  </div>
+                </section>
+              )}
 
               {/* Stock Control — only for physical products, not services */}
               {(form as any).product_type !== 'service' && (

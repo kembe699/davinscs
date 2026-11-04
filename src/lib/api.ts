@@ -102,6 +102,7 @@ export type ApiProduct = {
   storage_location_id?: number | null;
   storage_location_name?: string | null;
   show_in_pos?: boolean;
+  is_kitchen_item?: boolean;
   created_at: string;
   updated_at: string;
 };

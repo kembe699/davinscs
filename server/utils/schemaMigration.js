@@ -186,6 +186,7 @@ export async function migrateTenant(schemaName = "public") {
     -- Default TRUE so every existing product keeps showing in the POS exactly
     -- as it does today — this is an opt-out toggle, not an opt-in gate.
     ALTER TABLE products ADD COLUMN IF NOT EXISTS show_in_pos BOOLEAN DEFAULT TRUE;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS is_kitchen_item BOOLEAN DEFAULT FALSE;
     ALTER TABLE products ALTER COLUMN brand DROP NOT NULL;
     ALTER TABLE products ALTER COLUMN category DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS password_resets (

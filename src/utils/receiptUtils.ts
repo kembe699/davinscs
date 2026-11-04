@@ -253,3 +253,57 @@ ${unpaid ? '<div class="center bold" style="margin: 6px 0;">*** NOT YET PAID ***
 `;
 }
 
+
+const escapeHtml = (s: string) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+export interface KitchenTicketOptions {
+  saleNumber: string;
+  createdAt: string;
+  items: { name: string; quantity: number }[];
+  customerName?: string | null;
+  waiterName?: string | null;
+  /** e.g. "Table 4" or "Room 12" */
+  tableLabel?: string | null;
+}
+
+/** Kitchen order ticket (80mm): only what the kitchen has to prepare — big
+ *  quantities and names, no prices, no totals. Printed alongside the unpaid
+ *  order ticket for items marked "Kitchen item" on the product. */
+export function buildKitchenTicket(opts: KitchenTicketOptions): string {
+  const { saleNumber, createdAt, items, customerName, waiterName, tableLabel } = opts;
+  const dash = '-'.repeat(42);
+  const rows = items.map((it) => `
+    <tr>
+      <td class="kt-qty">${Number(it.quantity).toLocaleString()} x</td>
+      <td class="kt-name">${escapeHtml(it.name)}</td>
+    </tr>`).join('');
+  const css = `
+    @page { size: 80mm auto; margin: 4mm 3mm; }
+    .kt { font-family: 'Courier New', Courier, monospace; font-weight: 600; font-size: 12px; color: #000; background: #fff; width: 74mm; padding-bottom: 20px; }
+    .kt * { box-sizing: border-box; margin: 0; padding: 0; }
+    .kt-center { text-align: center; }
+    .kt-title { font-size: 18px; font-weight: bold; margin: 4px 0; }
+    .kt-big { font-size: 15px; font-weight: bold; }
+    .kt-dash { white-space: pre; overflow: hidden; margin: 4px 0; }
+    .kt table { width: 100%; border-collapse: collapse; }
+    .kt td { font-size: 15px; font-weight: bold; padding: 3px 1px; vertical-align: top; }
+    .kt-qty { width: 22%; white-space: nowrap; }
+    .kt-name { text-align: left; word-break: break-word; }
+  `;
+  return `
+<style>${css}</style>
+<div class="kt">
+  <div class="kt-center kt-title">KITCHEN ORDER</div>
+  <div class="kt-center">${escapeHtml(saleNumber)}</div>
+  ${tableLabel ? `<div class="kt-center kt-big" style="margin-top:4px;">${escapeHtml(tableLabel)}</div>` : ''}
+  <div class="kt-dash">${dash}</div>
+  <div>Time : ${new Date(createdAt).toLocaleString()}</div>
+  ${waiterName ? `<div>Waiter : ${escapeHtml(waiterName)}</div>` : ''}
+  ${customerName ? `<div>Customer : ${escapeHtml(customerName)}</div>` : ''}
+  <div class="kt-dash">${dash}</div>
+  <table>${rows}</table>
+  <div class="kt-dash">${dash}</div>
+  <div class="kt-center">${items.length} item${items.length === 1 ? '' : 's'}</div>
+</div>`;
+}
