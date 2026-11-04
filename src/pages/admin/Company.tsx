@@ -25,6 +25,7 @@ export default function Company() {
     website: "",
     description: "",
     currency: "UGX",
+    business_type: "",
     brand_color_start: "#004A99",
     brand_color_mid: "#008B8B",
     brand_color_end: "#32CD32",
@@ -76,6 +77,7 @@ export default function Company() {
           website: data.website || "",
           description: data.description || "",
           currency: data.currency || "UGX",
+          business_type: data.business_type || "",
           brand_color_start: data.brand_color_start || "#004A99",
           brand_color_mid: data.brand_color_mid || "#008B8B",
           brand_color_end: data.brand_color_end || "#32CD32",
@@ -121,6 +123,7 @@ export default function Company() {
         website: savedData.website || "",
         description: savedData.description || "",
         currency: savedData.currency || "UGX",
+        business_type: savedData.business_type || "",
         brand_color_start: start,
         brand_color_mid: mid,
         brand_color_end: end,
@@ -218,6 +221,23 @@ export default function Company() {
               <div>
                 <label className="block text-sm text-foreground mb-2">Country</label>
                 <input type="text" value={companyData.country} onChange={(e) => setCompanyData({ ...companyData, country: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground mb-2">Business Type</label>
+                {/* Food & Beverage and Hotel switch on tables, QR menu, waiters,
+                    kitchen tickets and rooms. */}
+                <select value={companyData.business_type} onChange={(e) => setCompanyData({ ...companyData, business_type: e.target.value })} className="w-full px-3 py-2 bg-admin-bg border border-admin-border text-admin-text focus:outline-none focus:border-primary">
+                  <option value="">Not set</option>
+                  <option value="retail">Retail Store</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="fashion">Fashion &amp; Apparel</option>
+                  <option value="food">Food &amp; Beverage</option>
+                  <option value="hotel">Hotel &amp; Hospitality</option>
+                  <option value="pharmacy">Pharmacy / Health</option>
+                  <option value="education">Education</option>
+                  <option value="services">Services / Repairs</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm text-foreground mb-2">Currency</label>

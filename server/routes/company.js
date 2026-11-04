@@ -71,10 +71,13 @@ router.post("/", requireAuth, async (req, res) => {
              postal_code = $9, website = $10, receipt_footer = $11,
              whatsapp = $12,
              brand_color_start = $13, brand_color_mid = $14, brand_color_end = $15,
-             currency = $16, business_type = $17,
+             -- COALESCE: a save that doesn't send business_type (it used to be
+             -- dropped by the Company page) must not wipe it — that switched
+             -- off every Food & Beverage / Hotel feature for the tenant.
+             currency = $16, business_type = COALESCE($17, business_type),
              updated_at = NOW()
          WHERE id = $18 RETURNING *`,
-        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', currency || 'UGX', business_type || '', existing.rows[0].id]
+        [name, address, phone, email, tax_id, logo, city, country, postal_code, website, description, whatsapp, brand_color_start || '#004A99', brand_color_mid || '#008B8B', brand_color_end || '#32CD32', currency || 'UGX', typeof business_type === 'string' ? business_type : null, existing.rows[0].id]
       );
       const response = {
         name: rows[0].company_name,
