@@ -492,6 +492,9 @@ export default function POSMain() {
   // by a new completed sale once Checkout goes through in handleProcessPayment.
   const resumeHeldSaleForEdit = (sale: any) => {
     setResumingHeldSaleId(sale.id);
+    // Keep the order on its table (QR orders always have one). Without this,
+    // holding it again re-created it with no table and the table showed free.
+    setActiveTable(sale.table_id ? (tables.find(t => t.id === sale.table_id) ?? null) : null);
     setCart((sale.items || []).map((item: any) => ({
       product: products.find(p => p.id === item.product_id) ?? ({
         id: item.product_id,
@@ -727,7 +730,10 @@ export default function POSMain() {
         discount_amount: cartDiscount,
         sale_type: "regular",
         status: "held",
-        table_id: activeTable?.id || undefined,
+        // Fall back to the resumed order's own table so it's never dropped.
+        table_id: activeTable?.id
+          || (resumingHeldSaleId ? heldSales.find((h: any) => h.id === resumingHeldSaleId)?.table_id : undefined)
+          || undefined,
         waiter_id: waiterId || undefined,
       };
 
@@ -968,7 +974,10 @@ export default function POSMain() {
         discount_amount: discountAmount,
         sale_type: "regular",
         status: "completed",
-        table_id: activeTable?.id || undefined,
+        // Fall back to the resumed order's own table so it's never dropped.
+        table_id: activeTable?.id
+          || (resumingHeldSaleId ? heldSales.find((h: any) => h.id === resumingHeldSaleId)?.table_id : undefined)
+          || undefined,
         waiter_id: waiterId || undefined,
       };
 
@@ -2194,6 +2203,16 @@ export default function POSMain() {
                             <User size={16} className="text-gray-400 dark:text-gray-500" />
                             {sale.customer_name || 'Walk-in Customer'}
                           </p>
+                          {(() => {
+                            const t = sale.table_id ? tables.find(x => x.id === sale.table_id) : null;
+                            const label = sale.table_label ?? t?.label;
+                            const location = sale.table_location ?? t?.location;
+                            return label ? (
+                              <p className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#10B981] bg-[#10B981]/10 rounded-full px-2 py-0.5">
+                                {label}{location ? ` · ${location}` : ''}
+                              </p>
+                            ) : null;
+                          })()}
                         </div>
                         <div className="w-10 h-10 bg-[#10B981]/10 dark:bg-[#10B981]/20 rounded-full flex items-center justify-center">
                           <ShoppingCart size={18} className="text-[#10B981]" />

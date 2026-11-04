@@ -592,6 +592,8 @@ router.get("/sales/held", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT s.*, COALESCE(c.name, s.customer_name) as customer_name, u.email as user_email, u.name as user_name, (SELECT COALESCE(w.name, w.email) FROM users w WHERE w.id = s.waiter_id) as waiter_name,
+             (SELECT t.label FROM restaurant_tables t WHERE t.id = s.table_id) as table_label,
+             (SELECT t.location FROM restaurant_tables t WHERE t.id = s.table_id) as table_location,
              json_agg(json_build_object(
                'id', si.id,
                'product_id', si.product_id,
