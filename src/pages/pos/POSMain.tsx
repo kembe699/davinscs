@@ -8,7 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencySync, roundToCents, formatConvertedCurrency } from "@/utils/currency";
 import { matchesBarcode } from "@/utils/barcode";
-import { printDocument, printThermal } from "@/utils/printUtils";
+import { printDocument, printThermal, printThermalSequence } from "@/utils/printUtils";
 import { buildThermalReceipt, buildKitchenTicket, generateReceiptQrDataUrl } from "@/utils/receiptUtils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
@@ -816,8 +816,9 @@ export default function POSMain() {
       const unpaidHtml = await buildReceiptBody(pendingUnpaidReceipt, { unpaid: true });
       // Restaurants: the order is split into its own slips before the unpaid
       // receipt — items marked "Kitchen item" on a KITCHEN ORDER slip, every
-      // other item on an OTHER ORDER slip (e.g. for the bar). All slips go in
-      // one print job with page breaks, so the printer cuts them apart.
+      // other item on an OTHER ORDER slip (e.g. for the bar). Each slip is its
+      // own print job: receipt printers cut at the end of a job, but not all of
+      // them cut at a page break inside one.
       const slips: string[] = [];
       if (isFoodBusiness) {
         const allItems = pendingUnpaidReceipt.items || [];
@@ -839,8 +840,7 @@ export default function POSMain() {
         }
       }
       slips.push(unpaidHtml);
-      const html = slips.join('<div style="break-after:page;page-break-after:always;"></div>');
-      printThermal(`Receipt_${pendingUnpaidReceipt.sale_number}`, html);
+      printThermalSequence(slips.map((html) => ({ title: `Receipt_${pendingUnpaidReceipt.sale_number}`, html })));
       setPendingUnpaidReceipt(null);
     } catch {
       toast("Failed to build receipt", "error", "Print Error");

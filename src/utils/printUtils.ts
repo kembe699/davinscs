@@ -103,14 +103,15 @@ function buildFullHTML(title: string, bodyHTML: string): string {
   </head><body>${bodyHTML}</body></html>`;
 }
 
-function waitForImagesAndPrint(iframe: HTMLIFrameElement) {
+function waitForImagesAndPrint(iframe: HTMLIFrameElement, onPrinted?: () => void) {
   const doc = iframe.contentDocument;
-  if (!doc) return;
+  if (!doc) { onPrinted?.(); return; }
 
   const images = Array.from(doc.images);
   if (images.length === 0) {
     setTimeout(() => {
       iframe.contentWindow!.print();
+      onPrinted?.();
       setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
     }, 100);
     return;
@@ -123,6 +124,7 @@ function waitForImagesAndPrint(iframe: HTMLIFrameElement) {
     if (hasPrinted) return;
     hasPrinted = true;
     iframe.contentWindow!.print();
+    onPrinted?.();
     setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
   };
 
@@ -204,7 +206,7 @@ export function downloadDocument(filename: string, bodyHTML: string): void {
   else setTimeout(doPrint, 1500);
 }
 
-export function printThermal(title: string, bodyHTML: string): void {
+export function printThermal(title: string, bodyHTML: string, onPrinted?: () => void): void {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${bodyHTML}</body></html>`;
   
   // Mobile browsers (especially Safari/Chrome on iOS/Android) struggle with printing hidden iframes.
@@ -218,7 +220,7 @@ export function printThermal(title: string, bodyHTML: string): void {
       
       const images = Array.from(win.document.images);
       if (images.length === 0) {
-        setTimeout(() => { win.print(); }, 500);
+        setTimeout(() => { win.print(); onPrinted?.(); }, 500);
         return;
       }
       
@@ -228,6 +230,7 @@ export function printThermal(title: string, bodyHTML: string): void {
         if (hasPrinted) return;
         hasPrinted = true;
         win.print();
+        onPrinted?.();
       };
       
       images.forEach(img => {
@@ -253,7 +256,19 @@ export function printThermal(title: string, bodyHTML: string): void {
   doc.write(html);
   doc.close();
   iframe.contentWindow!.focus();
-  waitForImagesAndPrint(iframe);
+  waitForImagesAndPrint(iframe, onPrinted);
+}
+
+/** Print several thermal slips as separate print jobs, one after another and in
+ *  order. Receipt printers cut at the end of each job, so every slip comes out
+ *  on its own piece of paper whatever the driver does with page breaks. */
+export function printThermalSequence(jobs: Array<{ title: string; html: string }>): void {
+  const next = (i: number) => {
+    if (i >= jobs.length) return;
+    // A short gap so the previous job is handed to the spooler first.
+    printThermal(jobs[i].title, jobs[i].html, () => setTimeout(() => next(i + 1), 400));
+  };
+  next(0);
 }
 
 /** @deprecated use printDocument instead */
