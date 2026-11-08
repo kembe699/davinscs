@@ -20,6 +20,7 @@ import AdminUsers from "./pages/admin/Users.tsx";
 import ResetPassword from "./pages/admin/ResetPassword.tsx";
 import Inventory from "./pages/admin/Inventory.tsx";
 import StorageLocations from "./pages/admin/StorageLocations.tsx";
+import Batches from "./pages/admin/Batches.tsx";
 import Procurement from "./pages/admin/Procurement.tsx";
 import Accounting from "./pages/admin/Accounting.tsx";
 import ReportsNew from "./pages/admin/ReportsNew.tsx";
@@ -139,6 +140,7 @@ const App = () => (
               <Route path="admin/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
               <Route path="admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="admin/storage-locations" element={<ProtectedRoute><StorageLocations /></ProtectedRoute>} />
+              <Route path="admin/batches" element={<ProtectedRoute><Batches /></ProtectedRoute>} />
               <Route path="admin/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
               <Route path="admin/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
               <Route path="admin/reports" element={<ProtectedRoute><ReportsNew /></ProtectedRoute>} />

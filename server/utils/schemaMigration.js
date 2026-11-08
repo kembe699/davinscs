@@ -309,6 +309,13 @@ export async function migrateTenant(schemaName = "public") {
     CREATE INDEX IF NOT EXISTS idx_product_batches_product ON product_batches(product_id);
     CREATE INDEX IF NOT EXISTS idx_product_batches_expiry ON product_batches(expiry_date);
     CREATE INDEX IF NOT EXISTS idx_product_batches_barcode ON product_batches(barcode) WHERE barcode <> '';
+    -- A batch can be retired (expired, damaged, recalled): its remaining stock
+    -- is written off and it stays on record, no longer sellable.
+    ALTER TABLE product_batches ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+    ALTER TABLE product_batches ADD COLUMN IF NOT EXISTS retired_at TIMESTAMPTZ;
+    ALTER TABLE product_batches ADD COLUMN IF NOT EXISTS retired_by INTEGER REFERENCES users(id);
+    ALTER TABLE product_batches ADD COLUMN IF NOT EXISTS retire_reason TEXT;
+    ALTER TABLE product_batches ADD COLUMN IF NOT EXISTS retired_quantity INTEGER;
 
     CREATE TABLE IF NOT EXISTS supplier_bills (
       id SERIAL PRIMARY KEY,

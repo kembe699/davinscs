@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiStorageLocation } from "@/lib/api";
+import { api, ApiStorageLocation, ApiStorageLocationItem } from "@/lib/api";
+import { format } from "date-fns";
 import { useToast } from "@/contexts/ToastContext";
 import AdminLayout from "./AdminLayout";
-import { Plus, Pencil, Trash2, Check, X, Warehouse } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Warehouse, Eye, Search } from "lucide-react";
 
 export default function StorageLocations() {
   const { toast } = useToast();
@@ -17,6 +18,7 @@ export default function StorageLocations() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [viewing, setViewing] = useState<ApiStorageLocation | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -116,7 +118,7 @@ export default function StorageLocations() {
                 <th className="text-left px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Name</th>
                 <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Products</th>
                 <th className="text-center px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Active</th>
-                <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest w-44">Actions</th>
+                <th className="text-right px-4 py-3 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest w-64">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
@@ -179,6 +181,12 @@ export default function StorageLocations() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setViewing(sl)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                          >
+                            <Eye size={11} /> Items
+                          </button>
                           <button
                             onClick={() => startEdit(sl)}
                             className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
@@ -280,6 +288,82 @@ export default function StorageLocations() {
           </div>
         </div>
       )}
+      {viewing && <LocationItems location={viewing} onClose={() => setViewing(null)} />}
     </AdminLayout>
+  );
+}
+
+/** What a storage location holds right now: products and their batches. */
+function LocationItems({ location, onClose }: { location: ApiStorageLocation; onClose: () => void }) {
+  const [items, setItems] = useState<ApiStorageLocationItem[] | null>(null);
+  const [error, setError] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    api.inventory.storageLocations.items(location.id)
+      .then(setItems)
+      .catch((e) => setError(e instanceof Error ? e.message : "Could not load items"));
+  }, [location.id]);
+  const term = q.trim().toLowerCase();
+  const shown = (items || []).filter((i) => !term || i.product_name.toLowerCase().includes(term) || (i.batch_number || "").toLowerCase().includes(term));
+  const products = new Set((items || []).map((i) => i.product_id)).size;
+  const units = (items || []).reduce((n, i) => n + (i.quantity > 0 ? i.quantity : 0), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-background border border-border-subtle w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
+          <div>
+            <p className="font-mono-tech text-[9px] text-primary tracking-[0.4em] uppercase mb-0.5">Items in store</p>
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2"><Warehouse size={16} /> {location.name}</h2>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+        </div>
+        <div className="px-6 py-3 border-b border-border-subtle flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search product or batch" className="field-input w-full pl-9" />
+          </div>
+          {items && <span className="font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">{products} products · {units} units</span>}
+        </div>
+        <div className="overflow-y-auto">
+          {error ? (
+            <div className="px-6 py-8 text-sm text-red-400">{error}</div>
+          ) : !items ? (
+            <div className="px-6 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest animate-pulse">Loading…</div>
+          ) : shown.length === 0 ? (
+            <div className="px-6 py-8 text-center font-mono-tech text-[10px] text-muted-foreground uppercase tracking-widest">
+              {items.length === 0 ? "Nothing stored here yet" : "No items match"}
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-subtle bg-chassis">
+                  <th className="text-left px-6 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Product</th>
+                  <th className="text-left px-4 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Batch</th>
+                  <th className="text-left px-4 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Expiry</th>
+                  <th className="text-right px-6 py-2 font-mono-tech text-[9px] text-muted-foreground uppercase tracking-widest">Qty</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {shown.map((i, idx) => {
+                  const expired = i.days_to_expiry != null && i.days_to_expiry < 0;
+                  const soon = i.days_to_expiry != null && i.days_to_expiry >= 0 && i.days_to_expiry <= 30;
+                  return (
+                    <tr key={`${i.product_id}-${i.batch_id ?? "x"}-${idx}`}>
+                      <td className="px-6 py-2 text-foreground">{i.product_name}</td>
+                      <td className="px-4 py-2 font-mono-tech text-xs text-muted-foreground">{i.batch_number || (i.batch_id === null ? "No batch" : "")}</td>
+                      <td className={`px-4 py-2 ${expired ? "text-red-400 font-semibold" : soon ? "text-amber-400 font-semibold" : "text-muted-foreground"}`}>
+                        {i.expiry_date ? format(new Date(i.expiry_date), "dd/MM/yyyy") : "—"}{expired ? " (expired)" : ""}
+                      </td>
+                      <td className={`px-6 py-2 text-right font-mono-tech ${i.quantity <= 0 ? "text-red-400" : ""}`}>{i.quantity}{i.uom ? <span className="text-xs text-muted-foreground"> {i.uom}</span> : null}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -95,7 +95,11 @@ router.put("/:id", requireAuth, async (req, res) => {
       `UPDATE products SET
         slug=$1, name=$2, brand=$3, price=$4, cost_price=$5, tag=$6, description=$7,
         specs=$8, image_url=$9, in_stock=$10, is_featured=$11, category=$12, barcode=$13,
-        expiry_date=$14, product_type=$15, quantity_on_hand=$16, reorder_level=$17,
+        expiry_date=$14, product_type=$15,
+        -- A batch-tracked product's total is the rollup the batch actions keep
+        -- in sync; saving the product form must not overwrite it.
+        quantity_on_hand=CASE WHEN EXISTS (SELECT 1 FROM product_batches pb WHERE pb.product_id = products.id) THEN quantity_on_hand ELSE $16 END,
+        reorder_level=$17,
         expense_account_id=$18, uom=$19, storage_location_id=$20, show_in_pos=$21,
         is_kitchen_item=COALESCE($23, is_kitchen_item), updated_at=NOW()
        WHERE id=$22 RETURNING *`,

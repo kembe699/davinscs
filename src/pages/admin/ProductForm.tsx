@@ -85,6 +85,31 @@ export default function ProductForm() {
     api.inventory.batches.list(Number(id)).then(setBatches).catch(() => {});
   };
 
+  // A batch change moves the product's stock total on the server; pull the new
+  // total into the form so the field shows it (and the form never holds a stale one).
+  const afterBatchChange = () => {
+    loadBatches();
+    api.products.list()
+      .then((ps) => {
+        const p = ps.find((x) => x.id === Number(id));
+        if (p) setForm((f) => ({ ...f, quantity_on_hand: (p as any).quantity_on_hand ?? 0 }));
+      })
+      .catch(() => {});
+  };
+  const hasBatches = batches.length > 0;
+
+  const retireBatch = async (batch: ApiProductBatch) => {
+    const reason = window.prompt(`Retire batch ${batch.batch_number}? Its ${batch.quantity_on_hand} left will be written off. Reason:`, "Expired");
+    if (reason === null) return;
+    try {
+      const r = await api.inventory.batches.retire(batch.id, reason.trim() || "Expired");
+      toast(`Batch retired${r.written_off ? ` — ${r.written_off} written off` : ""}.`, "success", "Retired");
+      afterBatchChange();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not retire batch", "error", "Error");
+    }
+  };
+
   useEffect(() => {
     loadBatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +131,7 @@ export default function ProductForm() {
         barcode: newBatch.barcode.trim() || undefined,
       });
       setNewBatch({ batch_number: "", quantity: "", expiry_date: "", barcode: "" });
-      loadBatches();
+      afterBatchChange();
       toast("Batch added.", "success", "Saved");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not add batch", "error", "Error");
@@ -122,7 +147,7 @@ export default function ProductForm() {
       await api.inventory.batches.adjust(batchId, delta);
       setAdjustingBatchId(null);
       setAdjustAmount("");
-      loadBatches();
+      afterBatchChange();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not adjust batch", "error", "Error");
     }
@@ -136,7 +161,7 @@ export default function ProductForm() {
     if (!window.confirm(`Remove batch ${batch.batch_number}?`)) return;
     try {
       await api.inventory.batches.delete(batch.id);
-      loadBatches();
+      afterBatchChange();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not remove batch", "error", "Error");
     }
@@ -580,11 +605,15 @@ export default function ProductForm() {
                       <label className="field-label">Quantity in stock</label>
                       <input
                         type="number" min={0}
-                        value={(form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
+                        value={hasBatches ? Number((form as any).quantity_on_hand) || 0 : (form as any).quantity_on_hand === 0 ? "" : (form as any).quantity_on_hand}
                         onChange={(e) => set("quantity_on_hand", e.target.value === "" ? "" : Number(e.target.value))}
                         placeholder="Insert quantity in stock"
-                        className="field-input"
+                        readOnly={hasBatches}
+                        className={`field-input ${hasBatches ? "opacity-70 cursor-not-allowed" : ""}`}
                       />
+                      {hasBatches && (
+                        <p className="text-[11px] text-muted-foreground mt-1">Tracked by batches — change stock from the Batches section below.</p>
+                      )}
                     </div>
                     <div className="sm:col-span-2">
                       <label className="field-label">Storage location</label>
@@ -617,6 +646,14 @@ export default function ProductForm() {
               )}
 
               {/* Batches — opt-in lot tracking, only once the product exists */}
+              {(form as any).product_type !== 'service' && !isEdit && (
+                <section className="border border-border-subtle p-6 bg-chassis">
+                  <h2 className="font-mono-tech text-[10px] text-primary tracking-[0.3em] uppercase">Batches</h2>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Save the product first, then add its batches here or from Inventory › Batches.
+                  </p>
+                </section>
+              )}
               {(form as any).product_type !== 'service' && isEdit && (
                 <section className="border border-border-subtle p-6 bg-chassis space-y-5">
                   <div>
@@ -631,9 +668,13 @@ export default function ProductForm() {
                   {batches.length > 0 && (
                     <div className="space-y-2">
                       {batches.map((b) => (
-                        <div key={b.id} className="flex flex-wrap items-center gap-3 border border-border-subtle px-3 py-2 text-sm">
+                        <div key={b.id} className={`flex flex-wrap items-center gap-3 border border-border-subtle px-3 py-2 text-sm ${b.status === "retired" ? "opacity-60" : ""}`}>
                           <span className="font-mono-tech text-xs text-foreground">{b.batch_number}</span>
-                          <span className="text-muted-foreground">Qty: {b.quantity_on_hand}</span>
+                          {b.status === "retired" ? (
+                            <span className="text-muted-foreground">Retired{b.retire_reason ? ` · ${b.retire_reason}` : ""}{b.retired_quantity ? ` · ${b.retired_quantity} written off` : ""}</span>
+                          ) : (
+                            <span className="text-muted-foreground">Qty: {b.quantity_on_hand}</span>
+                          )}
                           {b.expiry_date && (
                             <span className="text-muted-foreground">
                               Expires {format(new Date(b.expiry_date), "dd/MM/yyyy")}
@@ -641,7 +682,11 @@ export default function ProductForm() {
                           )}
                           {b.barcode && <span className="text-muted-foreground font-mono-tech text-xs">{b.barcode}</span>}
                           <div className="ml-auto flex items-center gap-2">
-                            {adjustingBatchId === b.id ? (
+                            {b.status === "retired" ? (
+                              <button type="button" onClick={() => deleteBatch(b)} title="Remove from list" className="text-muted-foreground hover:text-red-400">
+                                <Trash2 size={14} />
+                              </button>
+                            ) : adjustingBatchId === b.id ? (
                               <>
                                 <input
                                   type="number"
@@ -662,6 +707,9 @@ export default function ProductForm() {
                               <>
                                 <button type="button" onClick={() => setAdjustingBatchId(b.id)} className="text-muted-foreground hover:text-foreground text-xs font-mono-tech uppercase tracking-widest">
                                   Adjust
+                                </button>
+                                <button type="button" onClick={() => retireBatch(b)} className="text-muted-foreground hover:text-red-400 text-xs font-mono-tech uppercase tracking-widest">
+                                  Retire
                                 </button>
                                 <button type="button" onClick={() => deleteBatch(b)} className="text-muted-foreground hover:text-red-400">
                                   <Trash2 size={14} />

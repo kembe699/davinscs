@@ -254,6 +254,28 @@ export type ApiProductBatch = {
   cost_price: number | null;
   created_at: string;
   updated_at: string;
+  status?: "active" | "retired";
+  retired_at?: string | null;
+  retire_reason?: string | null;
+  retired_quantity?: number | null;
+  retired_by_email?: string | null;
+  // Only on the all-batches list:
+  product_name?: string;
+  product_uom?: string;
+  effective_location_id?: number | null;
+  days_to_expiry?: number | null;
+};
+
+/** One line of what a storage location holds. batch_id is null for stock not in a batch. */
+export type ApiStorageLocationItem = {
+  product_id: number;
+  product_name: string;
+  uom: string | null;
+  batch_id: number | null;
+  batch_number: string | null;
+  quantity: number;
+  expiry_date: string | null;
+  days_to_expiry: number | null;
 };
 
 export type ApiSupplierBill = {
@@ -758,9 +780,15 @@ export const api = {
         request<ApiStorageLocation>(`/api/inventory/storage-locations/${id}`, { method: "PUT", body: JSON.stringify(data) }),
       delete: (id: number) =>
         request<{ success: boolean }>(`/api/inventory/storage-locations/${id}`, { method: "DELETE" }),
+      items: (id: number) => request<ApiStorageLocationItem[]>(`/api/inventory/storage-locations/${id}/items`),
     },
     batches: {
       list: (product_id: number) => request<ApiProductBatch[]>(`/api/inventory/batches?product_id=${product_id}`),
+      listAll: () => request<ApiProductBatch[]>("/api/inventory/batches"),
+      retire: (id: number, reason: string) =>
+        request<{ batch_id: number; written_off: number }>(`/api/inventory/batches/${id}/retire`, { method: "POST", body: JSON.stringify({ reason }) }),
+      retireExpired: () =>
+        request<{ retired: number; written_off: number }>("/api/inventory/batches/retire-expired", { method: "POST" }),
       barcodes: () => request<{ id: number; product_id: number; batch_number: string; barcode: string }[]>("/api/inventory/batches/barcodes"),
       create: (data: {
         product_id: number;

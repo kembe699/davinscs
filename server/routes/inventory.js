@@ -132,17 +132,25 @@ router.post("/adjust", requireAuth, async (req, res) => {
 // products.quantity_on_hand stays the authoritative total — every batch
 // mutation here keeps it in sync as a rollup, since POS/reports/valuation
 // all read that column directly.
+// With ?product_id= the batches of one product; without it, every batch of
+// every product (the Batches page), with the product's name and unit.
 router.get("/batches", requireAuth, async (req, res) => {
   const { product_id } = req.query;
-  if (!product_id) return res.status(400).json({ error: "product_id is required" });
   try {
     const { rows } = await pool.query(
-      `SELECT pb.*, sl.name as storage_location_name
+      `SELECT pb.*, p.name AS product_name, p.uom AS product_uom, p.barcode AS product_barcode,
+              COALESCE(pb.storage_location_id, p.storage_location_id) AS effective_location_id,
+              COALESCE(sl.name, psl.name) AS storage_location_name,
+              (pb.expiry_date - CURRENT_DATE) AS days_to_expiry,
+              u.email AS retired_by_email
        FROM product_batches pb
+       JOIN products p ON p.id = pb.product_id
        LEFT JOIN storage_locations sl ON pb.storage_location_id = sl.id
-       WHERE pb.product_id = $1
-       ORDER BY pb.expiry_date ASC NULLS LAST, pb.created_at ASC`,
-      [product_id]
+       LEFT JOIN storage_locations psl ON p.storage_location_id = psl.id
+       LEFT JOIN users u ON u.id = pb.retired_by
+       ${product_id ? "WHERE pb.product_id = $1" : ""}
+       ORDER BY (pb.status = 'retired'), pb.expiry_date ASC NULLS LAST, pb.created_at ASC`,
+      product_id ? [product_id] : []
     );
     res.json(rows);
   } catch (err) {
@@ -157,7 +165,7 @@ router.get("/batches", requireAuth, async (req, res) => {
 router.get("/batches/barcodes", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, product_id, batch_number, barcode FROM product_batches WHERE barcode <> ''`
+      `SELECT id, product_id, batch_number, barcode FROM product_batches WHERE barcode <> '' AND status = 'active'`
     );
     res.json(rows);
   } catch (err) {
@@ -200,9 +208,11 @@ router.post("/batches", requireAuth, async (req, res) => {
          barcode = CASE WHEN EXCLUDED.barcode <> '' THEN EXCLUDED.barcode ELSE product_batches.barcode END,
          storage_location_id = COALESCE(EXCLUDED.storage_location_id, product_batches.storage_location_id),
          cost_price = COALESCE(EXCLUDED.cost_price, product_batches.cost_price),
+         -- Receiving stock into a retired batch number brings it back into use.
+         status = 'active', retired_at = NULL, retired_by = NULL, retire_reason = NULL, retired_quantity = NULL,
          updated_at = NOW()
        RETURNING *`,
-      [product_id, batch_number.trim(), qty, expiry_date || null, barcode?.trim() || '', storage_location_id || null, cost_price ?? null, req.user.id]
+      [product_id, batch_number.trim(), qty, expiry_date || null, barcode?.trim() || '', storage_location_id || null, (cost_price === '' || cost_price == null) ? null : Number(cost_price), req.user.id]
     );
     const batch = batchResult.rows[0];
 
@@ -297,6 +307,80 @@ router.post("/batches/:id/adjust", requireAuth, async (req, res) => {
   }
 });
 
+// Retire a batch (expired, damaged, recalled): whatever stock it still has is
+// written off — taken out of the product's total with a stock movement — and
+// the batch stays on record as retired so it can't be sold or scanned again.
+async function retireBatch(client, batchId, reason, userId) {
+  const { rows } = await client.query(
+    "SELECT id, product_id, batch_number, quantity_on_hand, status FROM product_batches WHERE id = $1 FOR UPDATE",
+    [batchId]
+  );
+  const batch = rows[0];
+  if (!batch) return { error: 404, message: "Batch not found" };
+  if (batch.status === "retired") return { error: 409, message: "This batch is already retired" };
+  const qty = batch.quantity_on_hand;
+  await client.query(
+    `UPDATE product_batches SET status = 'retired', quantity_on_hand = 0, retired_quantity = $1,
+       retired_at = NOW(), retired_by = $2, retire_reason = $3, updated_at = NOW()
+     WHERE id = $4`,
+    [qty, userId, reason, batchId]
+  );
+  if (qty > 0) {
+    await client.query(
+      "UPDATE products SET quantity_on_hand = GREATEST(quantity_on_hand - $1, 0), updated_at = NOW() WHERE id = $2",
+      [qty, batch.product_id]
+    );
+    await client.query(
+      `INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, notes, created_by)
+       VALUES ($1, 'adjustment', $2, 'batch', $3, $4, $5)`,
+      [batch.product_id, -qty, batchId, `Batch ${batch.batch_number} retired (${reason}) — ${qty} written off`, userId]
+    );
+  }
+  return { batch_id: batchId, written_off: qty };
+}
+
+router.post("/batches/retire-expired", requireAuth, async (req, res) => {
+  const client = await getSchemaClient();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      "SELECT id FROM product_batches WHERE status = 'active' AND expiry_date < CURRENT_DATE ORDER BY expiry_date"
+    );
+    let writtenOff = 0;
+    for (const r of rows) {
+      const out = await retireBatch(client, r.id, "Expired", req.user.id);
+      if (!out.error) writtenOff += out.written_off;
+    }
+    await client.query("COMMIT");
+    res.json({ retired: rows.length, written_off: writtenOff });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    return sendError(res, err);
+  } finally {
+    client.release();
+  }
+});
+
+router.post("/batches/:id/retire", requireAuth, async (req, res) => {
+  const reason = (req.body?.reason || "").trim() || "Expired";
+  const client = await getSchemaClient();
+  try {
+    await client.query("BEGIN");
+    const out = await retireBatch(client, req.params.id, reason, req.user.id);
+    if (out.error) {
+      await client.query("ROLLBACK");
+      return res.status(out.error).json({ error: out.message });
+    }
+    await client.query("COMMIT");
+    res.json(out);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    return sendError(res, err);
+  } finally {
+    client.release();
+  }
+});
+
 router.delete("/batches/:id", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT quantity_on_hand FROM product_batches WHERE id = $1", [req.params.id]);
@@ -339,6 +423,35 @@ router.get("/storage-locations", requireAuth, async (req, res) => {
        ORDER BY sl.name`
     );
     res.json(rows);
+  } catch (err) {
+    return sendError(res, err);
+  }
+});
+
+// What is stored in one location: batches kept there (a batch with no
+// location of its own sits with its product) and the products assigned there.
+// A batch-tracked product also shows any stock not in a batch ("No batch").
+router.get("/storage-locations/:id/items", requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id AS product_id, p.name AS product_name, p.uom, pb.id AS batch_id, pb.batch_number,
+              pb.quantity_on_hand AS quantity, pb.expiry_date, (pb.expiry_date - CURRENT_DATE) AS days_to_expiry
+       FROM product_batches pb
+       JOIN products p ON p.id = pb.product_id
+       WHERE pb.status = 'active' AND pb.quantity_on_hand > 0
+         AND COALESCE(pb.storage_location_id, p.storage_location_id) = $1
+       UNION ALL
+       SELECT p.id, p.name, p.uom, NULL, NULL,
+              p.quantity_on_hand - COALESCE(b.batched, 0), NULL, NULL
+       FROM products p
+       LEFT JOIN (SELECT product_id, SUM(quantity_on_hand) AS batched FROM product_batches
+                  WHERE status = 'active' GROUP BY product_id) b ON b.product_id = p.id
+       WHERE p.storage_location_id = $1 AND COALESCE(p.product_type, 'product') <> 'service'
+         AND (b.product_id IS NULL OR p.quantity_on_hand - b.batched > 0)
+       ORDER BY 2, 5 NULLS LAST`,
+      [req.params.id]
+    );
+    res.json(rows.map((r) => ({ ...r, quantity: Number(r.quantity) })));
   } catch (err) {
     return sendError(res, err);
   }

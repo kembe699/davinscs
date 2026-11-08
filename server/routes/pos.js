@@ -27,7 +27,7 @@ async function consumeBatchesFEFO(client, productId, quantity, preferredBatchId)
 
   if (preferredBatchId) {
     const { rows } = await client.query(
-      "SELECT id, quantity_on_hand FROM product_batches WHERE id = $1 AND product_id = $2 AND quantity_on_hand > 0",
+      "SELECT id, quantity_on_hand FROM product_batches WHERE id = $1 AND product_id = $2 AND quantity_on_hand > 0 AND status = 'active'",
       [preferredBatchId, productId]
     );
     if (rows[0]) {
@@ -46,7 +46,7 @@ async function consumeBatchesFEFO(client, productId, quantity, preferredBatchId)
   if (remaining > 0) {
     const { rows: batches } = await client.query(
       `SELECT id, quantity_on_hand FROM product_batches
-       WHERE product_id = $1 AND quantity_on_hand > 0 ${preferredBatchId ? "AND id <> $2" : ""}
+       WHERE product_id = $1 AND quantity_on_hand > 0 AND status = 'active' ${preferredBatchId ? "AND id <> $2" : ""}
        ORDER BY expiry_date ASC NULLS LAST, created_at ASC`,
       preferredBatchId ? [productId, preferredBatchId] : [productId]
     );
@@ -90,7 +90,8 @@ async function restoreToBatches(client, saleItemId, quantity) {
     const give = Math.min(row.quantity, remaining);
     if (row.batch_id) {
       await client.query(
-        "UPDATE product_batches SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2",
+        // A retired batch takes nothing back; the units stay in the product total, outside any batch.
+        "UPDATE product_batches SET quantity_on_hand = quantity_on_hand + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'",
         [give, row.batch_id]
       );
     }
