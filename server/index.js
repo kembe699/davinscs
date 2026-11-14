@@ -68,6 +68,7 @@ const allowedOrigins = [
   "https://www.flippedpos.com",
   // Render.com deployments
   "https://davinscs.onrender.com",
+  "https://flippedpos-website.onrender.com",
   // Local dev
   "http://localhost:3001",
   "http://localhost:5173",
