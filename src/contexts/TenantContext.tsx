@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams, useLocation, Outlet, Navigate } from "react-router-dom";
 import { useLayout } from "@/contexts/LayoutContext";
+import { PaymentReminder } from "@/components/PaymentReminder";
 
 interface TenantInfo {
   tenantSlug: string;
@@ -10,6 +11,7 @@ interface TenantInfo {
   status: string;
   trialEndsAt: string | null;
   subscriptionEnd: string | null;
+  paymentNotice: boolean;
 }
 
 const TenantContext = createContext<TenantInfo | null>(null);
@@ -85,6 +87,7 @@ export function TenantRoot() {
           status: d.status,
           trialEndsAt: d.trialEndsAt || null,
           subscriptionEnd: d.subscriptionEnd || null,
+          paymentNotice: !!d.paymentNotice,
         });
       })
       .catch(() => setError("Failed to load instance"))
@@ -211,6 +214,7 @@ export function TenantRoot() {
   return (
     <TenantContext.Provider value={tenant}>
       <Outlet />
+      {tenant.paymentNotice && isAdminOrPosPath && !isLoginPage && <PaymentReminder tenantSlug={tenant.tenantSlug} />}
     </TenantContext.Provider>
   );
 }

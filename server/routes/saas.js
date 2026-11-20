@@ -278,7 +278,7 @@ router.get('/tenant/:slug', async (req, res) => {
   const { slug } = req.params;
   try {
     const result = await pool.query(
-      'SELECT business_name, schema_name, tenant_slug, status, trial_ends_at, subscription_end FROM public.tenants WHERE tenant_slug = $1',
+      'SELECT business_name, schema_name, tenant_slug, status, trial_ends_at, subscription_end, payment_notice_at FROM public.tenants WHERE tenant_slug = $1',
       [slug.toLowerCase()]
     );
     const tenant = result.rows[0];
@@ -301,6 +301,7 @@ router.get('/tenant/:slug', async (req, res) => {
       status: effectiveStatus,
       trialEndsAt: tenant.trial_ends_at || null,
       subscriptionEnd: tenant.subscription_end || null,
+      paymentNotice: !!tenant.payment_notice_at,
     });
   } catch (err) {
     console.error('Tenant slug lookup error:', err);
@@ -649,7 +650,8 @@ async function activateSubscription(invoiceId) {
        SET status = 'active',
            subscription_start = CASE WHEN status <> 'active' THEN NOW() ELSE subscription_start END,
            subscription_end = $1,
-           expiry_reminder_sent_at = NULL
+           expiry_reminder_sent_at = NULL,
+           payment_notice_at = NULL
        WHERE id = $2`,
       [newEnd.toISOString(), inv.tenant_id]
     );

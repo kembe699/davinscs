@@ -10,6 +10,7 @@ import { dirname, join } from "path";
 import pool, { rawPool } from "./db.js";
 import { migrateTenant } from "./utils/schemaMigration.js";
 import { autoSeed } from "./autoSeed.js";
+import { runOneTimeTasks } from "./utils/oneTimeTasks.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import productRoutes from "./routes/products.js";
@@ -197,6 +198,7 @@ migrateTenant("public")
     }
   })
   .then(() => autoSeed())
+  .then(() => runOneTimeTasks())
   .then(() => {
     initSaasSchedulers();
     startDailyDigestJob();

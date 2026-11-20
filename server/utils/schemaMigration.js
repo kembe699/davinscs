@@ -26,6 +26,8 @@ export async function migrateTenant(schemaName = "public") {
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_start TIMESTAMPTZ;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS subscription_end TIMESTAMPTZ;
     ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS expiry_reminder_sent_at TIMESTAMPTZ;
+    -- Set by hand when a tenant must be reminded to pay; cleared when an invoice is paid.
+    ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS payment_notice_at TIMESTAMPTZ;
     CREATE TABLE IF NOT EXISTS public.tenant_db_snapshots (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER REFERENCES public.tenants(id) ON DELETE CASCADE,
